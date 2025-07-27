@@ -1,0 +1,5 @@
+.vscode
+.build
+kernel.elf
+os.iso
+disk.img

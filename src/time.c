@@ -1,0 +1,140 @@
+#include "headers/time.h"
+#include "headers/asm.h"
+#include "headers/io.h"
+#include "headers/memory.h"
+#include <stdint.h>
+
+#define CMOS_ADDRESS 0x70
+#define CMOS_DATA    0x71
+
+
+
+#define PIT_COMMAND   0x43
+#define PIT_CHANNEL0  0x40
+#define PIT_FREQUENCY 1000  // 1000 Hz = 1ms per tick
+
+uint64_t* timer_ticks = (uint64_t*) TICKS_AMOUNT_POINTER;
+
+
+#include "headers/asm.h" // for outb()
+
+// ----------------- PIC -----------------
+void pic_remap() {
+    // Initialize PICs in cascade mode
+    outb(0x20, 0x11); // Start initialization (master PIC)
+    outb(0xA0, 0x11); // Start initialization (slave PIC)
+    
+    outb(0x21, 0x20); // Remap master PIC vector offset to 0x20 (32)
+    outb(0xA1, 0x28); // Remap slave PIC vector offset to 0x28 (40)
+    
+    outb(0x21, 0x04); // Tell master PIC there is a slave at IRQ2
+    outb(0xA1, 0x02); // Tell slave PIC its cascade identity
+    
+    outb(0x21, 0x01); // Set 8086 mode for master PIC
+    outb(0xA1, 0x01); // Set 8086 mode for slave PIC
+    
+    outb(0x21, 0x0);  // Clear master PIC mask (enable all IRQs)
+    outb(0xA1, 0x0);  // Clear slave PIC mask (enable all IRQs)
+}
+
+// ----------------- PIT -----------------
+
+void pit_init() {
+    force_alloc(TICKS_AMOUNT_POINTER,sizeof(uint64_t));
+    *timer_ticks =0;
+    
+    uint16_t divisor = 1193180 / PIT_FREQUENCY;
+    
+    outb(PIT_COMMAND, 0x36);                 // Channel 0, lobyte/hibyte, mode 3
+    outb(PIT_CHANNEL0, divisor & 0xFF);      // Low byte
+    outb(PIT_CHANNEL0, (divisor >> 8) & 0xFF); // High byte
+}
+
+
+
+void timer_irq() {
+    (*timer_ticks)++;
+}
+
+// ----------------- Sleep -----------------
+
+void sleep(uint64_t ms) {
+    
+    uint64_t target = *timer_ticks + ms;
+    while (*timer_ticks < target)__asm__ volatile ("hlt");  
+    
+}
+
+// ----------------- RDTSC -----------------
+
+uint64_t rdtsc() {
+    uint32_t hi, lo;
+    __asm__ __volatile__ ("rdtsc" : "=a"(lo), "=d"(hi));
+    return ((uint64_t)hi << 32) | lo;
+}
+
+
+// BCD to binary conversion
+static uint8_t bcd_to_bin(uint8_t bcd) {
+    return (bcd & 0x0F) + ((bcd >> 4) * 10);
+}
+
+static uint8_t read_rtc_register(uint8_t reg) {
+    outb(CMOS_ADDRESS, reg);
+    return inb(CMOS_DATA);
+}
+
+bool rtc_read_time(rtc_time_t* time) {
+    if (!time) return false;
+
+    // Wait for update to complete (bit 7 in status register A)
+    outb(CMOS_ADDRESS, 0x0A);
+    while (inb(CMOS_DATA) & 0x80);
+
+    // Read values
+    uint8_t sec  = read_rtc_register(0x00);
+    uint8_t min  = read_rtc_register(0x02);
+    uint8_t hour = read_rtc_register(0x04);
+    uint8_t day  = read_rtc_register(0x07);
+    uint8_t mon  = read_rtc_register(0x08);
+    uint8_t year = read_rtc_register(0x09);
+    uint8_t reg_b = read_rtc_register(0x0B);
+
+    // If RTC is in BCD mode, convert values
+    bool is_bcd = !(reg_b & 0x04);
+    if (is_bcd) {
+        sec  = bcd_to_bin(sec);
+        min  = bcd_to_bin(min);
+        hour = bcd_to_bin(hour);
+        day  = bcd_to_bin(day);
+        mon  = bcd_to_bin(mon);
+        year = bcd_to_bin(year);
+    }
+
+    time->second = sec;
+    time->minute = min;
+    time->hour   = hour;
+    time->day    = day;
+    time->month  = mon;
+    time->year   = 2000 + year; // assuming year is 00–99
+
+    return true;
+}
+
+
+DWORD get_fattime (void)
+{
+    rtc_time_t time;
+    rtc_read_time(&time);
+
+    DWORD fattime = 0;
+    fattime |= ((time.year - 1980) & 0x7F) << 25;  // Year since 1980
+    fattime |= ((time.month) & 0x0F) << 21;     // Month (1-12)
+    fattime |= (time.day & 0x1F) << 16;           // Day (1-31)
+    fattime |= (time.hour & 0x1F) << 11;           // Hour (0-23)
+    fattime |= (time.minute & 0x3F) << 5;             // Minute (0-59)
+    fattime |= (time.second / 2) & 0x1F;              // Second (0-29)
+
+    return fattime;
+    
+}
