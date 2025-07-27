@@ -6,6 +6,8 @@ volatile uint16_t* video_memory = (volatile uint16_t*)0xB8000;
 int vgaX = 0;
 int vgaY = 0;
 
+static char print_color = 0x0F; //white on black
+
 void put_char(int x, int y,uint8_t c, uint8_t color) {
     if (x < 0 || x >= 80 || y < 0 || y >= 25) return;
     video_memory[y * 80 + x] = (uint16_t)c | ((uint16_t)color << 8);
@@ -76,7 +78,7 @@ int printstr(const char* str) {
                 Scroll_Down();
             }
         } else {
-            put_char(vgaX, vgaY, *str, 0x0F);
+            put_char(vgaX, vgaY, *str, print_color);
             vgaX++;
             if (vgaX >= 80) {
                 vgaX = 0;
@@ -103,7 +105,7 @@ int printlen(const char *buffer, unsigned int length) {
                 Scroll_Down();
             }
         } else {
-            put_char(vgaX, vgaY, buffer[i], 0x0F);
+            put_char(vgaX, vgaY, buffer[i], print_color);
             vgaX++;
             if (vgaX >= 80) {
                 vgaX = 0;
@@ -540,4 +542,8 @@ int printLine(const char* str, int line){
     }
     put_char(vgaX++, vgaY, '\0', 0x0F); 
     return amount;
+}
+
+void set_print_color(char color){
+    print_color = color;
 }

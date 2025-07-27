@@ -3,3 +3,5 @@
 kernel.elf
 os.iso
 disk.img
+build_execs
+build_lib

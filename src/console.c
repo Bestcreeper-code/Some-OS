@@ -272,7 +272,6 @@ bool Console_Process_Command(String command) {
         UINT fileSize;
 
         // Open the binary file for reading
-
         res = f_open(&file,"0:/gametest.bin", FA_READ);
         if (res == FR_OK) {
             fileSize = f_size(&file);  // Get file size
@@ -289,18 +288,21 @@ bool Console_Process_Command(String command) {
                     printf("File read successfully (%u bytes).\n", bytesRead);
 
                     // Define a function pointer to the entry point
-                    void (*entry)(void) = (void (*)(void))buffer;
+                    int (*entry)(void) = (int (*)(void))buffer;
 
-                    printf("Jumping to notepad.bin...\n");
+                    printf("Jumping to gametest.bin...\n");
 
                     // Call the loaded binary
                     entry();
 
                     // If it returns (unlikely), print something
-                    printf("Returned from notepad.bin\n");
+                    printf("Returned from gametest.bin\n");
+
+                    // Wipe the memory region after execution
+                    memset(buffer, 0, fileSize);
+                    printf("Memory wiped.\n");
                 } else {
                     printf("File read error: %d\n", res);
-                    // free(buffer);
                 }
             }
 
@@ -309,6 +311,7 @@ bool Console_Process_Command(String command) {
             printf("Failed to open file: %d\n", res);
         }
     }
+
     else {
         printstr("Unknown command. Type 'help' for a list of commands.\n");
         result = false;
@@ -329,7 +332,11 @@ void Start_Console() {
     strcpy(currpath,"0:/");
     ClearScreen();
     move_cursor(0, 0);
+
+    set_print_color(0x82);
     printf(TitleAsciiString);
+    printf("\n");
+    set_print_color(0x0F);
     
 
     

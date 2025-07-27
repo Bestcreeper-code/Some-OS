@@ -40,6 +40,10 @@ int print_unsigned_number(uint32_t num);
 int printf(const char* format,...);
 int printLine(const char* str, int line);
 
+// Text Color
+// set current print color
+void set_print_color(char color);
+
 // Input
 unsigned char GetInputChar(void);
 unsigned char GetInputCharNonBlocking(void);
