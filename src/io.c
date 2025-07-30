@@ -44,11 +44,10 @@ void Scroll_Down() {
 }
 
 void ClearScreen() {
+    move_cursor(0,0);
     for (int i = 0; i < 80*25; i++) {
         video_memory[i] = (uint16_t)' ' | ((uint16_t)0x0F << 8);
     }
-    vgaX = 0;
-    vgaY = 0;
 }
 
 void move_cursor(int x, int y) {
