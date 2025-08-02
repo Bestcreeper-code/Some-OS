@@ -1,5 +1,7 @@
-const char* TitleAsciiString = 
-"  ___  ____  ____  ____  ____  ____  ____     __   ____  \n\
- / __)(  _ \\(  __)(  __)(  _ \\(  __)(  _ \\   /  \\ / ___) \n\
-( (__  )   / ) _)  ) _)  ) __/ ) _)  )   /  (  O )\\___ \\ \n\
- \\___)(__\\_)(____)(____)(__)  (____)(__\\_)   \\__/ (____/";
+#ifndef TEXTCONST_DATA
+#define TEXTCONST_DATA
+
+extern const char* TitleAsciiString;
+
+extern const unsigned char Terminal4x6[];
+#endif

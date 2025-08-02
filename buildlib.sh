@@ -13,8 +13,15 @@ for asm_file in src/asm/*.asm; do
 done
 
 # === Compile C source files ===
-echo "[2] Compiling C source files in src/..."
+echo "[2.1] Compiling C source files in src/..."
 for src_file in src/*.c; do
+  obj_file="build_lib/$(basename "${src_file%.c}.o")"
+  echo "  Compiling $src_file -> $obj_file"
+  gcc -m32 -ffreestanding -fno-pic -fno-pie -c "$src_file" -o "$obj_file"
+done
+
+echo "[2.2] Compiling C source files in src/data/..."
+for src_file in src/data/*.c; do
   obj_file="build_lib/$(basename "${src_file%.c}.o")"
   echo "  Compiling $src_file -> $obj_file"
   gcc -m32 -ffreestanding -fno-pic -fno-pie -c "$src_file" -o "$obj_file"

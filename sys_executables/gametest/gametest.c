@@ -21,7 +21,7 @@ int app_main() {
     pl_parts = malloc(sizeof(Vector2) * pl_size);
     if (!pl_parts) {
         printf("Initial allocation failed!\n");
-        return;
+        return 0;
     }
 
     // Initial snake segments

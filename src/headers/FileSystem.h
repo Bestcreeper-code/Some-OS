@@ -13,4 +13,6 @@ FRESULT check_path_exists(
     FileType type //E_FT_FILE, E_FT_DIR or E_FT_BOTH
 );
 
+int Load_bin_exe(const char* file_path);
+
 FRESULT change_Current_Dir(char** currdir,char* path);

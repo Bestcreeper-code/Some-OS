@@ -35,26 +35,25 @@ void print_dir (const char *path)
 
 
 FRESULT check_path_exists(const char *path, FileType type) {
-    FILINFO fno;
-    
-    
-    FRESULT res = f_stat(path, &fno);
-    if (res != FR_OK) {
-        return res;  
+    if (type == E_FT_DIR) {
+        DIR dir;
+        FRESULT res = f_opendir(&dir, path);
+        if (res != FR_OK) return FR_NO_PATH;
+        f_closedir(&dir);
+        return FR_OK;
     }
 
-  
-    if (type == E_FT_DIR && !(fno.fattrib & AM_DIR)) { //Want a Dir but is File
-        return FR_NO_PATH; 
+    if (type == E_FT_FILE) {
+        FILINFO fno;
+        FRESULT res = f_stat(path, &fno);
+        if (res != FR_OK) return res;
+        if (fno.fattrib & AM_DIR) return FR_NO_PATH;
+        return FR_OK;
     }
 
-    
-    if (type == E_FT_FILE && (fno.fattrib & AM_DIR)) { //Want a File but is Dir
-        return FR_NO_PATH; 
-    }
-
-    return FR_OK;  
+    return FR_INVALID_OBJECT;  // Invalid FileType
 }
+
 
 //currdir is changed 
 FRESULT change_Current_Dir(char** currdir, char* path) {
@@ -105,5 +104,53 @@ FRESULT change_Current_Dir(char** currdir, char* path) {
     } else {
         free(finalpath);
         return FR_NO_FILE;
+    }
+}
+
+int Load_bin_exe(const char* file_path){
+    FIL file;              // File object
+    FRESULT res;           // Result code
+    UINT bytesRead;        // Number of bytes read
+    void* buffer;
+    UINT fileSize;
+
+    // Open the binary file for reading
+    res = f_open(&file,file_path, FA_READ);
+    if (res == FR_OK) {
+        fileSize = f_size(&file);  // Get file size
+
+        // Allocate memory for file contents
+        buffer = (void*)0x200000; // Use a fixed address for simplicity
+        if (buffer == NULL) {
+            printf("Memory allocation failed.\n");
+        } else {
+            // Read the file contents into buffer
+            res = f_read(&file, buffer, fileSize, &bytesRead);
+            if (res == FR_OK && bytesRead == fileSize) {
+                // File successfully read into buffer
+                printf("File read successfully (%u bytes).\n", bytesRead);
+
+                // Define a function pointer to the entry point
+                int (*entry)(void) = (int (*)(void))buffer;
+
+                printf("Jumping to %s...\n",file_path);
+
+                // Call the loaded binary
+                entry();
+
+                // If it returns (unlikely), print something
+                printf("Returned from %s\n",file_path);
+
+                // Wipe the memory region after execution
+                memset(buffer, 0, fileSize);
+                printf("Memory cleared.\n");
+            } else {
+                printf("File read error: %d\n", res);
+            }
+        }
+
+        f_close(&file);
+    } else {
+        printf("Failed to open file: %d\n", res);
     }
 }

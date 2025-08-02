@@ -1,8 +1,10 @@
 #include "headers/io.h"
 #include "headers/string.h"
 #include "headers/asm.h"
+#include "headers/video.h"
+#include "data/globals.h"
 
-volatile uint16_t* video_memory = (volatile uint16_t*)0xB8000;
+volatile uint16_t* text_mode_memory = (volatile uint16_t*)0xB8000;
 int vgaX = 0;
 int vgaY = 0;
 
@@ -10,12 +12,20 @@ static char print_color = 0x0F; //white on black
 
 void put_char(int x, int y,uint8_t c, uint8_t color) {
     if (x < 0 || x >= 80 || y < 0 || y >= 25) return;
-    video_memory[y * 80 + x] = (uint16_t)c | ((uint16_t)color << 8);
+    switch(graphics_mode){
+        case 0x03:
+            text_mode_memory[y * 80 + x] = (uint16_t)c | ((uint16_t)color << 8);
+            break;
+
+        // case 0x13:
+        //     draw_bitmap_char(c,x * 4,y * 8,4,6,color,NULL,true);
+        //     break;
+    }
 }
 
 char get_char(int x, int y) {
     if (x < 0 || x >= 80 || y < 0 || y >= 25) return 0;
-    return (char)(video_memory[y * 80 + x] & 0xFF);
+    return (char)(text_mode_memory[y * 80 + x] & 0xFF);
 }
 
 void enable_cursor(uint8_t start, uint8_t end) {
@@ -32,12 +42,12 @@ void Scroll_Down() {
     
     for (i = 0; i < 24; i++) { 
         for (j = 0; j < 80; j++) { 
-            video_memory[i * 80 + j] = video_memory[(i + 1) * 80 + j];
+            text_mode_memory[i * 80 + j] = text_mode_memory[(i + 1) * 80 + j];
         }
     }
     
     for (j = 0; j < 80; j++) {
-        video_memory[24 * 80 + j] = (uint16_t)' ' | ((uint16_t)0x0F << 8);
+        text_mode_memory[24 * 80 + j] = (uint16_t)' ' | ((uint16_t)0x0F << 8);
     }
     
     
@@ -46,8 +56,9 @@ void Scroll_Down() {
 void ClearScreen() {
     move_cursor(0,0);
     for (int i = 0; i < 80*25; i++) {
-        video_memory[i] = (uint16_t)' ' | ((uint16_t)0x0F << 8);
+        text_mode_memory[i] = (uint16_t)' ' | ((uint16_t)0x0F << 8);
     }
+    clear_13h_screen(1);
 }
 
 void move_cursor(int x, int y) {

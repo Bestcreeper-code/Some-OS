@@ -265,51 +265,9 @@ bool Console_Process_Command(String command) {
         }
     }
     else if (!strcmp(tokens[0], "run")) {
-        FIL file;              // File object
-        FRESULT res;           // Result code
-        UINT bytesRead;        // Number of bytes read
-        void* buffer;
-        UINT fileSize;
-
-        // Open the binary file for reading
-        res = f_open(&file,"0:/gametest.bin", FA_READ);
-        if (res == FR_OK) {
-            fileSize = f_size(&file);  // Get file size
-
-            // Allocate memory for file contents
-            buffer = (void*)0x00200000; // Use a fixed address for simplicity
-            if (buffer == NULL) {
-                printf("Memory allocation failed.\n");
-            } else {
-                // Read the file contents into buffer
-                res = f_read(&file, buffer, fileSize, &bytesRead);
-                if (res == FR_OK && bytesRead == fileSize) {
-                    // File successfully read into buffer
-                    printf("File read successfully (%u bytes).\n", bytesRead);
-
-                    // Define a function pointer to the entry point
-                    int (*entry)(void) = (int (*)(void))buffer;
-
-                    printf("Jumping to gametest.bin...\n");
-
-                    // Call the loaded binary
-                    entry();
-
-                    // If it returns (unlikely), print something
-                    printf("Returned from gametest.bin\n");
-
-                    // Wipe the memory region after execution
-                    memset(buffer, 0, fileSize);
-                    printf("Memory wiped.\n");
-                } else {
-                    printf("File read error: %d\n", res);
-                }
-            }
-
-            f_close(&file);
-        } else {
-            printf("Failed to open file: %d\n", res);
-        }
+        if(token_count<2)return 0;
+        char* list[2] ={currpath,tokens[1]};
+        Load_bin_exe(Concat(list,2,'\0'));
     }
 
     else {

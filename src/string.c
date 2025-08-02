@@ -17,19 +17,33 @@ void* memset(void *dest, int value, size_t count) {
     }
     return dest;
 }
-
 void* memcpy(void* dest, const void* src, size_t n) {
-    
-    char* d = (char*)dest;
-    const char* s = (const char*)src;
+    if (n <= 0) return dest;
 
-    
-    for (size_t i = 0; i < n; i++) {
-        d[i] = s[i];
-    }
+    uintptr_t d = (uintptr_t)dest;
+    uintptr_t s = (uintptr_t)src;
+    size_t dw_n = n / 4;
+    size_t b_n = n % 4;
 
-    return dest;
+    void* ret = dest;
+
+    __asm__ volatile (
+        "rep movsl"
+        : "+D" (d), "+S" (s), "+c" (dw_n)
+        :
+        : "memory"
+    );
+
+    __asm__ volatile (
+        "rep movsb"
+        : "+D" (d), "+S" (s), "+c" (b_n)
+        :
+        : "memory"
+    );
+
+    return ret;
 }
+
 
 
 
