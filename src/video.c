@@ -170,6 +170,19 @@ void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int w
     }
 }
 
+void draw_bitmap_string(const char* str, int x_pos, int y_pos, int width, int height, char color, void* font, bool use_default_font, int space) {
+    if (!str) return;
+
+    int cursor_x = x_pos;
+
+    while (*str) {
+        draw_bitmap_char((unsigned char)*str, cursor_x, y_pos, width, height, color, font, use_default_font);
+        cursor_x += width + space;  // Move to next character position
+        str++;
+    }
+}
+
+
 void clear_13h_screen(char color) {
     memset((void*)0xA0000, color, 320 * 200);
 }

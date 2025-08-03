@@ -9,8 +9,8 @@ double factorial(int n) {
     return result;
 }
 
-// Power function
-double power(double base, int exp) {
+
+double pow(double base, int exp) {
     double result = 1.0;
     for (int i = 0; i < exp; ++i) {
         result *= base;
@@ -18,11 +18,22 @@ double power(double base, int exp) {
     return result;
 }
 
+double sqrt(double x) {
+    double result;
+    __asm__ (
+        "fldl %1\n"    // Load double x onto FPU stack
+        "fsqrt\n"      // Compute square root of st(0)
+        "fstpl %0\n"   // Store the result from st(0) into result
+        : "=m" (result)   // output
+        : "m" (x)         // input
+    );
+    return result;
+}
+
 // Normalize angle to range [-PI, PI] for better convergence
 double normalize_angle(double x) {
-    const double PI = 3.14159265358979323846;
-    while (x > PI) x -= 2 * PI;
-    while (x < -PI) x += 2 * PI;
+    while (x > M_PI) x -= 2 * M_PI;
+    while (x < -M_PI) x += 2 * M_PI;
     return x;
 }
 
@@ -33,7 +44,7 @@ double cos(double x) {
     int terms = 10;
 
     for (int n = 0; n < terms; ++n) {
-        double term = power(-1, n) * power(x, 2 * n) / factorial(2 * n);
+        double term = pow(-1, n) * pow(x, 2 * n) / factorial(2 * n);
         sum += term;
     }
     return sum;
@@ -46,7 +57,7 @@ double sin(double x) {
     int terms = 10;
 
     for (int n = 0; n < terms; ++n) {
-        double term = power(-1, n) * power(x, 2 * n + 1) / factorial(2 * n + 1);
+        double term = pow(-1, n) * pow(x, 2 * n + 1) / factorial(2 * n + 1);
         sum += term;
     }
     return sum;

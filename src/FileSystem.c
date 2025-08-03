@@ -2,6 +2,8 @@
 #include "headers/string.h"
 #include "headers/memory.h"
 
+#define EXEC_LOAD_ADRESS 0x200000
+
 void print_dir (const char *path)
 {
     FRESULT res;
@@ -120,33 +122,30 @@ int Load_bin_exe(const char* file_path){
         fileSize = f_size(&file);  // Get file size
 
         // Allocate memory for file contents
-        buffer = (void*)0x200000; // Use a fixed address for simplicity
-        if (buffer == NULL) {
-            printf("Memory allocation failed.\n");
+        force_alloc(EXEC_LOAD_ADRESS,fileSize);
+        buffer = (void*)EXEC_LOAD_ADRESS; // Use a fixed address for simplicity
+        // Read the file contents into buffer
+        res = f_read(&file, buffer, fileSize, &bytesRead);
+        if (res == FR_OK && bytesRead == fileSize) {
+            // File successfully read into buffer
+            printf("File read successfully (%u bytes).\n", bytesRead);
+
+            // Define a function pointer to the entry point
+            int (*entry)(void) = (int (*)(void))buffer;
+
+            printf("Jumping to %s...\n",file_path);
+
+            // Call the loaded binary
+            entry();
+
+            // If it returns (unlikely), print something
+            printf("Returned from %s\n",file_path);
+
+            // Wipe the memory region after execution
+            memset(buffer, 0, fileSize);
+            printf("Memory cleared.\n");
         } else {
-            // Read the file contents into buffer
-            res = f_read(&file, buffer, fileSize, &bytesRead);
-            if (res == FR_OK && bytesRead == fileSize) {
-                // File successfully read into buffer
-                printf("File read successfully (%u bytes).\n", bytesRead);
-
-                // Define a function pointer to the entry point
-                int (*entry)(void) = (int (*)(void))buffer;
-
-                printf("Jumping to %s...\n",file_path);
-
-                // Call the loaded binary
-                entry();
-
-                // If it returns (unlikely), print something
-                printf("Returned from %s\n",file_path);
-
-                // Wipe the memory region after execution
-                memset(buffer, 0, fileSize);
-                printf("Memory cleared.\n");
-            } else {
-                printf("File read error: %d\n", res);
-            }
+            printf("File read error: %d\n", res);
         }
 
         f_close(&file);
