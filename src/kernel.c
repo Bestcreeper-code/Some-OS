@@ -18,30 +18,31 @@ extern int vgaX, vgaY;
 
 
 void kmain(unsigned long magic, unsigned long addr) {
+    vga_set_mode_03h();
     initGdt();
     idt_init();
     pic_remap();
     pit_init(); 
     __asm__ volatile ("sti"); // Enable interrupts
-    
     ClearScreen();
-
-    FRESULT res = f_mount(&FatFsSys, "0:", 1);
+    force_alloc(FATFS_SYS_ADDR,sizeof(FATFS));
+    mounting:
+    FRESULT res = f_mount(FatFsSys, "0:", 1);
     if (res != FR_OK) {
-        printf("Failed to mount filesystem. Error code: %d\n", res);
+        printf("Failed to mount filesystem. Error code: %d\n Trying to mount again", res);
+        goto mounting;
     } else {
         printf("Filesystem mounted successfully.\n");
         get_string();
     }
-
+    
     printf("Magic number: 0x%x\n", (void*)magic);
     printf("Multiboot info address: 0x%p\n", (void*)addr);
-
+    
     *((uint32_t*)multiboot_info_storing_adress) = addr;
     parse_memory_map( Get_multiboot_info() );
-
-    get_string();
-
+    
+    
     enable_cursor(0, 15);
     move_cursor(0, 0);
 

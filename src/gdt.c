@@ -13,7 +13,7 @@ void initGdt(){
     setGdtGate(1, 0, 0xFFFFFFFF, 0x9A, 0xCF);//kernel code seg
     setGdtGate(2, 0, 0xFFFFFFFF, 0x92, 0xCF);//kernel data seg
     setGdtGate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF);//user code seg
-    setGdtGate(3, 0, 0xFFFFFFFF, 0xF2, 0xCF);//user data seg
+    setGdtGate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF);//user data seg
 
     gdt_flush((uint32_t)&gdt_ptr);
     

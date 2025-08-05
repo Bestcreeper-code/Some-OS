@@ -1,4 +1,5 @@
 #include "../../FatFs/ff.h"
+#include "../../FatFs/FatFs++.h"
 #include "io.h"
 
 typedef enum {
@@ -8,6 +9,8 @@ typedef enum {
 } FileType;
 
 void print_dir (const char *path);
+char** read_dir(const char *path, int *amount);
+
 FRESULT check_path_exists(
     const char *path, //Path to the File/Dir
     FileType type //E_FT_FILE, E_FT_DIR or E_FT_BOTH
@@ -15,4 +18,4 @@ FRESULT check_path_exists(
 
 int Load_bin_exe(const char* file_path);
 
-FRESULT change_Current_Dir(char** currdir,char* path);
+FRESULT change_Current_Dir(char** currdir,const char* path);

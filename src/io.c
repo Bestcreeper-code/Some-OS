@@ -2,11 +2,16 @@
 #include "headers/string.h"
 #include "headers/asm.h"
 #include "headers/video.h"
+#include "headers/time.h"
+#include "headers/FileSystem.h"
 #include "data/globals.h"
+#include "data/KB_Layouts.h"
 
 volatile uint16_t* text_mode_memory = (volatile uint16_t*)0xB8000;
 int vgaX = 0;
 int vgaY = 0;
+
+char current_Language = KB_LAY_AZERTY;
 
 static char print_color = 0x0F; //white on black
 
@@ -142,26 +147,12 @@ bool shift_pressed = false;
 bool caps_lock_on = false;
 bool ctrl_pressed = false;
 bool alt_pressed = false;
+bool altgr_pressed = false;
 bool extended = false;
 
 
-unsigned char scancode_to_char[128] = {
-    0, 27, '&', 'e', '"', '\'', '(', '-', 'e', '_', 'c', 'a', ')', '=', '\b', '\t',
-    'a', 'z', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '^', '$', '\n', 0, 'q', 's',
-    'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'u', '`', 0, '*', 'w', 'x', 'c', 'v',
-    'b', 'n', ',', ';', ':', '!', 0, '*', 0, ' ', 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, '7', '8', '9', '-', '4', '5', '6', '+', '1',
-    '2', '3', '0', '.', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
 
-unsigned char scancode_to_char_shift[128] = {
-    0, 27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '0', '+', '\b', '\t',
-    'A', 'Z', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P', 0, 0, '\n', 0, 'Q', 'S',
-    'D', 'F', 'G', 'H', 'J', 'K', 'L', 'M', '%', '~', 0, '|', 'W', 'X', 'C', 'V',
-    'B', 'N', '?', '.', '/', 0, 0, '*', 0, ' ', 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, '7', '8', '9', '-', '4', '5', '6', '+', '1',
-    '2', '3', '0', '.', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-};
+
 
 
 unsigned char GetInputChar() {
@@ -184,23 +175,30 @@ unsigned char GetInputChar() {
 
         if (extended) {
             switch (keycode) {
-                case 0x48: c = KEY_UP; break; // KEY_UP
-                case 0x50: c = KEY_DOWN; break; // KEY_DOWN
-                case 0x4B: c = KEY_LEFT; break; // KEY_LEFT
-                case 0x4D: c = KEY_RIGHT; break; // KEY_RIGHT
-                case 0x47: c = KEY_HOME; break; // KEY_HOME
-                case 0x1D: ctrl_pressed = !released; break;
-                case 0x38: alt_pressed = !released; break;
+                case 0x1D: ctrl_pressed = !released; break;   // Right Ctrl (extended)
+                case 0x38: altgr_pressed = !released; break;  // Right Alt (AltGr)
+            }
+            if (released) {
+                extended = false;
+                continue; // skip extended key release codes (if not caught with the switchable keys switch statement )
+            }
+            switch (keycode) {
+                case 0x48: c = KEY_UP; break;
+                case 0x50: c = KEY_DOWN; break;
+                case 0x4B: c = KEY_LEFT; break;
+                case 0x4D: c = KEY_RIGHT; break;
+                case 0x47: c = KEY_HOME; break;
+
                 default:
-                    // unknown extended code, ignore or add handling
+                    // Unknown extended code: ignore or handle here
                     break;
             }
             extended = false;
-            if (released) continue;
             if (c != 0) return c;
+            continue;
         }
 
-        // Handle modifier keys
+        // Handle modifier keys (non-extended)
         switch (keycode) {
             case 0x2A: // Left Shift
             case 0x36: // Right Shift
@@ -209,99 +207,123 @@ unsigned char GetInputChar() {
             case 0x3A: // Caps Lock
                 if (!released) caps_lock_on = !caps_lock_on;
                 break;
-            case 0x1D: // Ctrl
+            case 0x1D: // Left Ctrl
                 ctrl_pressed = !released;
                 break;
-            case 0x38: // Alt
+            case 0x38: // Left Alt
                 alt_pressed = !released;
                 break;
         }
-        if (released) continue;
+        if (released) continue; // ignore key releases for chars
 
-        // Translate scancode to char
-        unsigned char base_char = shift_pressed ? scancode_to_char_shift[keycode] : scancode_to_char[keycode];
+        // Determine current modifier state
+        KeyModifier mod = MOD_Normal;
+        if (altgr_pressed) {
+            mod = MOD_AltGr;
+        } else if (shift_pressed ^ caps_lock_on) {
+            mod = MOD_Shift;
+        }
 
-        if (caps_lock_on && base_char >= 'a' && base_char <= 'z' && !shift_pressed)
-            base_char -= 32;
+        unsigned char base_char = keymaps[current_Language][mod][keycode];
 
-        if (ctrl_pressed && base_char >= 'a' && base_char <= 'z')
-            base_char = base_char - 'a' + 1;
+        // Ctrl modifies only a-z chars and only if AltGr NOT pressed
+        if (ctrl_pressed && base_char >= 'a' && base_char <= 'z' && !altgr_pressed) {
+            base_char = base_char - 'a' + 1; // Ctrl + letter → control char
+        }
 
         c = base_char;
     }
     return c;
 }
 
-unsigned char GetInputCharNonBlocking() {
-    static bool extended = false;
-    static bool shift_pressed = false;
-    static bool ctrl_pressed = false;
-    static bool alt_pressed = false;
-    static bool caps_lock_on = false;
-
-    uint8_t status;
-    __asm__ __volatile__("inb $0x64, %0" : "=a"(status));
-    if (!(status & 0x01)) {
-        // No data available, return 0 immediately (no char)
-        return 0;
-    }
-
-    uint8_t scancode;
-    __asm__ __volatile__("inb $0x60, %0" : "=a"(scancode));
-
-    if (scancode == 0xE0) {
-        extended = true;
-        return 0;  // wait for next scancode
-    }
-
-    bool released = (scancode & 0x80) != 0;
-    uint8_t keycode = scancode & 0x7F;
+unsigned char GetInputCharNonBlocking(void) {
     unsigned char c = 0;
 
-    if (extended) {
-        switch (keycode) {
-            case 0x48: c = KEY_UP; break;    // KEY_UP
-            case 0x50: c = KEY_DOWN; break;  // KEY_DOWN
-            case 0x4B: c = KEY_LEFT; break;  // KEY_LEFT
-            case 0x4D: c = KEY_RIGHT; break; // KEY_RIGHT
-            case 0x47: c = KEY_HOME; break;  // KEY_HOME
-            case 0x1D: ctrl_pressed = !released; break;
-            case 0x38: alt_pressed = !released; break;
-            default: break; // unknown extended
+    while (true) {
+        uint8_t status;
+        __asm__ __volatile__("inb $0x64, %0" : "=a"(status));
+        if (!(status & 0x01)) {
+            extended = false;  // clear extended flag before exit if no data
+            break;
         }
-        extended = false;
-        if (released) return 0;
-        return c;
+
+        uint8_t scancode;
+        __asm__ __volatile__("inb $0x60, %0" : "=a"(scancode));
+
+        if (scancode == 0xE0) {
+            extended = true;
+            continue;  // wait for next scancode to complete extended code
+        }
+
+        bool released = (scancode & 0x80) != 0;
+        uint8_t keycode = scancode & 0x7F;
+
+        if (extended) {
+            // Handle extended key presses/releases
+            if (released) {
+                // Key release extended keys
+                if (keycode == 0x1D) ctrl_pressed = false;   // Right Ctrl released
+                else if (keycode == 0x38) altgr_pressed = false;  // Right Alt (AltGr) released
+                extended = false;
+                continue;
+            }
+            // Key press extended keys
+            switch (keycode) {
+                case 0x48: c = KEY_UP; break;
+                case 0x50: c = KEY_DOWN; break;
+                case 0x4B: c = KEY_LEFT; break;
+                case 0x4D: c = KEY_RIGHT; break;
+                case 0x47: c = KEY_HOME; break;
+                case 0x1D: ctrl_pressed = true; break;  
+                case 0x38: altgr_pressed = true; break;  
+                default: break;
+            }
+            extended = false;
+            if (c != 0) return c;
+            continue;
+        }
+
+        // Handle modifiers (non-extended)
+        switch (keycode) {
+            case 0x2A:  // Left Shift
+            case 0x36:  // Right Shift
+                shift_pressed = !released;
+                continue;
+            case 0x3A:  // Caps Lock toggle on press
+                if (!released) caps_lock_on = !caps_lock_on;
+                continue;
+            case 0x1D:  // Left Ctrl
+                ctrl_pressed = !released;
+                continue;
+            case 0x38:  // Left Alt
+                alt_pressed = !released;
+                continue;
+        }
+        if (released) continue;  // ignore key releases for regular keys
+
+        // Determine modifier state for lookup
+        KeyModifier mod = MOD_Normal;
+        if (altgr_pressed) {
+            mod = MOD_AltGr;
+        } else if (shift_pressed ^ caps_lock_on) {
+            mod = MOD_Shift;
+        }
+
+        unsigned char base_char = keymaps[current_Language][mod][keycode];
+
+        // Ctrl + letter => control character (only if AltGr NOT pressed)
+        if (ctrl_pressed && base_char >= 'a' && base_char <= 'z' && !altgr_pressed) {
+            base_char = base_char - 'a' + 1;
+        }
+
+        if (base_char != 0) {
+            return base_char;  
+        }
+        
     }
 
-    // Modifier keys
-    switch (keycode) {
-        case 0x2A: // Left Shift
-        case 0x36: // Right Shift
-            shift_pressed = !released;
-            return 0;
-        case 0x3A: // Caps Lock
-            if (!released) caps_lock_on = !caps_lock_on;
-            return 0;
-        case 0x1D: // Ctrl
-            ctrl_pressed = !released;
-            return 0;
-        case 0x38: // Alt
-            alt_pressed = !released;
-            return 0;
-    }
-    if (released) return 0;
-
-    // Translate scancode to char
-    unsigned char base_char = shift_pressed ? scancode_to_char_shift[keycode] : scancode_to_char[keycode];
-
-    if (caps_lock_on && base_char >= 'a' && base_char <= 'z' && !shift_pressed)
-        base_char -= 32;
-
-    if (ctrl_pressed && base_char >= 'a' && base_char <= 'z')
-        base_char = base_char - 'a' + 1;
-
-    return base_char;
+    extended = false;  
+    return 0;  // no char available now
 }
 
 
@@ -557,3 +579,8 @@ int printLine(const char* str, int line){
 void set_print_color(char color){
     print_color = color;
 }
+
+// int load_Language(){
+//     f_
+//     f_read()
+// } MAKE LATEr

@@ -22,7 +22,7 @@
 #include "../src/headers/string.h"
 #include "ff.h"			/* Declarations of FatFs API */
 #include "diskio.h"		/* Declarations of device I/O functions */
-
+#include "FatFs++.h"    /* Added methods */
 
 /*--------------------------------------------------------------------------
 
@@ -463,6 +463,11 @@ typedef struct {	/* Open object identifier with status */
 #error Wrong FF_VOLUMES setting
 #endif
 static FATFS *FatFs[FF_VOLUMES];	/* Pointer to the filesystem objects (logical drives) */
+/* CUSTOM funvc to get the fatfs sys pter */
+FATFS **get_fatfs_sys_array() {
+    return FatFs;
+}
+
 static WORD Fsid;					/* Filesystem mount ID */
 
 #if FF_FS_RPATH != 0

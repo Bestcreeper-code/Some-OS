@@ -11,6 +11,7 @@
 
 #define KEY_ESCAPE     27
 #define KEY_BACKSPACE  8
+#define KEY_ENTER      '\n'
 #define KEY_UP         0x80
 #define KEY_DOWN       0x81
 #define KEY_LEFT       0x82
@@ -21,8 +22,8 @@ extern volatile uint16_t* video_memory;
 extern int vgaX, vgaY;
 
 // Keyboard state
-extern bool shift_pressed, caps_lock_on, ctrl_pressed, alt_pressed;
-
+extern bool shift_pressed, caps_lock_on, ctrl_pressed, alt_pressed, altgr_pressed;
+extern char current_Language;
 // VGA/Screen output
 void put_char(int x, int y, uint8_t c, uint8_t color);
 char get_char(int x, int y);

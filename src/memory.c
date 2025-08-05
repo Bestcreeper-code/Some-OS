@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include "data/globals.h"
 
-#define FREE_REGION_MAP_ADDR 0x2710  
+
 
 static inline free_region_map_t* get_free_region_map(void) {
     return (free_region_map_t*)FREE_REGION_MAP_ADDR;
