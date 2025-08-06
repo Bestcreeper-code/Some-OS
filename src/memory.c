@@ -80,6 +80,45 @@ void force_alloc(uint64_t adress, uint64_t size) {
     }
 }
 
+void force_free(uint64_t address, uint64_t size) {
+    free_region_map_t* map = get_free_region_map();
+    uint64_t new_start = address;
+    uint64_t new_end = address + size;
+
+    // Try to merge with existing regions
+    for (int i = 0; i < map->free_region_count; i++) {
+        free_region_t* region = &map->free_regions[i];
+        uint64_t region_start = region->base_addr;
+        uint64_t region_end = region->base_addr + region->length;
+
+        // Merge with region before
+        if (new_end == region_start) {
+            region->base_addr = new_start;
+            region->length += size;
+            return;
+        }
+
+        // Merge with region after
+        if (new_start == region_end) {
+            region->length += size;
+            return;
+        }
+
+        // Check for exact duplicate (shouldn't happen, but just in case)
+        if (new_start >= region_start && new_end <= region_end) {
+            return; // Already free
+        }
+    }
+
+    // No merge possible — insert as new region
+    if (map->free_region_count < MAX_FREE_REGIONS) {
+        map->free_regions[map->free_region_count].base_addr = new_start;
+        map->free_regions[map->free_region_count].length = size;
+        map->free_region_count++;
+    }
+    // else: no space to track this free region; memory gets lost (fragmentation)
+}
+
 
 void parse_memory_map(multiboot_info_t* mb_info) {
     free_region_map_t* map = get_free_region_map();

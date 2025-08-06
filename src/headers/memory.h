@@ -22,6 +22,7 @@ typedef struct {
 void parse_memory_map(multiboot_info_t* mb_info);
 
 void force_alloc(uint64_t adress, uint64_t size);
+void force_free(uint64_t address, uint64_t size);
 uint64_t get_pter_size(void* pter);
 
 void* malloc(size_t _Size);

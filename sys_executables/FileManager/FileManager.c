@@ -4,6 +4,7 @@
 #include "../../src/headers/FileSystem.h"
 #include "../../src/headers/time.h"
 #include "Graphics/graphics.h"
+#include "res.h"
 #include "../../src/data/globals.h"
 //y capped to 125 smh
 #define MAX_DISPLAYED_ENTRIES 10
@@ -43,6 +44,7 @@ change_dir:
     draw_bitmap_string(current_dir,0,0,4,6,0x12,NULL,true,1);
 
     uint8_t input = 0;
+
     while (true)
     {
 
@@ -79,7 +81,11 @@ change_dir:
         // case KEY_HOME:
         //     if(strcpy(current_dir,"0:/") == FR_OK) goto change_dir;
         //     break;
-        
+        case 'e':case 'E':
+            char* parts[2] = {current_dir,dir_content[scroll_index + cursor_index]};
+            Open_File_Edit_Popup(Concat(parts,2,'/'));
+            break;
+            
         case 'C':
         case 'c':
             if (alt_pressed)
