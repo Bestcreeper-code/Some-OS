@@ -17,15 +17,15 @@ static char print_color = 0x0F; //white on black
 
 void put_char(int x, int y,uint8_t c, uint8_t color) {
     if (x < 0 || x >= 80 || y < 0 || y >= 25) return;
-    switch(graphics_mode){
-        case 0x03:
+    // switch(graphics_mode){
+    //     case 0x03:
             text_mode_memory[y * 80 + x] = (uint16_t)c | ((uint16_t)color << 8);
-            break;
+            // break;
 
         // case 0x13:
         //     draw_bitmap_char(c,x * 4,y * 8,4,6,color,NULL,true);
         //     break;
-    }
+    // }
 }
 
 char get_char(int x, int y) {
@@ -228,7 +228,7 @@ unsigned char GetInputChar() {
 
         // Ctrl modifies only a-z chars and only if AltGr NOT pressed
         if (ctrl_pressed && base_char >= 'a' && base_char <= 'z' && !altgr_pressed) {
-            base_char = base_char - 'a' + 1; // Ctrl + letter → control char
+            base_char = base_char -'a' + CTRL_KEY_COMBO; // Ctrl + letter → control char
         }
 
         c = base_char;
@@ -313,7 +313,7 @@ unsigned char GetInputCharNonBlocking(void) {
 
         // Ctrl + letter => control character (only if AltGr NOT pressed)
         if (ctrl_pressed && base_char >= 'a' && base_char <= 'z' && !altgr_pressed) {
-            base_char = base_char - 'a' + 1;
+            base_char = base_char -'a' + CTRL_KEY_COMBO;
         }
 
         if (base_char != 0) {

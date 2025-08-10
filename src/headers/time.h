@@ -3,8 +3,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
-#define TICKS_AMOUNT_POINTER 0x2700
+#include "addresses.h"
+// #define TICKS_AMOUNT_POINTER 0x2700
 
 typedef struct {
     uint8_t second;

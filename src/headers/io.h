@@ -17,6 +17,7 @@
 #define KEY_LEFT       0x82
 #define KEY_RIGHT      0x83
 #define KEY_HOME       0x84
+#define CTRL_KEY_COMBO 159
 
 extern volatile uint16_t* video_memory;
 extern int vgaX, vgaY;

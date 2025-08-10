@@ -1,12 +1,14 @@
 #include <stdint.h>
 #include "multiboot_info.h"
 #include <stddef.h>
+#include "addresses.h"
 
 #define MULTIBOOT_MMAP_FREE_MEMORY  1
 #define MULTIBOOT_MMAP_RESERVED     2
 
 #define MAX_FREE_REGIONS 128
-#define FREE_REGION_MAP_ADDR 0x2710  
+
+// #define FREE_REGION_MAP 0x2710  
 
 typedef struct {
     uint64_t base_addr;

@@ -8,7 +8,7 @@
 
 
 static inline free_region_map_t* get_free_region_map(void) {
-    return (free_region_map_t*)FREE_REGION_MAP_ADDR;
+    return (free_region_map_t*)FREE_REGION_MAP;
 }
 
 void force_alloc(uint64_t adress, uint64_t size) {
@@ -122,7 +122,7 @@ void force_free(uint64_t address, uint64_t size) {
 
 void parse_memory_map(multiboot_info_t* mb_info) {
     free_region_map_t* map = get_free_region_map();
-    force_alloc(FREE_REGION_MAP_ADDR,sizeof(free_region_map_t));
+    force_alloc(FREE_REGION_MAP,sizeof(free_region_map_t));
     map->free_region_count = 0;
     memset(map->free_regions, 0, sizeof(free_region_t) * MAX_FREE_REGIONS);
     

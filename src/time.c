@@ -13,7 +13,7 @@
 #define PIT_CHANNEL0  0x40
 #define PIT_FREQUENCY 1000  // 1000 Hz = 1ms per tick
 
-uint64_t* timer_ticks = (uint64_t*) TICKS_AMOUNT_POINTER;
+uint64_t* timer_ticks = (uint64_t*) TICKS_AMOUNT;
 
 
 #include "headers/asm.h" // for outb()
@@ -40,7 +40,7 @@ void pic_remap() {
 // ----------------- PIT -----------------
 
 void pit_init() {
-    force_alloc(TICKS_AMOUNT_POINTER,sizeof(uint64_t));
+    force_alloc(TICKS_AMOUNT,sizeof(uint64_t));
     *timer_ticks =0;
     
     uint16_t divisor = 1193180 / PIT_FREQUENCY;

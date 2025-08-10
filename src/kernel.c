@@ -39,7 +39,7 @@ void kmain(unsigned long magic, unsigned long addr) {
     printf("Magic number: 0x%x\n", (void*)magic);
     printf("Multiboot info address: 0x%p\n", (void*)addr);
     
-    *((uint32_t*)multiboot_info_storing_adress) = addr;
+    *((uint32_t*)MULTIBOOT_INFO_STORING_ADRESS) = addr;
     parse_memory_map( Get_multiboot_info() );
     
     
