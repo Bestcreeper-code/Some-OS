@@ -12,166 +12,16 @@
 volatile uint8_t* fb = (uint8_t*)0xA0000;
 
 
-void vga_set_mode_03h() {
-    graphics_mode = 0x03;
-    // VGA mode 03h (80x25 color text) sequencer registers
-    uint8_t seq_regs[5] = {0x03, 0x01, 0x03, 0x00, 0x03};  // Clocking Mode is 0x00 (not 0x01)
-    
-    // CRT Controller registers (0x3D4/0x3D5)
-    uint8_t crtc_regs[25] = {
-        0x5B, 0x4F, 0x50, 0x82, 0x55,
-        0x81, 0xBF, 0x1F, 0x00, 0x4F,
-        0x0D, 0x0E, 0x00, 0x00, 0x00,
-        0x50, 0x9C, 0x0E, 0x8F, 0x28,
-        0x1F, 0x96, 0xB9, 0xA0, 0xFF
-    };
-
-    // Graphics Controller registers (9 registers, indexes 0-8)
-    uint8_t gfx_regs[9] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x10, 0x0E, 0x00, 0xFF };
-
-    // Attribute Controller registers (21 registers)
-    uint8_t attr_regs[21] = {
-        0x00, 0x01, 0x02, 0x03, 0x04,
-        0x05, 0x06, 0x07, 0x08, 0x09,
-        0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
-        0x0F, 0x41, 0x00, 0x0F, 0x08,
-        0x00
-    };
-
-    int i;
-
-    // 1. Disable video output during setup (reset sequencer)
-    outb(0x3C4, 0x00);
-    outb(0x3C5, 0x03);
-
-    // 2. Set sequencer registers
-    for (i = 0; i < 5; i++) {
-        outb(0x3C4, i);
-        outb(0x3C5, seq_regs[i]);
-    }
-
-    // 3. Re-enable sequencer (clear reset bit 0)
-    outb(0x3C4, 0x00);
-    outb(0x3C5, 0x01);
-
-    // 4. Set miscellaneous output register
-    outb(0x3C2, 0x67);  // Typical value for 80x25 text mode
-
-    // 5. Unlock CRTC registers (clear bit 7 of register 0x11)
-    outb(0x3D4, 0x11);
-    uint8_t val = inb(0x3D5);
-    outb(0x3D5, val & 0x7F);
-
-    // 6. Set CRT Controller registers
-    for (i = 0; i < 25; i++) {
-        outb(0x3D4, i);
-        outb(0x3D5, crtc_regs[i]);
-    }
-
-    // 7. Lock CRTC registers (set bit 7 of register 0x11)
-    outb(0x3D4, 0x11);
-    val = inb(0x3D5);
-    outb(0x3D5, val | 0x80);
-
-    // 8. Set graphics controller registers (9 registers)
-    for (i = 0; i < 9; i++) {
-        outb(0x3CE, i);
-        outb(0x3CF, gfx_regs[i]);
-    }
-
-    // 9. Set attribute controller registers
-    for (i = 0; i < 21; i++) {
-        inb(0x3DA);  // Reset flip-flop by reading input status register 1
-        outb(0x3C0, i);
-        outb(0x3C0, attr_regs[i]);
-    }
-
-    // 10. Enable video output (set bit 5 of attribute controller register 0x10)
-    inb(0x3DA);  // Reset flip-flop
-    outb(0x3C0, 0x20);
-
-    
-    ClearScreen();
-}
+extern  uint8_t font8x16[256 * 16]; // define somewhere in your data section
 
 
 
-
-
-void vga_set_mode_13h() {
-    graphics_mode = 0x13;
-    // Sequencer registers (Index port 0x3C4, Data port 0x3C5)
-    uint8_t seq_regs[5] = { 0x03, 0x01, 0x0F, 0x00, 0x0E };
-
-    // CRT Controller registers (0x3D4/0x3D5)
-    uint8_t crtc_regs[25] = {
-        0x5F, 0x4F, 0x50, 0x82, 0x54,
-        0x80, 0xBF, 0x1F, 0x00, 0x41,
-        0x00, 0x00, 0x00, 0x00, 0x00,
-        0x9C, 0x0E, 0x8F, 0x28, 0x40,
-        0x96, 0xB9, 0xA3, 0xFF, 0x00
-    };
-
-    // Graphics Controller registers (0x3CE/0x3CF)
-    uint8_t gfx_regs[9] = { 0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x05, 0x0F, 0xFF };
-
-    // Attribute Controller registers (0x3C0)
-    uint8_t attr_regs[21] = {
-        0x00, 0x01, 0x02, 0x03, 0x04,
-        0x05, 0x06, 0x07, 0x08, 0x09,
-        0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
-        0x0F, 0x41, 0x00, 0x0F, 0x00,
-        0x00
-    };
-
-    int i;
-
-    // 1. Disable video output during setup
-    outb(0x3C4, 0x00);
-    outb(0x3C5, 0x03);
-
-    // 2. Set sequencer registers
-    for (i = 0; i < 5; i++) {
-        outb(0x3C4, i);
-        outb(0x3C5, seq_regs[i]);
-    }
-
-    // 3. Unlock CRTC registers (clear bit 7 of register 0x11)
-    outb(0x3D4, 0x11);
-    uint8_t val = inb(0x3D5);
-    outb(0x3D5, val & 0x7F);
-
-    // 4. Set CRTC registers
-    for (i = 0; i < 25; i++) {
-        outb(0x3D4, i);
-        outb(0x3D5, crtc_regs[i]);
-    }
-
-    // 5. Set graphics controller registers
-    for (i = 0; i < 9; i++) {
-        outb(0x3CE, i);
-        outb(0x3CF, gfx_regs[i]);
-    }
-
-    // 6. Set attribute controller registers
-    for (i = 0; i < 21; i++) {
-        // Reset flip-flop by reading from 0x3DA (input status register 1)
-        inb(0x3DA);
-
-        outb(0x3C0, i);
-        outb(0x3C0, attr_regs[i]);
-    }
-
-    // 7. Enable video output (bit 5 of attribute controller register 0x10)
-    inb(0x3DA);      // Reset flip-flop
-    outb(0x3C0, 0x20);    // Enable video output
-}
 
 
 
 void put_pixel(int x, int y, uint8_t color) {
 #if (QEMU)
-    int pitch = 512;
+    int pitch = 320;
 #else
     int pitch = Get_multiboot_info()->framebuffer_pitch;
 #endif

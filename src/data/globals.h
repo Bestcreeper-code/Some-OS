@@ -3,7 +3,7 @@
 #include "../../FatFs/ff.h"
 
 #define DEBUG_MODE 0
-#define QEMU       1
+#define QEMU       0
 #define FATFS_SYS_ADDR 0x24C0
 
 

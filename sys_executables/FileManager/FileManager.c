@@ -3,9 +3,12 @@
 #include "../../src/headers/memory.h"
 #include "../../src/headers/FileSystem.h"
 #include "../../src/headers/time.h"
+#include "../../src/headers/random.h"
+#include "../../src/headers/vga_modes.h"
 #include "Graphics/graphics.h"
 #include "res.h"
 #include "../../src/data/globals.h"
+#include "../../src/data/textconsts.h"
 //y capped to 125 smh
 #define MAX_DISPLAYED_ENTRIES 10
 
@@ -22,7 +25,7 @@ void app_main() {
 
     current_dir[0] = '0'; current_dir[1] = ':'; current_dir[2] = '/'; current_dir[3] = '\0';
     
-    vga_set_mode_13h();
+    vga_set_mode(0x13);
 
 change_dir:
     cursor_index = 0;
@@ -113,7 +116,8 @@ cleanup:
         }
         free(dir_content);
     }
-    clear_13h_screen(0);
-    vga_set_mode_03h();
+    for (int i = 0; i < 16/*  * 512 */; i++) {
+        fb[i] = rand() % 256;  
+    }
     sleep(1000);
 }

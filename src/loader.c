@@ -1,10 +1,12 @@
 #include "headers/loader.h"
 #include "headers/addresses.h"
 #include "headers/FileSystem.h"
+#include "headers/memory.h"
 #include "headers/video.h"
+#include "headers/vga_modes.h"
 
 
-void* new_process(const char* path){
+void* new_process(char* path){
     FIL file;
     FRESULT fr;
     void* res = NULL;
@@ -25,7 +27,7 @@ void* new_process(const char* path){
 
                 //loading the file
                 uint32_t byte_read = 0;
-                if (f_read(&file, process_entry, file_size, (UINT *)&byte_read) != FR_OK || byte_read != file_size) {
+                if (f_read(&file, (void*)process_entry, file_size, (UINT *)&byte_read) != FR_OK || byte_read != file_size) {
                     free(process_addr);
                     break;
                 }
@@ -34,10 +36,10 @@ void* new_process(const char* path){
                 table->entries[i].base = process_entry;
                 table->entries[i].size = file_size;
                 table->entries[i].stack_base = process_entry-1;
-                table->entries[i].stack_end = process_addr;
+                table->entries[i].stack_end = (uint32_t)process_addr;
 
 
-                res = process_entry;
+                res = (void*)process_entry;
                 break;
             }
         }
@@ -57,5 +59,5 @@ void switch_process(uint32_t old_proc_esp){
     Process_Table* table = (Process_Table*) PROCESS_TABLE;
     table->entries[table->current_process].stack_end = old_proc_esp;
 
-    vga_set_mode_03h();
+    vga_set_mode(0x03);
 }

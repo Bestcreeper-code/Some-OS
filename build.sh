@@ -32,6 +32,7 @@ gcc -m32 -g -ffreestanding -c src/gdt.c -o build/gdt.o
 gcc -m32 -g -ffreestanding -c src/video.c -o build/video.o
 gcc -m32 -g -ffreestanding -c src/data/textconsts.c -o build/textconsts.o
 gcc -m32 -g -ffreestanding -c src/math.c -o build/math.o
+gcc -m32 -g -ffreestanding -c src/vga_modes.c -o build/vga_modes.o
 
 # === Compile FatFs ===
 echo "[3] Compiling FatFs..."
@@ -50,7 +51,7 @@ ld -m elf_i386 -Ttext=0x100000 -z noexecstack -o kernel.elf \
   build/ATA_IO.o build/FileSystem.o build/multiboot_info.o \
   build/ff.o build/diskio.o build/ffsystem.o build/ffunicode.o \
   build/idt.o build/isr13.o build/dummy_handle.o build/gdt.o build/gdt_asm.o \
-  build/video.o build/textconsts.o
+  build/video.o build/textconsts.o build/vga_modes.o
 
 # === Convert to binary for GRUB ===
 echo "[5] Generating kernel.bin..."

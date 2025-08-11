@@ -41,6 +41,6 @@ keyboard_handler:
 switch_proc:
     sti
     push dword [proc_esp]
-    call foo      ; call function
+    ; call foo      ; call function
     ; add esp, 4    ; clean up the argument off the stack in func
 

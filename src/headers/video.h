@@ -6,9 +6,6 @@
 
 extern volatile uint8_t* fb;
 
-void vga_set_mode_03h();
-void vga_set_mode_13h();
-
 void put_pixel(int x, int y, uint8_t color);
 void draw_bitmap_char(const unsigned char character,int x,int y,int width,int height,char color,void* font,bool use_default_font);
 void draw_bitmap_string(const char* str, int x_pos, int y_pos, int width, int height, char color, void* font, bool use_default_font, int space);

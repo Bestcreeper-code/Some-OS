@@ -18,7 +18,7 @@ extern int vgaX, vgaY;
 
 
 void kmain(unsigned long magic, unsigned long addr) {
-    vga_set_mode_03h();
+    // vga_set_mode_03h();
     initGdt();
     idt_init();
     pic_remap();

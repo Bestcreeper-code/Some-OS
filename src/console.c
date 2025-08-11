@@ -294,6 +294,7 @@ void Start_Console() {
     set_print_color(0x82);
     printf(TitleAsciiString);
     printf("\n");
+    printf("%d",Get_multiboot_info()->framebuffer_pitch);
     set_print_color(0x0F);
     
 

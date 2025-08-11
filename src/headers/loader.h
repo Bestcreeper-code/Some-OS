@@ -23,7 +23,7 @@ typedef struct
 }__attribute__((packed)) Process_Table;
 
 
-int new_process(const char* path);
+void* new_process(char* path);
 
 void switch_process(uint32_t old_proc_esp);
  

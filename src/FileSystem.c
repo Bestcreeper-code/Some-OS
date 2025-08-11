@@ -1,7 +1,10 @@
 #include "headers/FileSystem.h"
 #include "headers/string.h"
 #include "headers/memory.h"
+#include "headers/time.h"
 #include "headers/video.h"
+#include "headers/vga_modes.h"
+#include "data/textconsts.h"
 
 #define EXEC_LOAD_ADRESS 0x200000
 
@@ -243,9 +246,9 @@ int Load_bin_exe(const char* file_path){
             // Call the loaded binary
             entry();
 
-            vga_set_mode_03h();
-
+            vga_set_mode(0x03);
             ClearScreen();
+
             // If it returns (unlikely), print something
             printf("Returned from %s\n",file_path);
 
