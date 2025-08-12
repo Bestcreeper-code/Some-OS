@@ -36,7 +36,7 @@ void* new_process(char* path){
                 table->entries[i].base = process_entry;
                 table->entries[i].size = file_size;
                 table->entries[i].stack_base = process_entry-1;
-                table->entries[i].stack_end = (uint32_t)process_addr;
+                table->entries[i].stack_end = process_entry-1;
 
 
                 res = (void*)process_entry;
@@ -60,4 +60,45 @@ void switch_process(uint32_t old_proc_esp){
     table->entries[table->current_process].stack_end = old_proc_esp;
 
     vga_set_mode(0x03);
+    ClearScreen();
+    uint8_t current = 0;
+    while(true){
+        for (int i = 0; i < MAX_PROCESSES; i++)
+        {
+            if (i = current)set_print_color(14);
+            else set_print_color(15);
+            if (table->entries[i].name){
+                printf("key %d: %s\n",i,table->entries[i].name);
+            }
+        }
+        set_print_color(15);
+        uint8_t in = getc();
+        switch (in)
+        {
+        case KEY_DOWN:
+            if(current > 0)current--;
+            break;
+        case KEY_UP:
+            if(current < MAX_PROCESSES-1)current++;
+            break;
+        
+        default:
+            break;
+        }
+        
+
+    }
+}
+
+void clear_processes(){
+    Process_Table* table = (Process_Table*) PROCESS_TABLE;
+    for (int i = 0; i < 16; i++)
+    {
+        free(table->entries[i].name);
+    }
+    memset(table->entries,0,sizeof(table->entries));
+    table->current_process = 0;
+    strcpy(table->entries[0].name, "Terminal");
+    table->entries->stack_base = KERNEL_STACK_BASE;
+    table->entries->stack_end = KERNEL_STACK_BASE;
 }

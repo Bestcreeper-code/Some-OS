@@ -28,8 +28,8 @@ extern char current_Language;
 // VGA/Screen output
 void put_char(int x, int y, uint8_t c, uint8_t color);
 char get_char(int x, int y);
-void Scroll_Down(void);
-void ClearScreen(void);
+void Scroll_Down();
+void ClearScreen();
 void move_cursor(int x, int y);
 void enable_cursor(uint8_t start, uint8_t end);
 
@@ -47,6 +47,9 @@ int printLine(const char* str, int line);
 void set_print_color(char color);
 
 // Input
-unsigned char GetInputChar(void);
-unsigned char GetInputCharNonBlocking(void);
+unsigned char GetInputChar();
+unsigned char GetInputCharNonBlocking();
+
+unsigned char getc();
+unsigned char getc_nb();
 #endif

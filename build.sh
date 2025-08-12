@@ -14,6 +14,8 @@ nasm -f elf32 src/asm/irq0_handle.asm -o build/irq0_handle.o
 nasm -f elf32 src/asm/isr13.asm -o build/isr13.o
 nasm -f elf32 src/asm/dummy_handle.asm -o build/dummy_handle.o
 nasm -f elf32 src/asm/gdt.asm -o build/gdt_asm.o
+nasm -f elf32 src/asm/keyboard_interrupt.asm -o build/keyboard_interrupt_asm.o
+nasm -f elf32 src/asm/processes.asm -o build/processes_asm.o
 
 # === Compile kernel and core files ===
 echo "[2] Compiling kernel and core files..."
@@ -33,6 +35,7 @@ gcc -m32 -g -ffreestanding -c src/video.c -o build/video.o
 gcc -m32 -g -ffreestanding -c src/data/textconsts.c -o build/textconsts.o
 gcc -m32 -g -ffreestanding -c src/math.c -o build/math.o
 gcc -m32 -g -ffreestanding -c src/vga_modes.c -o build/vga_modes.o
+gcc -m32 -g -ffreestanding -c src/loader.c -o build/loader.o
 
 # === Compile FatFs ===
 echo "[3] Compiling FatFs..."
@@ -45,13 +48,15 @@ gcc -m32 -g -ffreestanding -c FatFs/ffunicode.c -o build/ffunicode.o
 echo "[4] Linking kernel ELF..."
 ld -m elf_i386 -Ttext=0x100000 -z noexecstack -o kernel.elf \
   build/multiboot_header.o \
-  build/irq0_handle.o \
+  build/irq0_handle.o build/keyboard_interrupt_asm.o \
   build/kernel.o build/console.o build/memory.o build/random.o \
   build/time.o build/io.o build/string.o \
   build/ATA_IO.o build/FileSystem.o build/multiboot_info.o \
   build/ff.o build/diskio.o build/ffsystem.o build/ffunicode.o \
   build/idt.o build/isr13.o build/dummy_handle.o build/gdt.o build/gdt_asm.o \
-  build/video.o build/textconsts.o build/vga_modes.o
+  build/video.o build/textconsts.o build/vga_modes.o build/loader.o \
+  build/processes_asm.o
+
 
 # === Convert to binary for GRUB ===
 echo "[5] Generating kernel.bin..."
@@ -90,7 +95,7 @@ fi
 
 # === Launch QEMU ===
 echo "[10] Launching QEMU..."
-qemu-system-i386 -boot d -cdrom os.iso -m 512M -drive file=disk.img,format=raw,if=ide  #-no-reboot -d int,cpu_reset
+qemu-system-i386 -boot d -cdrom os.iso -m 512M -drive file=disk.img,format=raw,if=ide #-s -S #-no-reboot -d int,cpu_reset
 
 
 echo "[*] Build complete!"

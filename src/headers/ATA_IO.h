@@ -18,11 +18,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef struct __attribute__((packed)){
-    uint16_t type;
-    char data[508];
-    uint16_t nextSector;
-} DiskSector;
 
 
 

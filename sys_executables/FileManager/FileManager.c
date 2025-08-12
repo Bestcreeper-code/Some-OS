@@ -105,7 +105,7 @@ change_dir:
             uint8_t text_color = i == cursor_index? 0x25 : 0x3F; //is it selected?
             draw_bitmap_string(dir_content[scroll_index + i], 13, 13 + (i*6), 4, 6, text_color, NULL, true, 1);
         }
-        input = GetInputChar();
+        input = getc();
     }
 cleanup:
     free(current_dir);

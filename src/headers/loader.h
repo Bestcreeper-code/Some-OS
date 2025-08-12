@@ -22,6 +22,7 @@ typedef struct
     Process_Table_Entry entries[16];
 }__attribute__((packed)) Process_Table;
 
+void clear_processes();
 
 void* new_process(char* path);
 

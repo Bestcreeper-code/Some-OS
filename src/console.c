@@ -38,7 +38,7 @@ String Console_Get_Command() {
     int cursor_index = 0;
 
     while (true) {
-        unsigned char c = GetInputChar();
+        unsigned char c = getc();
 
         int total_length = string.length + start;
         int lines_used = (total_length + VGA_MAX_COLS - 1) / VGA_MAX_COLS;

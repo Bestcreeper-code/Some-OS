@@ -150,7 +150,7 @@ bool alt_pressed = false;
 bool altgr_pressed = false;
 bool extended = false;
 
-
+volatile uint8_t* input_char_buffer = (volatile uint8_t*)INPUT_CHAR_BUFFER_ADDRESS;
 
 
 
@@ -236,94 +236,109 @@ unsigned char GetInputChar() {
     return c;
 }
 
+
+
 unsigned char GetInputCharNonBlocking(void) {
-    unsigned char c = 0;
-
-    while (true) {
-        uint8_t status;
-        __asm__ __volatile__("inb $0x64, %0" : "=a"(status));
-        if (!(status & 0x01)) {
-            extended = false;  // clear extended flag before exit if no data
-            break;
-        }
-
-        uint8_t scancode;
-        __asm__ __volatile__("inb $0x60, %0" : "=a"(scancode));
-
-        if (scancode == 0xE0) {
-            extended = true;
-            continue;  // wait for next scancode to complete extended code
-        }
-
-        bool released = (scancode & 0x80) != 0;
-        uint8_t keycode = scancode & 0x7F;
-
-        if (extended) {
-            // Handle extended key presses/releases
-            if (released) {
-                // Key release extended keys
-                if (keycode == 0x1D) ctrl_pressed = false;   // Right Ctrl released
-                else if (keycode == 0x38) altgr_pressed = false;  // Right Alt (AltGr) released
-                extended = false;
-                continue;
-            }
-            // Key press extended keys
-            switch (keycode) {
-                case 0x48: c = KEY_UP; break;
-                case 0x50: c = KEY_DOWN; break;
-                case 0x4B: c = KEY_LEFT; break;
-                case 0x4D: c = KEY_RIGHT; break;
-                case 0x47: c = KEY_HOME; break;
-                case 0x1D: ctrl_pressed = true; break;  
-                case 0x38: altgr_pressed = true; break;  
-                default: break;
-            }
-            extended = false;
-            if (c != 0) return c;
-            continue;
-        }
-
-        // Handle modifiers (non-extended)
-        switch (keycode) {
-            case 0x2A:  // Left Shift
-            case 0x36:  // Right Shift
-                shift_pressed = !released;
-                continue;
-            case 0x3A:  // Caps Lock toggle on press
-                if (!released) caps_lock_on = !caps_lock_on;
-                continue;
-            case 0x1D:  // Left Ctrl
-                ctrl_pressed = !released;
-                continue;
-            case 0x38:  // Left Alt
-                alt_pressed = !released;
-                continue;
-        }
-        if (released) continue;  // ignore key releases for regular keys
-
-        // Determine modifier state for lookup
-        KeyModifier mod = MOD_Normal;
-        if (altgr_pressed) {
-            mod = MOD_AltGr;
-        } else if (shift_pressed ^ caps_lock_on) {
-            mod = MOD_Shift;
-        }
-
-        unsigned char base_char = keymaps[current_Language][mod][keycode];
-
-        // Ctrl + letter => control character (only if AltGr NOT pressed)
-        if (ctrl_pressed && base_char >= 'a' && base_char <= 'z' && !altgr_pressed) {
-            base_char = base_char -'a' + CTRL_KEY_COMBO;
-        }
-
-        if (base_char != 0) {
-            return base_char;  
-        }
-        
+    uint8_t status;
+    __asm__ __volatile__("inb $0x64, %0" : "=a"(status));
+    if (!(status & 0x01)) {
+        extended = false;  // no data, reset state
+        return 0;
     }
 
-    extended = false;  
-    return 0;  // no char available now
+    // There is data available, read one scancode
+    uint8_t scancode;
+    __asm__ __volatile__("inb $0x60, %0" : "=a"(scancode));
+
+    // Handle extended scancode prefix 0xE0
+    if (scancode == 0xE0) {
+        extended = true;
+        return 0;  // no char yet, next call will read next scancode
+    }
+
+    bool released = (scancode & 0x80) != 0;
+    uint8_t keycode = scancode & 0x7F;
+
+    if (extended) {
+        // Handle extended keys (similar logic as your original)
+        if (released) {
+            if (keycode == 0x1D) ctrl_pressed = false;
+            else if (keycode == 0x38) altgr_pressed = false;
+            extended = false;
+            return 0;
+        }
+        unsigned char c = 0;
+        switch (keycode) {
+            case 0x48: c = KEY_UP; break;
+            case 0x50: c = KEY_DOWN; break;
+            case 0x4B: c = KEY_LEFT; break;
+            case 0x4D: c = KEY_RIGHT; break;
+            case 0x47: c = KEY_HOME; break;
+            case 0x1D: ctrl_pressed = true; break;
+            case 0x38: altgr_pressed = true; break;
+        }
+        extended = false;
+        return c;
+    }
+
+    // Handle modifiers for non-extended keys
+    switch (keycode) {
+        case 0x2A:
+        case 0x36:
+            shift_pressed = !released;
+            return 0;
+        case 0x3A:
+            if (!released) caps_lock_on = !caps_lock_on;
+            return 0;
+        case 0x1D:
+            ctrl_pressed = !released;
+            return 0;
+        case 0x38:
+            alt_pressed = !released;
+            return 0;
+    }
+
+    if (released) return 0;
+
+    KeyModifier mod = MOD_Normal;
+    if (altgr_pressed) {
+        mod = MOD_AltGr;
+    } else if (shift_pressed ^ caps_lock_on) {
+        mod = MOD_Shift;
+    }
+
+    unsigned char base_char = keymaps[current_Language][mod][keycode];
+
+    if (ctrl_pressed && base_char >= 'a' && base_char <= 'z' && !altgr_pressed) {
+        base_char = base_char - 'a' + CTRL_KEY_COMBO;
+    }
+
+    return base_char ;
+}
+
+
+unsigned char getc(){
+    unsigned char chr = 0;
+    while(chr == 0){
+        if(input_char_buffer[0]){
+            chr = input_char_buffer[0];
+            memcpy((void*)&input_char_buffer[0],(void*)&input_char_buffer[1],INPUT_CHAR_BUFFER_SIZE-1);
+            input_char_buffer[INPUT_CHAR_BUFFER_SIZE-1] = 0;
+        }
+    }
+    return chr;
+}
+
+
+unsigned char getc_nb(){
+    unsigned char chr = 0;
+
+    if(input_char_buffer[0]){
+        chr = input_char_buffer[0];
+        memcpy((void*)&input_char_buffer[0],(void*)&input_char_buffer[1],INPUT_CHAR_BUFFER_SIZE-1);
+    }
+
+    return chr;
 }
 
 
@@ -332,7 +347,7 @@ String get_string_after_index(int start) {
     int cursor_index = 0; // Cursor position inside string
 
     while (true) {
-        unsigned char c = GetInputChar();
+        unsigned char c = getc();
 
         if (c == 0x08) {  // Backspace
             if (cursor_index > 0) {

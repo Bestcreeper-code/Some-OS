@@ -89,7 +89,7 @@ uint8_t Open_File_Edit_Popup(char* file) {
         }
 
 
-        unsigned char input = GetInputChar();
+        unsigned char input = getc();
 
         switch (input) {
             case KEY_UP:

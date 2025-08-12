@@ -29,7 +29,7 @@ void app_main() {
     {
         memset((void*)second_buffer, 0x0, SCREEN_PITCH * SCREEN_HEIGHT);//clear
 
-        unsigned char input = GetInputCharNonBlocking();
+        unsigned char input = getc_nb();
         if (input == 's') pl_pos.y--;
         if (input == 'w') pl_pos.y++;
         if (input == 'd') rotation = (int)(rotation+3)%360;

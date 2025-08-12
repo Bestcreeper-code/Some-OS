@@ -25,27 +25,30 @@ void kmain(unsigned long magic, unsigned long addr) {
     pit_init(); 
     __asm__ volatile ("sti"); // Enable interrupts
     ClearScreen();
+
     force_alloc(FATFS_SYS_ADDR,sizeof(FATFS));
-    mounting:
+    force_alloc(KERNEL_STACK_BASE-KERNEL_STACK_SIZE,KERNEL_STACK_SIZE);
+    
+mounting:
     FRESULT res = f_mount(FatFsSys, "0:", 1);
     if (res != FR_OK) {
         printf("Failed to mount filesystem. Error code: %d\n Trying to mount again", res);
         goto mounting;
     } else {
         printf("Filesystem mounted successfully.\n");
-        get_string();
+        // get_string();
     }
     
     printf("Magic number: 0x%x\n", (void*)magic);
     printf("Multiboot info address: 0x%p\n", (void*)addr);
     
-    *((uint32_t*)MULTIBOOT_INFO_STORING_ADRESS) = addr;
+    *((uint32_t*)MULTIBOOT_INFO_ADDRESS) = addr;
     parse_memory_map( Get_multiboot_info() );
     
     
     enable_cursor(0, 15);
     move_cursor(0, 0);
-
+    clear_processes();
     Start_Console();
 
     while (1) {

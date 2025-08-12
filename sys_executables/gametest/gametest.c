@@ -38,7 +38,7 @@ int app_main() {
 
     while (true) {
         // --- Input ---
-        c = GetInputCharNonBlocking();
+        c = getc_nb();
         if (c == KEY_UP && dir_y != 1) { dir_x = 0; dir_y = -1; }
         else if (c == KEY_DOWN && dir_y != -1) { dir_x = 0; dir_y = 1; }
         else if (c == KEY_LEFT && dir_x != 1) { dir_x = -1; dir_y = 0; }
