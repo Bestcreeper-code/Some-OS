@@ -33,4 +33,3 @@ echo "[*] build complete:"
 echo "    Relocatable ELF (with reloc info): build_execs/FileManager.rel"
 echo "    Linked ELF executable: build_execs/FileManager.elf"
 echo "    Flat binary (raw loadable): build_execs/FileManager.bin"
-

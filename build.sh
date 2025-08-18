@@ -94,8 +94,14 @@ else
 fi
 
 # === Launch QEMU ===
-echo "[10] Launching QEMU..."
-qemu-system-i386 -boot d -cdrom os.iso -m 512M -drive file=disk.img,format=raw,if=ide #-s -S #-no-reboot -d int,cpu_reset
+if [ "$1" = "-d" ]; then
+  echo "[10] Launching QEMU in GDB mode..."
+  qemu-system-i386 -boot d -cdrom os.iso -m 512M -drive file=disk.img,format=raw,if=ide -s -S #-no-reboot -d int,cpu_reset
+else
+  echo "[10] Launching QEMU..."
+  qemu-system-i386 -boot d -cdrom os.iso -m 512M -drive file=disk.img,format=raw,if=ide #-s -S #-no-reboot -d int,cpu_reset
+fi
+
 
 
 echo "[*] Build complete!"

@@ -4,6 +4,7 @@
 #include "headers/video.h"
 #include "headers/time.h"
 #include "headers/FileSystem.h"
+#include "headers/addresses.h"
 #include "data/globals.h"
 #include "data/KB_Layouts.h"
 
@@ -143,11 +144,6 @@ int printlen(const char *buffer, unsigned int length) {
 
 // Keyboard input handling + character decoding
 
-bool shift_pressed = false;
-bool caps_lock_on = false;
-bool ctrl_pressed = false;
-bool alt_pressed = false;
-bool altgr_pressed = false;
 bool extended = false;
 
 volatile uint8_t* input_char_buffer = (volatile uint8_t*)INPUT_CHAR_BUFFER_ADDRESS;
@@ -155,86 +151,86 @@ volatile uint8_t* input_char_buffer = (volatile uint8_t*)INPUT_CHAR_BUFFER_ADDRE
 
 
 
-unsigned char GetInputChar() {
-    unsigned char c = 0;
-    while (c == 0) {
-        uint8_t status;
-        __asm__ __volatile__("inb $0x64, %0" : "=a"(status));
-        if (!(status & 0x01)) continue;
+// unsigned char GetInputChar() {
+//     unsigned char c = 0;
+//     while (c == 0) {
+//         uint8_t status;
+//         __asm__ __volatile__("inb $0x64, %0" : "=a"(status));
+//         if (!(status & 0x01)) continue;
 
-        uint8_t scancode;
-        __asm__ __volatile__("inb $0x60, %0" : "=a"(scancode));
+//         uint8_t scancode;
+//         __asm__ __volatile__("inb $0x60, %0" : "=a"(scancode));
 
-        if (scancode == 0xE0) {
-            extended = true;
-            continue;
-        }
+//         if (scancode == 0xE0) {
+//             extended = true;
+//             continue;
+//         }
 
-        bool released = (scancode & 0x80) != 0;
-        uint8_t keycode = scancode & 0x7F;
+//         bool released = (scancode & 0x80) != 0;
+//         uint8_t keycode = scancode & 0x7F;
 
-        if (extended) {
-            switch (keycode) {
-                case 0x1D: ctrl_pressed = !released; break;   // Right Ctrl (extended)
-                case 0x38: altgr_pressed = !released; break;  // Right Alt (AltGr)
-            }
-            if (released) {
-                extended = false;
-                continue; // skip extended key release codes (if not caught with the switchable keys switch statement )
-            }
-            switch (keycode) {
-                case 0x48: c = KEY_UP; break;
-                case 0x50: c = KEY_DOWN; break;
-                case 0x4B: c = KEY_LEFT; break;
-                case 0x4D: c = KEY_RIGHT; break;
-                case 0x47: c = KEY_HOME; break;
+//         if (extended) {
+//             switch (keycode) {
+//                 case 0x1D: ctrl_pressed = !released; break;   // Right Ctrl (extended)
+//                 case 0x38: altgr_pressed = !released; break;  // Right Alt (AltGr)
+//             }
+//             if (released) {
+//                 extended = false;
+//                 continue; // skip extended key release codes (if not caught with the switchable keys switch statement )
+//             }
+//             switch (keycode) {
+//                 case 0x48: c = KEY_UP; break;
+//                 case 0x50: c = KEY_DOWN; break;
+//                 case 0x4B: c = KEY_LEFT; break;
+//                 case 0x4D: c = KEY_RIGHT; break;
+//                 case 0x47: c = KEY_HOME; break;
 
-                default:
-                    // Unknown extended code: ignore or handle here
-                    break;
-            }
-            extended = false;
-            if (c != 0) return c;
-            continue;
-        }
+//                 default:
+//                     // Unknown extended code: ignore or handle here
+//                     break;
+//             }
+//             extended = false;
+//             if (c != 0) return c;
+//             continue;
+//         }
 
-        // Handle modifier keys (non-extended)
-        switch (keycode) {
-            case 0x2A: // Left Shift
-            case 0x36: // Right Shift
-                shift_pressed = !released;
-                break;
-            case 0x3A: // Caps Lock
-                if (!released) caps_lock_on = !caps_lock_on;
-                break;
-            case 0x1D: // Left Ctrl
-                ctrl_pressed = !released;
-                break;
-            case 0x38: // Left Alt
-                alt_pressed = !released;
-                break;
-        }
-        if (released) continue; // ignore key releases for chars
+//         // Handle modifier keys (non-extended)
+//         switch (keycode) {
+//             case 0x2A: // Left Shift
+//             case 0x36: // Right Shift
+//                 GET_KEYBOARD_MOD_FLAG() = !released;
+//                 break;
+//             case 0x3A: // Caps Lock
+//                 if (!released) caps_lock_on = !caps_lock_on;
+//                 break;
+//             case 0x1D: // Left Ctrl
+//                 ctrl_pressed = !released;
+//                 break;
+//             case 0x38: // Left Alt
+//                 alt_pressed = !released;
+//                 break;
+//         }
+//         if (released) continue; // ignore key releases for chars
 
-        // Determine current modifier state
-        KeyModifier mod = MOD_Normal;
-        if (altgr_pressed) {
-            mod = MOD_AltGr;
-        } else if (shift_pressed ^ caps_lock_on) {
-            mod = MOD_Shift;
-        }
+//         // Determine current modifier state
+//         KeyModifier mod = MOD_Normal;
+//         if (altgr_pressed) {
+//             mod = MOD_AltGr;
+//         } else if (shift_pressed ^ caps_lock_on) {
+//             mod = MOD_Shift;
+//         }
 
-        unsigned char base_char = keymaps[current_Language][mod][keycode];
+//         unsigned char base_char = keymaps[current_Language][mod][keycode];
 
-        // Ctrl modifies only a-z chars and only if AltGr NOT pressed
-        if (ctrl_pressed && base_char >= 'a' && base_char <= 'z' && !altgr_pressed) {
-            base_char = base_char -'a' + CTRL_KEY_COMBO; // Ctrl + letter → control char
-        }
+//         // Ctrl modifies only a-z chars and only if AltGr NOT pressed
+//         if (ctrl_pressed && base_char >= 'a' && base_char <= 'z' && !altgr_pressed) {
+//             base_char = base_char -'a' + CTRL_KEY_COMBO; // Ctrl + letter → control char
+//         }
 
-        c = base_char;
-    }
-    return c;
-}
+//         c = base_char;
+//     }
+//     return c;
+// }
 
 
 
@@ -246,27 +242,27 @@ unsigned char GetInputCharNonBlocking(void) {
         return 0;
     }
 
-    // There is data available, read one scancode
     uint8_t scancode;
     __asm__ __volatile__("inb $0x60, %0" : "=a"(scancode));
 
-    // Handle extended scancode prefix 0xE0
     if (scancode == 0xE0) {
         extended = true;
-        return 0;  // no char yet, next call will read next scancode
+        return 0;  // wait for next scancode
     }
 
     bool released = (scancode & 0x80) != 0;
     uint8_t keycode = scancode & 0x7F;
 
     if (extended) {
-        // Handle extended keys (similar logic as your original)
         if (released) {
-            if (keycode == 0x1D) ctrl_pressed = false;
-            else if (keycode == 0x38) altgr_pressed = false;
+            if (keycode == 0x1D)
+                SET_KEYBOARD_MOD_FLAG(CTRL_PRESSED, false);
+            else if (keycode == 0x38)
+                SET_KEYBOARD_MOD_FLAG(ALTGR_PRESSED, false);
             extended = false;
             return 0;
         }
+
         unsigned char c = 0;
         switch (keycode) {
             case 0x48: c = KEY_UP; break;
@@ -274,47 +270,52 @@ unsigned char GetInputCharNonBlocking(void) {
             case 0x4B: c = KEY_LEFT; break;
             case 0x4D: c = KEY_RIGHT; break;
             case 0x47: c = KEY_HOME; break;
-            case 0x1D: ctrl_pressed = true; break;
-            case 0x38: altgr_pressed = true; break;
+            case 0x1D: SET_KEYBOARD_MOD_FLAG(CTRL_PRESSED, true); break;
+            case 0x38: SET_KEYBOARD_MOD_FLAG(ALTGR_PRESSED, true); break;
         }
         extended = false;
         return c;
     }
 
-    // Handle modifiers for non-extended keys
+    // Non-extended modifier keys
     switch (keycode) {
-        case 0x2A:
-        case 0x36:
-            shift_pressed = !released;
+        case 0x2A: // Left Shift
+        case 0x36: // Right Shift
+            SET_KEYBOARD_MOD_FLAG(SHIFT_PRESSED, !released);
             return 0;
-        case 0x3A:
-            if (!released) caps_lock_on = !caps_lock_on;
+        case 0x3A: // Caps Lock toggle on key press
+            if (!released) {
+                bool caps_state = (GET_KEYBOARD_MOD_FLAG(CAPSLOCK_ON) != 0);
+                SET_KEYBOARD_MOD_FLAG(CAPSLOCK_ON, !caps_state);
+            }
             return 0;
-        case 0x1D:
-            ctrl_pressed = !released;
+        case 0x1D: // Ctrl
+            SET_KEYBOARD_MOD_FLAG(CTRL_PRESSED, !released);
             return 0;
-        case 0x38:
-            alt_pressed = !released;
+        case 0x38: // Alt
+            SET_KEYBOARD_MOD_FLAG(ALT_PRESSED, !released);
             return 0;
     }
 
     if (released) return 0;
 
+    // Determine modifier for keymap lookup
     KeyModifier mod = MOD_Normal;
-    if (altgr_pressed) {
+    if (GET_KEYBOARD_MOD_FLAG(ALTGR_PRESSED)) {
         mod = MOD_AltGr;
-    } else if (shift_pressed ^ caps_lock_on) {
+    } else if ((GET_KEYBOARD_MOD_FLAG(SHIFT_PRESSED) != 0) ^ (GET_KEYBOARD_MOD_FLAG(CAPSLOCK_ON) != 0)) {
         mod = MOD_Shift;
     }
 
     unsigned char base_char = keymaps[current_Language][mod][keycode];
 
-    if (ctrl_pressed && base_char >= 'a' && base_char <= 'z' && !altgr_pressed) {
+    if ((GET_KEYBOARD_MOD_FLAG(CTRL_PRESSED) != 0) && base_char >= 'a' && base_char <= 'z' && !GET_KEYBOARD_MOD_FLAG(ALTGR_PRESSED)) {
         base_char = base_char - 'a' + CTRL_KEY_COMBO;
     }
 
-    return base_char ;
+    return base_char;
 }
+
 
 
 unsigned char getc(){
@@ -342,60 +343,52 @@ unsigned char getc_nb(){
 }
 
 
-String get_string_after_index(int start) {
-    String string = { .length = 0 };
-    int cursor_index = 0; // Cursor position inside string
+
+void get_string_after_index(int start, char* buffer) {
+    int length = 0;
+    int cursor_index = 0;
+
+    buffer[0] = '\0';  // initialize empty
 
     while (true) {
         unsigned char c = getc();
 
         if (c == 0x08) {  // Backspace
             if (cursor_index > 0) {
-                // Shift characters left from cursor position
-                for (int i = cursor_index - 1; i < string.length - 1; i++) {
-                    string.buffer[i] = string.buffer[i + 1];
-                }
-                string.length--;
+                memmove(&buffer[cursor_index - 1], &buffer[cursor_index], length - cursor_index);
+                length--;
                 cursor_index--;
+                buffer[length] = '\0';
             }
 
         } else if (c >= 32 && c <= 126) {  // Printable characters
-            if (string.length < sizeof(string.buffer) - 1) {
-                // Shift chars right to make space for new char
-                for (int i = string.length; i > cursor_index; i--) {
-                    string.buffer[i] = string.buffer[i - 1];
-                }
-                string.buffer[cursor_index] = c;
-                string.length++;
+            if (length < 255) {  // optional max length guard
+                memmove(&buffer[cursor_index + 1], &buffer[cursor_index], length - cursor_index);
+                buffer[cursor_index] = c;
+                length++;
                 cursor_index++;
+                buffer[length] = '\0';
             }
 
         } else if (c == KEY_LEFT) {
-            if (cursor_index > 0) {
-                cursor_index--;
-            }
+            if (cursor_index > 0) cursor_index--;
 
         } else if (c == KEY_RIGHT) {
-            if (cursor_index < string.length) {
-                cursor_index++;
-            }
+            if (cursor_index < length) cursor_index++;
 
         } else if (c == '\n') {
-            // Null terminate the string before returning
-            if (string.length < sizeof(string.buffer)) {
-                string.buffer[string.length] = '\0';
-            }
-            return string;
+            buffer[length] = '\0';
+            return;
         }
 
-        // Update cursor position relative to start (prompt length)
+        // Update cursor position on screen
         vgaX = start + cursor_index;
         move_cursor(vgaX, vgaY);
     }
 }
 
-String get_string() {
-    return get_string_after_index(0);
+void get_string(char* buffer) {
+    return get_string_after_index(vgaX,buffer);
 }
 
 

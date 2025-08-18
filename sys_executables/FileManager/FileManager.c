@@ -10,7 +10,7 @@
 #include "../../src/data/globals.h"
 #include "../../src/data/textconsts.h"
 //y capped to 125 smh
-#define MAX_DISPLAYED_ENTRIES 10
+#define MAX_DISPLAYED_ENTRIES 15
 
 
 void app_main() {
@@ -87,11 +87,12 @@ change_dir:
         case 'e':case 'E':
             char* parts[2] = {current_dir,dir_content[scroll_index + cursor_index]};
             Open_File_Edit_Popup(Concat(parts,2,'/'));
-            break;
+            goto change_dir;
+            
             
         case 'C':
         case 'c':
-            if (alt_pressed)
+            if (GET_KEYBOARD_MOD_FLAG(ALT_PRESSED))
             {
                 goto cleanup;
             }

@@ -2,10 +2,12 @@
 #include "../../src/headers/video.h"
 #include <stddef.h>
 #include "../../src/headers/io.h"
+#include "../../src/headers/memory.h"
+#include "../../src/headers/FileSystem.h"
 #include "../../FatFs/ff.h"
 void intToStr(int num, char* str) {
     int i = 0;
-
+    
     // Handle zero explicitly
     if (num == 0) {
         str[i++] = '0';
@@ -31,6 +33,64 @@ void intToStr(int num, char* str) {
 
 
 
+#define MAX_STRING_INPUT_LEN 256
+
+
+char* String_Input_Popup(int x, int y,int width) {
+    char color = 0x9;
+    int font_w = 4, font_h = 6, space = 1;
+    
+    int height = font_h+2;
+
+    int max_rendered_chars = width / (font_w + space);
+
+    char* buffer = (char*)malloc(MAX_STRING_INPUT_LEN);
+    if (!buffer) return NULL;
+
+    int len = 0;
+    buffer[0] = '\0';
+
+    while (1) {
+        Draw_Rect((Vector2){x - 2, y - 2}, width + 9, height + 9, 0); // black shadow 
+        Draw_Rect((Vector2){x, y}, width, height, color); // input area
+
+        char* visible_str = buffer;
+        if (len > max_rendered_chars) {
+            visible_str = buffer + (len - max_rendered_chars);
+        }
+
+        // String inside the box
+        draw_bitmap_string(visible_str, x, y, font_w, font_h, 0X3F, NULL, true, space);
+
+        // Get input
+        char ch = getc();
+
+        switch (ch) {
+            case KEY_ENTER:
+                return buffer;
+
+            case KEY_BACKSPACE:
+                if (len > 0) {
+                    len--;
+                    buffer[len] = '\0';
+                }
+                break;
+            case KEY_ESCAPE:
+                return NULL;
+
+
+            default:
+                if (ch >= 32 && ch <= 126 && len < MAX_STRING_INPUT_LEN - 1) {
+                    buffer[len++] = ch;
+                    buffer[len] = '\0';
+                }
+                break;
+        }
+    }
+
+    return buffer;
+}
+
 #define F_EDIT_POPUP_POS_X            80
 #define F_EDIT_POPUP_POS_Y            30
 
@@ -47,19 +107,60 @@ uint8_t Process_File_Edit(char* path,char action){
     switch (action)
     {
     case 0: //RENAME
-        /* placeholder */
+    {
+        char* input = String_Input_Popup(125, 94, 70);
+        if(input == NULL)break;
+
+        char* new_filename = Get_Filename(input);
+        char* dir = Get_Dir(path);
+
+        char* prts[2] = {dir, new_filename };
+
+        char* newpath = Concat(prts,2,'/');
+
+        f_rename(path, newpath);
+
+        free(input);
+        free(new_filename);
+        free(dir);
+        free(newpath);
+
         break;
+    }
     case 1: //MOVE
-        /* placeholder */
+    {
+        char* input = String_Input_Popup(125, 94, 70);
+        if(input == NULL)break;
+
+        char* filename = Get_Filename(path);
+        char* curr_dir = Get_Dir(path);
+        
+
+        if(change_Current_Dir(&curr_dir, input) == FR_OK){
+
+            char* prts[2] = { curr_dir, filename };
+
+            char* newpath = Concat(prts,2,'/');
+            f_rename(path, newpath);
+            free(newpath);
+        }
+
+        free(input);
+        free(filename);
+        free(curr_dir);
+
         break;
+    }
     case 2: //DELETE
-        f_unlink(path);
-        break;
-    
+    {
+        return f_unlink(path);
+    }
     default:
         break;
     }
+    
 }
+
 
 uint8_t Open_File_Edit_Popup(char* file) {
     uint8_t cursor_index = 0;
@@ -67,7 +168,7 @@ uint8_t Open_File_Edit_Popup(char* file) {
 
     while (true) {
 
-        Draw_Rect((Vector2){F_EDIT_POPUP_POS_X-2, F_EDIT_POPUP_POS_Y-2}, 164, 64, 0x0);
+        Draw_Rect((Vector2){F_EDIT_POPUP_POS_X-2, F_EDIT_POPUP_POS_Y-2}, 164 + 5, 64 + 5, 0x0);
         Draw_Rect((Vector2){F_EDIT_POPUP_POS_X, F_EDIT_POPUP_POS_Y}, 160, 60, 0x26);
 
 

@@ -1,19 +1,20 @@
+#include "res.h"
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include "headers/console.h"
-#include "headers/asm.h"
-#include "headers/string.h"
-#include "headers/ATA_IO.h"
-#include "headers/time.h"
-#include "headers/io.h"
-#include "headers/memory.h"
-#include "headers/multiboot_info.h"
-#include "../FatFs/ff.h"
-#include "headers/FileSystem.h"
+#include "../../src/headers/console.h"
+#include "../../src/headers/asm.h"
+#include "../../src/headers/string.h"
+#include "../../src/headers/ATA_IO.h"
+#include "../../src/headers/time.h"
+#include "../../src/headers/io.h"
+#include "../../src/headers/memory.h"
+#include "../../src/headers/multiboot_info.h"
+#include "../../FatFs/ff.h"
+#include "../../src/headers/FileSystem.h"
 
-#include "data/textconsts.h"
+#include "../../src/data/textconsts.h"
 
 #define MAX_HISTORY 32
 #define MAX_COMMAND_LENGTH 256  // or adjust as needed

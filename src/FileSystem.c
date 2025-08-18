@@ -4,6 +4,7 @@
 #include "headers/time.h"
 #include "headers/video.h"
 #include "headers/vga_modes.h"
+#include "headers/loader.h"
 #include "data/textconsts.h"
 
 #define EXEC_LOAD_ADRESS 0x200000
@@ -217,6 +218,7 @@ FRESULT change_Current_Dir(char** currdir, const char* _path) {
 }
 
 
+
 int Load_bin_exe(const char* file_path){
     FIL file;              // File object
     FRESULT res;           // Result code
@@ -224,13 +226,14 @@ int Load_bin_exe(const char* file_path){
     void* buffer;
     UINT fileSize;
 
+
     // Open the binary file for reading
     res = f_open(&file,file_path, FA_READ);
     if (res == FR_OK) {
         fileSize = f_size(&file);  // Get file size
 
         // Allocate memory for file contents
-        force_alloc(EXEC_LOAD_ADRESS,fileSize);
+        force_alloc(EXEC_LOAD_ADRESS, fileSize);
         buffer = (void*)EXEC_LOAD_ADRESS; // Use a fixed address for simplicity
         // Read the file contents into buffer
         res = f_read(&file, buffer, fileSize, &bytesRead);
@@ -247,6 +250,7 @@ int Load_bin_exe(const char* file_path){
             entry();
 
             vga_set_mode(0x03);
+            
             ClearScreen();
 
             // If it returns (unlikely), print something
@@ -264,4 +268,27 @@ int Load_bin_exe(const char* file_path){
     } else {
         printf("Failed to open file: %d\n", res);
     }
+}
+
+char* Get_Dir(char* path){
+    if (!path) return NULL;
+    int count;
+    char** parts = Split(path, '/', 0, &count);
+    char* res;
+    if(count > 1)res = Concat(parts, count - 1, '/');
+    else res = NULL;
+    EndSplit(parts, count);
+
+    return res;
+}
+
+char* Get_Filename(char* path){
+    if (!path) return NULL;
+    int count;
+    char** parts = Split(path, '/', 0, &count);
+    char* res = malloc(strlen(parts[count-1]) + 1);
+    strcpy(res, parts[count-1]);
+    EndSplit(parts, count);
+
+    return res;
 }

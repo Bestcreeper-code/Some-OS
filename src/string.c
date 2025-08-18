@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "headers/string.h"
 #include "headers/memory.h"
 
@@ -76,7 +77,7 @@ char** Split(const char* string, char separator, int max_tokens, int* out_count)
         return NULL;
     }
 
-    int capacity = (max_tokens > 0) ? max_tokens : 8; // Start small and grow
+    int capacity = (max_tokens > 0) ? max_tokens : 8; 
     char** tokens = malloc(sizeof(char*) * capacity);
     if (!tokens) return NULL;
 
@@ -134,11 +135,7 @@ void EndSplit(char** tokens, int count) {
     free(tokens);
 }
 
-#include <stdlib.h>
-#include <string.h>
 
-#include <stdlib.h>
-#include <string.h>
 
 char* Concat(char** list, size_t size, char linking_char) {
     if (size == 0) {
@@ -260,5 +257,65 @@ char *strncpy(char *dest, const char *src, size_t n) {
     while (i < n) {
         dest[i++] = '\0';
     }
+    return dest;
+}
+
+#include <stddef.h>
+
+void *memmove(void *dest, const void *src, size_t n) {
+    unsigned char *d = (unsigned char *)dest;
+    const unsigned char *s = (const unsigned char *)src;
+
+    if (d == s || n == 0)
+        return dest;
+
+    size_t dwords = n / 4;
+    size_t bytes = n % 4;
+
+    if (d < s) {
+        // Forward copy: rep movsl (4 bytes), then rep movsb (bytes)
+        asm volatile (
+            "rep movsl\n\t"
+            "rep movsb"
+            : "+S"(s), "+D"(d), "+c"(dwords)
+            :
+            : "memory"
+        );
+
+        if (bytes) {
+            asm volatile (
+                "rep movsb"
+                : "+S"(s), "+D"(d), "+c"(bytes)
+                :
+                : "memory"
+            );
+        }
+    } else {
+        // Backward copy: adjust pointers to end, set DF for backward copy
+        s += n;
+        d += n;
+
+        asm volatile (
+            "std\n\t"          // set direction flag to decrement pointers
+            "rep movsl\n\t"
+            "rep movsb\n\t"
+            "cld"              // clear direction flag
+            : "+S"(s), "+D"(d), "+c"(dwords)
+            :
+            : "memory"
+        );
+
+        if (bytes) {
+            asm volatile (
+                "std\n\t"
+                "rep movsb\n\t"
+                "cld"
+                : "+S"(s), "+D"(d), "+c"(bytes)
+                :
+                : "memory"
+            );
+        }
+    }
+
     return dest;
 }

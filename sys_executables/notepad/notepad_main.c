@@ -6,7 +6,7 @@
 //y capped to 125 smh
 
 void app_main() {
-    vga_set_mode_13h();
+    vga_set_mode(0X13);
     clear_13h_screen(0x9);
 
     Draw_Rect((Vector2){30, 10}, 260, 105,0x3F);

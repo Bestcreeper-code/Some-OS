@@ -8,6 +8,7 @@
 
 
 #include "string.h"
+#include "addresses.h"
 
 #define KEY_ESCAPE     27
 #define KEY_BACKSPACE  8
@@ -19,11 +20,22 @@
 #define KEY_HOME       0x84
 #define CTRL_KEY_COMBO 159
 
+#define SET_KEYBOARD_MOD_FLAG(flag, state) \
+    (*(uint8_t*)KEYBOARD_MOD_KEYS_FLAGS) = (state) ? ((*(uint8_t*)KEYBOARD_MOD_KEYS_FLAGS) | (flag)) : ((*(uint8_t*)KEYBOARD_MOD_KEYS_FLAGS) & ~(flag))
+
+#define GET_KEYBOARD_MOD_FLAG(flag) \
+    ((*(uint8_t*) KEYBOARD_MOD_KEYS_FLAGS) & (flag))
+
+#define ALT_PRESSED 0x1
+#define ALTGR_PRESSED 0x2
+#define CTRL_PRESSED 0x4  
+#define SHIFT_PRESSED 0x08
+#define CAPSLOCK_ON 0x10
+
 extern volatile uint16_t* video_memory;
 extern int vgaX, vgaY;
 
 // Keyboard state
-extern bool shift_pressed, caps_lock_on, ctrl_pressed, alt_pressed, altgr_pressed;
 extern char current_Language;
 // VGA/Screen output
 void put_char(int x, int y, uint8_t c, uint8_t color);
@@ -47,9 +59,12 @@ int printLine(const char* str, int line);
 void set_print_color(char color);
 
 // Input
-unsigned char GetInputChar();
+// unsigned char GetInputChar();
 unsigned char GetInputCharNonBlocking();
 
 unsigned char getc();
 unsigned char getc_nb();
+
+void get_string(char* buffer);
+void get_string_after_index(int start, char* buffer);
 #endif
