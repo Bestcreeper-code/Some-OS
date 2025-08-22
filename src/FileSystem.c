@@ -122,7 +122,7 @@ char **read_dir(const char *path, int *amount) {
 
 
 FRESULT check_path_exists(const char *path, FileType type) {
-    if (type == E_FT_DIR) {
+    if (type == FT_DIR) {
         DIR dir;
         FRESULT res = f_opendir(&dir, path);
         if (res != FR_OK) return FR_NO_PATH;
@@ -130,12 +130,31 @@ FRESULT check_path_exists(const char *path, FileType type) {
         return FR_OK;
     }
 
-    if (type == E_FT_FILE) {
+    if (type == FT_FILE) {
         FILINFO fno;
         FRESULT res = f_stat(path, &fno);
         if (res != FR_OK) return res;
         if (fno.fattrib & AM_DIR) return FR_NO_PATH;
         return FR_OK;
+    }
+
+    if (type == FT_BOTH) {
+        // Check directory first
+        DIR dir;
+        FRESULT res_dir = f_opendir(&dir, path);
+        if (res_dir == FR_OK) {
+            f_closedir(&dir);
+            return FR_OK;
+        }
+
+        // Check file
+        FILINFO fno;
+        FRESULT res_file = f_stat(path, &fno);
+        if (res_file == FR_OK && !(fno.fattrib & AM_DIR)) {
+            return FR_OK;
+        }
+
+        return FR_NO_PATH;
     }
 
     return FR_INVALID_OBJECT;  // Invalid FileType
@@ -161,7 +180,7 @@ FRESULT change_Current_Dir(char** currdir, const char* _path) {
     if (Starts_With(path, "0:/")) {
         EndSplit(cut_dir, part_count);
 
-        if (check_path_exists(path, E_FT_DIR) == FR_OK) {
+        if (check_path_exists(path, FT_DIR) == FR_OK) {
             free(*currdir);
             *currdir = strdup(path);
             free(path);
@@ -207,7 +226,7 @@ FRESULT change_Current_Dir(char** currdir, const char* _path) {
     if (!finalpath) return FR_NOT_ENOUGH_CORE;
 
     // Final check
-    if (check_path_exists(finalpath, E_FT_DIR) == FR_OK) {
+    if (check_path_exists(finalpath, FT_DIR) == FR_OK) {
         free(*currdir);
         *currdir = finalpath;
         return FR_OK;
@@ -219,7 +238,7 @@ FRESULT change_Current_Dir(char** currdir, const char* _path) {
 
 
 
-int Load_bin_exe(const char* file_path){
+int Load_bin_exe(const char* file_path,int argc, char** argv){
     FIL file;              // File object
     FRESULT res;           // Result code
     UINT bytesRead;        // Number of bytes read
@@ -239,27 +258,22 @@ int Load_bin_exe(const char* file_path){
         res = f_read(&file, buffer, fileSize, &bytesRead);
         if (res == FR_OK && bytesRead == fileSize) {
             // File successfully read into buffer
-            printf("File read successfully (%u bytes).\n", bytesRead);
+            printf("File read successfully \n");
 
             // Define a function pointer to the entry point
-            int (*entry)(void) = (int (*)(void))buffer;
+            int (*entry)(int, char**) = (int (*)(int, char**))buffer;
 
-            printf("Jumping to %s...\n",file_path);
 
             // Call the loaded binary
-            entry();
+            entry(argc, argv);
 
             vga_set_mode(0x03);
             
             ClearScreen();
 
-            // If it returns (unlikely), print something
-            printf("Returned from %s\n",file_path);
-
             // Wipe the memory region after execution
             memset(buffer, 0, fileSize);
-            
-            printf("Memory cleared.\n");
+        
         } else {
             printf("File read error: %d\n", res);
         }

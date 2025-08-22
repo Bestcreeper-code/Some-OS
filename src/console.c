@@ -31,9 +31,9 @@ static char* currpath = 0;
 
 // Allocate and return a malloc'd null-terminated string for the command
 char* Console_Get_Command() {
-    printf("%s>", currpath);
+    printf("%s> ", currpath);
     int command_history_index = command_History_count;
-    int start = strlen(currpath) + 1;  // prompt length + '>'
+    int start = strlen(currpath) + 2;  // path length + ""> ""
     int input_start_line = vgaY;
 
     char* buffer = malloc(MAX_COMMAND_LENGTH);
@@ -264,8 +264,11 @@ bool Console_Process_Command(char* command) {
         if(token_count < 2) {
             result = false;
         } else {
-            char* list[2] = {currpath, tokens[1]};
-            Load_bin_exe(Concat(list, 2, '\0'));
+            int args_count;
+            char** args = Split(tokens[1], ' ', 0, &args_count);
+            char* list[2] = {currpath, args[0]};
+            Load_bin_exe(Concat(list, 2, '/'), args_count, args);//argv[0] is path used to call the bin
+            EndSplit(args, args_count);
         }
     }
     else {
@@ -279,6 +282,9 @@ bool Console_Process_Command(char* command) {
 
 
 void Start_Console() {
+    memset(CONSOLE_REQUEST_QUEUE, 0,sizeof(char*) * 16);
+    char** console_requests = CONSOLE_REQUEST_QUEUE;
+
     currpath = malloc(4);
     if (!currpath) {
         printf("Path Broken");
@@ -295,7 +301,14 @@ void Start_Console() {
     set_print_color(0x0F);
 
     while (true) {
-        char* command = Console_Get_Command();
+        char* command;
+        command = Console_Get_Command();
+        // if(console_requests[0] == 0)command = Console_Get_Command();
+        // else{
+        //     command = console_requests[0];
+        //     memmove(console_requests[0], console_requests[1], sizeof(char*) * 15);
+        //     console_requests[15] = NULL;
+        // }
         if (!command) continue;
 
         // Add command to history

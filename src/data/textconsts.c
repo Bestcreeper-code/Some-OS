@@ -5,7 +5,7 @@ const char* TitleAsciiString =
 ( (__  )   / ) _)  ) _)  ) __/ ) _)  )   /  (  O )\\___ \\ \n\
  \\___)(__\\_)(____)(____)(__)  (____)(__\\_)   \\__/ (____/";
 
-const unsigned char Terminal4x6[] = {
+const unsigned char Base_Font4x6[] = {
     0x00, 0x00, 0x00, 0x00,                  // Code for char  
     0x00, 0x00, 0x17, 0x00,                  // Code for char !
     0x00, 0x03, 0x00, 0x03,                  // Code for char "

@@ -13,7 +13,7 @@ typedef struct {
     uint8_t day;
     uint8_t month;
     uint16_t year;
-} rtc_time_t;
+} __attribute__((__packed__)) rtc_time_t;
 
 
 void pic_remap();
@@ -28,6 +28,7 @@ uint64_t rdtsc();
 
 bool rtc_read_time(rtc_time_t* time);
 
-
+uint32_t rtc_to_unix_timestamp(rtc_time_t* rtc);
+void rtc_add_seconds(rtc_time_t* t, uint32_t seconds);
 
 #endif // TIME_H

@@ -138,3 +138,87 @@ DWORD get_fattime (void)
     return fattime;
     
 }
+
+static const int days_in_month[] = {
+    31, 28, 31, 30, 31, 30,
+    31, 31, 30, 31, 30, 31
+};
+
+bool is_leap_year(int year) {
+    return (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
+}
+
+uint32_t rtc_to_unix_timestamp(rtc_time_t* rtc) {
+    uint32_t days = 0;
+
+    // Count days from 1970 to current year
+    for (int y = 1970; y < rtc->year; y++) {
+        days += is_leap_year(y) ? 366 : 365;
+    }
+
+    // Count days in the current year up to current month
+    for (int m = 1; m < rtc->month; m++) {
+        days += days_in_month[m - 1];
+        if (m == 2 && is_leap_year(rtc->year)) {
+            days += 1; // leap day
+        }
+    }
+
+    days += rtc->day - 1; // days so far this month
+
+    // Convert to seconds
+    uint32_t seconds = days * 86400;
+    seconds += rtc->hour * 3600;
+    seconds += rtc->minute * 60;
+    seconds += rtc->second;
+
+    return seconds;
+}
+
+void rtc_add_seconds(rtc_time_t* t, uint32_t seconds) {
+    if (!t) return;
+
+    // Add seconds and cascade
+    t->second += seconds % 60;
+    if (t->second >= 60) {
+        t->second -= 60;
+        t->minute++;
+    }
+
+    seconds /= 60;
+    t->minute += seconds % 60;
+    if (t->minute >= 60) {
+        t->minute -= 60;
+        t->hour++;
+    }
+
+    seconds /= 60;
+    t->hour += seconds % 24;
+    if (t->hour >= 24) {
+        t->hour -= 24;
+        t->day++;
+    }
+
+    // Add full days
+    seconds /= 24;
+    t->day += seconds;
+
+    // Normalize day/month/year
+    while (1) {
+        int dim = days_in_month[t->month - 1];
+        if (t->month == 2 && is_leap_year(t->year)) {
+            dim = 29;
+        }
+
+        if (t->day <= dim) break;
+
+        t->day -= dim;
+        t->month++;
+
+        if (t->month > 12) {
+            t->month = 1;
+            t->year++;
+        }
+    }
+}
+

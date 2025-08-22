@@ -13,6 +13,7 @@
 #include "headers/asm.h"
 #include "headers/video.h"
 #include "headers/vga_modes.h"
+#include "headers/mouse.h"
 
 #include "data/globals.h"
 
@@ -20,20 +21,25 @@ extern int vgaX, vgaY;
 
 
 void kmain(unsigned long magic, unsigned long addr) {
+
     *((char*)TASK_SWITCHING_FLAG) = 0;
     // vga_set_mode_03h();
     initGdt();
     idt_init();
     pic_remap();
     pit_init(); 
-    __asm__ volatile ("sti"); // Enable interrupts
+    disable_mouse_display();
+    
+    *((uint32_t*)MULTIBOOT_INFO_ADDRESS) = addr;
+    parse_memory_map( Get_multiboot_info() );
+    
     vga_set_mode(0X03);
     
     
     ClearScreen();
     
-    force_alloc(FATFS_SYS_ADDR,sizeof(FATFS));
-    force_alloc(KERNEL_STACK_BASE-KERNEL_STACK_SIZE,KERNEL_STACK_SIZE);
+    // force_alloc(KERNEL_STACK_BASE-KERNEL_STACK_SIZE ,KERNEL_STACK_SIZE);
+    force_alloc(KERNEL_DATA_START, KERNEL_DATA_END - KERNEL_DATA_START);
     
 mounting:
     FRESULT res = f_mount(FatFsSys, "0:", 1);
@@ -49,8 +55,6 @@ mounting:
     printf("Magic number: 0x%x\n", (void*)magic);
     printf("Multiboot info address: 0x%p\n", (void*)addr);
     
-    *((uint32_t*)MULTIBOOT_INFO_ADDRESS) = addr;
-    parse_memory_map( Get_multiboot_info() );
     
     // clear_processes();
     // new_process("0:/filemger.bin");
@@ -60,6 +64,11 @@ mounting:
     move_cursor(0, 0);
     // *((char*)TASK_SWITCHING_FLAG) = 1;
     // Load_bin_exe("0:/console.bin");
+
+    __asm__ volatile ("sti"); // Enable interrupts
+
+    Load_bin_exe("0:/SYSTEM_CORE/Security/login.bin", 0, NULL);
+
     Start_Console();
 
     while (1) {
@@ -79,5 +88,6 @@ __attribute__((naked)) void _start() {
         "jmp .\n"
     );
 }
+
 
 // readelf --relocs build_execs/gametest.o > relocations.txt

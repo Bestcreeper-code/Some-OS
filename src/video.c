@@ -29,10 +29,11 @@ void put_pixel(int x, int y, uint8_t color) {
 }
 
 // Draw a char from 32 to 127
+//(charact, charx, chary, 4, 6, color, NULL, true) for default
 void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int width, int height, char color, void* font, bool use_default_font) {
     uint8_t* font_array = (uint8_t*)font;
 
-    if (use_default_font) font_array = (uint8_t*)Terminal4x6;
+    if (use_default_font) font_array = (uint8_t*)Base_Font4x6;
     if (width <= 0 || height <= 0 || character < 32 || character > 127) return;
 
     // Each character has 'width' bytes (1 byte per column)

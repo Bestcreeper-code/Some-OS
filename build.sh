@@ -11,6 +11,7 @@ nasm -f elf32 src/multiboot_header.asm -o build/multiboot_header.o
 # === Assemble irq0 handler ===
 echo "[1.1] Assembling irq0 handler..."
 nasm -f elf32 src/asm/irq0_handle.asm -o build/irq0_handle.o
+nasm -f elf32 src/asm/irq12_handle.asm -o build/irq12_handle.o
 nasm -f elf32 src/asm/isr13.asm -o build/isr13.o
 nasm -f elf32 src/asm/dummy_handle.asm -o build/dummy_handle.o
 nasm -f elf32 src/asm/gdt.asm -o build/gdt_asm.o
@@ -36,6 +37,7 @@ gcc -m32 -g -ffreestanding -c src/data/textconsts.c -o build/textconsts.o
 gcc -m32 -g -ffreestanding -c src/math.c -o build/math.o
 gcc -m32 -g -ffreestanding -c src/vga_modes.c -o build/vga_modes.o
 gcc -m32 -g -ffreestanding -c src/loader.c -o build/loader.o
+gcc -m32 -g -ffreestanding -c src/mouse.c -o build/mouse.o
 
 # === Compile FatFs ===
 echo "[3] Compiling FatFs..."
@@ -55,7 +57,7 @@ ld -m elf_i386 -Ttext=0x100000 -z noexecstack -o kernel.elf \
   build/ff.o build/diskio.o build/ffsystem.o build/ffunicode.o \
   build/idt.o build/isr13.o build/dummy_handle.o build/gdt.o build/gdt_asm.o \
   build/video.o build/textconsts.o build/vga_modes.o build/loader.o \
-  build/processes_asm.o
+  build/processes_asm.o build/mouse.o build/irq12_handle.o
 
 
 # === Convert to binary for GRUB ===

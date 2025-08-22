@@ -592,3 +592,249 @@ void set_print_color(char color){
 //     f_
 //     f_read()
 // } MAKE LATEr
+
+void init_keyboard(){
+    uint8_t master_mask = inb(0x21);  // Master PIC
+    master_mask &= ~(1 << 1);         // Unmask IRQ1 (keyboard)
+    outb(0x21, master_mask);
+}
+
+
+
+
+
+//sprintf HELPER FUNCTIONS
+
+
+
+int write_char(char* buffer, int pos, char c) {
+    buffer[pos] = c;
+    return 1;
+}
+
+
+int write_str(char* buffer, int pos, const char* s) {
+    int i = 0;
+    while (s[i]) {
+        buffer[pos + i] = s[i];
+        i++;
+    }
+    return i;
+}
+
+
+int write_number(char* buffer, int pos, int num) {
+    char temp[12]; 
+    int i = 0;
+    bool negative = false;
+
+    if (num == 0) {
+        buffer[pos] = '0';
+        return 1;
+    }
+
+    if (num < 0) {
+        negative = true;
+        
+        if (num == (int)0x80000000) {
+            
+            return write_str(buffer, pos, "-2147483648");
+        }
+        num = -num;
+    }
+
+    while (num > 0) {
+        temp[i++] = (num % 10) + '0';
+        num /= 10;
+    }
+
+    if (negative) {
+        temp[i++] = '-';
+    }
+
+    // Reverse into buffer
+    for (int j = 0; j < i; j++) {
+        buffer[pos + j] = temp[i - j - 1];
+    }
+
+    return i;
+}
+
+
+int write_unsigned(char* buffer, int pos, uint32_t num) {
+    char temp[11]; 
+    int i = 0;
+
+    if (num == 0) {
+        buffer[pos] = '0';
+        return 1;
+    }
+
+    while (num > 0) {
+        temp[i++] = (num % 10) + '0';
+        num /= 10;
+    }
+
+    // Reverse into buffer
+    for (int j = 0; j < i; j++) {
+        buffer[pos + j] = temp[i - j - 1];
+    }
+
+    return i;
+}
+
+
+
+
+int write_hex32(char* buffer, int pos, uint32_t num) {
+    const char* hex = "0123456789ABCDEF";
+    char temp[8]; 
+    int i = 0;
+
+    if (num == 0) {
+        buffer[pos] = '0';
+        return 1;
+    }
+
+    while (num > 0) {
+        temp[i++] = hex[num & 0xF];
+        num >>= 4;
+    }
+
+    // Reverse into buffer
+    for (int j = 0; j < i; j++) {
+        buffer[pos + j] = temp[i - j - 1];
+    }
+
+    return i;
+}
+
+int write_number_fixed_width(char* buffer, int pos, int num, int width) {
+    char temp[20]; // enough for 32-bit int digits
+    int i = 0;
+    bool negative = false;
+
+    if (num < 0) {
+        negative = true;
+        num = -num;
+    }
+
+    // Convert number to string (reverse)
+    if (num == 0) {
+        temp[i++] = '0';
+    } else {
+        while (num > 0) {
+            temp[i++] = (num % 10) + '0';
+            num /= 10;
+        }
+    }
+    int digits_to_print = (width > i) ? width : i;
+
+    int total_len = digits_to_print + (negative ? 1 : 0);
+    if (negative) {
+        buffer[pos++] = '-';
+    }
+    for (int pad = digits_to_print - i; pad > 0; pad--) {
+        buffer[pos++] = '0';
+    }
+
+
+    int start = (i > width) ? i - width : 0;
+
+    for (int j = i - 1 - start; j >= 0; j--) {
+        buffer[pos++] = temp[j + start];
+    }
+
+    return total_len;
+}
+
+
+int sprintf(char* buffer, const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+
+    int pos = 0;
+
+    while (*format) {
+        if (*format == '%') {
+            format++;
+            if (*format == '\0') break;
+
+            // Handle %0Nd for integers (exactly N digits)
+            if (*format == '0') {
+                format++;
+                int width = 0;
+                while (*format >= '0' && *format <= '9') {
+                    width = width * 10 + (*format - '0');
+                    format++;
+                }
+                if (*format == 'd') {
+                    int val = va_arg(args, int);
+                    pos += write_number_fixed_width(buffer, pos, val, width);
+                    format++; 
+                    continue;
+                } else {
+                    
+                    buffer[pos++] = '%';
+                    buffer[pos++] = '0';
+                    // rewind to print digits and next char literally
+                    const char* rewind_fmt = format;
+                    while (rewind_fmt > format - 10 && *rewind_fmt >= '0' && *rewind_fmt <= '9') {
+                        buffer[pos++] = *(rewind_fmt - 1);
+                        rewind_fmt--;
+                    }
+                    buffer[pos++] = *format;
+                    format++;
+                    continue;
+                }
+            }
+
+            switch (*format) {
+                case 'd': {
+                    int val = va_arg(args, int);
+                    pos += write_number(buffer, pos, val);
+                    break;
+                }
+                case 'u': {
+                    uint32_t val = va_arg(args, uint32_t);
+                    pos += write_unsigned(buffer, pos, val);
+                    break;
+                }
+                case 'x':
+                case 'X': {
+                    uint32_t val = va_arg(args, uint32_t);
+                    pos += write_hex32(buffer, pos, val);
+                    break;
+                }
+                case 'c': {
+                    char c = (char)va_arg(args, int);
+                    pos += write_char(buffer, pos, c);
+                    break;
+                }
+                case 's': {
+                    const char* s = va_arg(args, const char*);
+                    pos += write_str(buffer, pos, s);
+                    break;
+                }
+                case '%': {
+                    pos += write_char(buffer, pos, '%');
+                    break;
+                }
+                default: {
+                    pos += write_char(buffer, pos, '%');
+                    pos += write_char(buffer, pos, *format);
+                    break;
+                }
+            }
+        } else {
+            pos += write_char(buffer, pos, *format);
+        }
+        format++;
+    }
+
+    // Null-terminate
+    buffer[pos] = '\0';
+
+    va_end(args);
+    return pos; // number of characters written
+}

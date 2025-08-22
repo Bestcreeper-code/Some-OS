@@ -4,7 +4,7 @@
 
 extern const char* TitleAsciiString;
 
-extern const unsigned char Terminal4x6[];
+extern const unsigned char Base_Font4x6[];
 
 extern uint8_t font8x16[256 * 16];
 #endif

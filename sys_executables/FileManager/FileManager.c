@@ -13,9 +13,11 @@
 #define MAX_DISPLAYED_ENTRIES 15
 
 
-void app_main() {
+void app_main(int argc, char** argv) {
+    char* base_path = "0:/";
+    if(argc > 1)base_path = argv[1];
     fs_set((FATFS*)FATFS_SYS_ADDR,0);
-    char* current_dir = malloc(16);
+    char* current_dir = strdup(base_path);
 
     char** dir_content = NULL;
     int dir_content_size = 0;
@@ -23,7 +25,7 @@ void app_main() {
     int cursor_index;
     int scroll_index;
 
-    current_dir[0] = '0'; current_dir[1] = ':'; current_dir[2] = '/'; current_dir[3] = '\0';
+    
     
     vga_set_mode(0x13);
 

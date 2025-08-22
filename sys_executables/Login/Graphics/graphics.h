@@ -4,7 +4,7 @@
 typedef struct 
 {
     float x,y;
-} __attribute__((packed)) Vector2;
+} Vector2;
 
 
 

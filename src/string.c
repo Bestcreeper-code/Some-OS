@@ -1,4 +1,4 @@
-#include <stdlib.h>
+#include <stddef.h>
 #include "headers/string.h"
 #include "headers/memory.h"
 
@@ -98,7 +98,7 @@ char** Split(const char* string, char separator, int max_tokens, int* out_count)
             start = ptr + 1;
 
             // Resize if needed (only if max_tokens == 0)
-            if (max_tokens == 0 && token_index >= capacity) {
+            if (max_tokens <= 0 && token_index >= capacity) {
                 capacity *= 2;
                 char** temp = realloc(tokens, sizeof(char*) * capacity);
                 if (!temp) {
@@ -173,7 +173,7 @@ char* Concat(char** list, size_t size, char linking_char) {
 bool InsertChar(char* str, uint32_t pos, char c) {
     uint32_t length = strlen(str);
     
-    if (pos > length || length >= STRING_MAX_LEN - 1) return false;
+    if (pos > length ) return false;
 
     for (uint32_t i = length; i > pos; i--) {
         str[i] = str[i - 1];
@@ -260,7 +260,6 @@ char *strncpy(char *dest, const char *src, size_t n) {
     return dest;
 }
 
-#include <stddef.h>
 
 void *memmove(void *dest, const void *src, size_t n) {
     unsigned char *d = (unsigned char *)dest;

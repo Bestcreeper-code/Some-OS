@@ -1,6 +1,8 @@
 #include "headers/idt.h"
 #include "headers/asm.h"
 #include "headers/string.h"
+#include "headers/mouse.h"
+#include "headers/io.h"
 
 #define IDT_ENTRIES 256
 struct IDTEntry idt[IDT_ENTRIES];
@@ -12,11 +14,11 @@ static inline void idt_flush(uint32_t idt_ptr_addr) {
 
 extern void irq0_handler();
 extern void irq1_handler();
+extern void irq12_handler();
 
 extern void isr13(); // General Protection Fault
 
 extern void irq_dummy_handler();
-
 
 
 
@@ -37,8 +39,10 @@ void idt_init() {
     }
 
     idt_set_gate(32, (uint32_t)irq0_handler, 0x08, 0x8E); // IRQ0 (timer)
-    idt_set_gate(33, (uint32_t)irq1_handler, 0x08, 0x8E); // IRQ1 (keyboard) 
-    idt_set_gate(13, (uint32_t)isr13, 0x08, 0x8E);
+    idt_set_gate(33, (uint32_t)irq1_handler, 0x08, 0x8E); /* IRQ1 (keyboard) */ init_keyboard();
+    idt_set_gate(13, (uint32_t)isr13, 0x08, 0x8E); //isr13 (General Protection Fault)
+    idt_set_gate(44, (uint32_t)irq12_handler, 0x08, 0x8E); /* IRQ12 (mouse)*/init_mouse();
+
 
     idt_flush((uint32_t)&idt_reg);
 }

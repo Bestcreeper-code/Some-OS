@@ -37,6 +37,7 @@ extern int vgaX, vgaY;
 
 // Keyboard state
 extern char current_Language;
+void init_keyboard();
 // VGA/Screen output
 void put_char(int x, int y, uint8_t c, uint8_t color);
 char get_char(int x, int y);
@@ -68,3 +69,13 @@ unsigned char getc_nb();
 void get_string(char* buffer);
 void get_string_after_index(int start, char* buffer);
 #endif
+
+//sprintf helpers and func
+int sprintf(char* buffer, const char* format, ...);
+
+int write_char(char* buffer, int pos, char c);
+int write_str(char* buffer, int pos, const char* s);
+int write_number(char* buffer, int pos, int num);
+int write_unsigned(char* buffer, int pos, uint32_t num);
+int write_hex32(char* buffer, int pos, uint32_t num);
+int write_number_fixed_width(char* buffer, int pos, int num, int width);

@@ -7,9 +7,15 @@
 
 #define INPUT_CHAR_BUFFER_SIZE  256
 
-#define KERNEL_STACK_BASE 0x101FFF//      |
-#define KERNEL_STACK_SIZE 0x1FFF //8Kb    | - goes from 0x101FFF to 0x100000
+// #define KERNEL_STACK_BASE 0x101FFF//      |
+// #define KERNEL_STACK_SIZE 0x1FFF //8Kb    | - goes from 0x101FFF to 0x100000
 
+#define KERNEL_DATA_START 0x21FB
+
+#define MOUSE_FLAGS_ADDR    (uint8_t*) 0x21F6 // uint8_t
+#define MOUSE_Y_POS_ADDR      (short*) 0x21F7 // int16_t
+#define MOUSE_X_POS_ADDR      (short*) 0x21F9 // int16_t
+#define CONSOLE_REQUEST_QUEUE  (char**)0x21FB // 16 char*(commands) that apps can request to the console on exit
 #define TASK_SWITCHING_FLAG            0x223B // activate/deactivate task switching between kernel and running app
 #define KEYBOARD_MOD_KEYS_FLAGS        0x223C // Modifier keys flags (shift,ctrl,...)
 #define INPUT_CHAR_BUFFER_ADDRESS      0x223D // Buffer for 256 input chars (start)
@@ -20,6 +26,9 @@
 #define MULTIBOOT_INFO_ADDRESS         0x26EE // uint32
 #define TICKS_AMOUNT                   0x26F2 // uint64
 #define FREE_REGION_MAP                0x26FA // 2052 Bytes or 0x804 Bytes (free_region_map_t)
+
+#define KERNEL_DATA_END   0x2EFD
+
 // typedef struct {
 //     uintptr_t mb_info_addr;
 //     uintptr_t tick_amount_ptr;

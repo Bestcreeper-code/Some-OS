@@ -8,7 +8,7 @@
 #include <stddef.h>
 
 
-//libc methods
+
 char *strchr(const char *str, int c);
 size_t strlen(const char* str);
 char *strdup(const char *s); 
