@@ -5,6 +5,7 @@
 #include "headers/video.h"
 #include "headers/vga_modes.h"
 #include "headers/loader.h"
+#include "headers/Logger.h"
 #include "data/textconsts.h"
 
 #define EXEC_LOAD_ADRESS 0x200000
@@ -258,7 +259,7 @@ int Load_bin_exe(const char* file_path,int argc, char** argv){
         res = f_read(&file, buffer, fileSize, &bytesRead);
         if (res == FR_OK && bytesRead == fileSize) {
             // File successfully read into buffer
-            printf("File read successfully \n");
+            Kern_log("File %s read successfully \n",file_path);
 
             // Define a function pointer to the entry point
             int (*entry)(int, char**) = (int (*)(int, char**))buffer;

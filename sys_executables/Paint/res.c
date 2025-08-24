@@ -5,6 +5,7 @@
 #include "../../src/headers/memory.h"
 #include "../../src/headers/FileSystem.h"
 #include "../../FatFs/ff.h"
+#include "res.h"
 
 char* intToStr(int num) {
     // Handle zero as special case
@@ -46,7 +47,7 @@ char* intToStr(int num) {
 #define MAX_STRING_INPUT_LEN 256
 
 
-char* String_Input_Popup(int x, int y,int width, bool hidden) {
+char* String_Input_Popup(int x, int y,int width) {
     char color = 0x9;
     int font_w = 4, font_h = 6, space = 1;
     
@@ -70,21 +71,7 @@ char* String_Input_Popup(int x, int y,int width, bool hidden) {
         }
 
         // String inside the box
-        if(!hidden) draw_bitmap_string(visible_str, x, y, font_w, font_h, 0X3F, NULL, true, space);
-        else {
-            int hid_len = sizeof(visible_str);
-            char* hidden_str = malloc(hid_len + 1);
-            if (!hidden_str) {
-                free(buffer);
-                return NULL;
-            }
-            for (int i = 0; i < hid_len; i++) {
-                hidden_str[i] = '*';
-            }
-            hidden_str[hid_len] = '\0';
-            draw_bitmap_string(hidden_str, x, y, font_w, font_h, 0X3F, NULL, true, space);
-            free(hidden_str);
-        }
+        draw_bitmap_string(visible_str, x, y, font_w, font_h, 0X3F, NULL, true, space);
 
         // Get input
         char ch = getc();
@@ -132,7 +119,7 @@ uint8_t Process_File_Edit(char* path,char action){
     {
     case 0: //RENAME
     {
-        char* input = String_Input_Popup(125, 94, 70, false);
+        char* input = String_Input_Popup(125, 94, 70);
         if(input == NULL)break;
 
         char* new_filename = Get_Filename(input);
@@ -153,7 +140,7 @@ uint8_t Process_File_Edit(char* path,char action){
     }
     case 1: //MOVE
     {
-        char* input = String_Input_Popup(125, 94, 70, false);
+        char* input = String_Input_Popup(125, 94, 70);
         if(input == NULL)break;
 
         char* filename = Get_Filename(path);
@@ -247,14 +234,24 @@ uint8_t Open_File_Edit_Popup(char* file) {
     }
 }
 
-char* xor_crypt(const char* value, int value_size, const char* key, int key_size) {
-    char* output = malloc(value_size);
-    if (!output) return NULL;  // Always check malloc success
-
-    for (int i = 0; i < value_size; i++) {
-        output[i] = value[i] ^ key[i % key_size];
-    }
-    return output;
-}
 
     
+void* create_default_paint_header() {
+    void* data = malloc(sizeof(PaintFileHeader) + 320 * 175);
+    if (!data) return NULL;
+    
+    PaintFileHeader* header = (PaintFileHeader*)data;
+    
+    // Safely copy magic string with null terminator
+    strncpy(header->magic, PAINT_FILE_MAGIC, sizeof(header->magic) - 1);
+    header->magic[sizeof(header->magic) - 1] = '\0';  // ensure null termination
+    
+    header->width = 160;
+    header->height = 75;
+    header->data_start = sizeof(PaintFileHeader);
+    
+    // Set default canvas pixels to white (0x3F)
+    memset((char*)data + sizeof(PaintFileHeader), 0x3F, 160 *75);
+    
+    return data;
+}

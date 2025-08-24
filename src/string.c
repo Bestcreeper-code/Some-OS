@@ -318,3 +318,31 @@ void *memmove(void *dest, const void *src, size_t n) {
 
     return dest;
 }
+
+//conversion functions
+int atoi(const char* str) {
+    if (!str) return -1;
+
+    int res = 0;
+    bool negative = false;
+    int i = 0;
+
+    
+    while (str[i] == ' ') i++;
+
+    
+    if (str[i] == '-') {
+        negative = true;
+        i++;
+    } else if (str[i] == '+') {
+        i++;
+    }
+
+    // Convert digits
+    for (; str[i] != '\0'; i++) {
+        if (str[i] < '0' || str[i] > '9') return -1;
+        res = res * 10 + (str[i] - '0');
+    }
+
+    return negative ? -res : res;
+}

@@ -38,6 +38,7 @@ gcc -m32 -g -ffreestanding -c src/math.c -o build/math.o
 gcc -m32 -g -ffreestanding -c src/vga_modes.c -o build/vga_modes.o
 gcc -m32 -g -ffreestanding -c src/loader.c -o build/loader.o
 gcc -m32 -g -ffreestanding -c src/mouse.c -o build/mouse.o
+gcc -m32 -g -ffreestanding -c src/Logger.c -o build/Logger.o
 
 # === Compile FatFs ===
 echo "[3] Compiling FatFs..."
@@ -57,7 +58,8 @@ ld -m elf_i386 -Ttext=0x100000 -z noexecstack -o kernel.elf \
   build/ff.o build/diskio.o build/ffsystem.o build/ffunicode.o \
   build/idt.o build/isr13.o build/dummy_handle.o build/gdt.o build/gdt_asm.o \
   build/video.o build/textconsts.o build/vga_modes.o build/loader.o \
-  build/processes_asm.o build/mouse.o build/irq12_handle.o
+  build/processes_asm.o build/mouse.o build/irq12_handle.o \
+  build/Logger.o 
 
 
 # === Convert to binary for GRUB ===
@@ -98,10 +100,10 @@ fi
 # === Launch QEMU ===
 if [ "$1" = "-d" ]; then
   echo "[10] Launching QEMU in GDB mode..."
-  qemu-system-i386 -boot d -cdrom os.iso -m 512M -drive file=disk.img,format=raw,if=ide -s -S #-no-reboot -d int,cpu_reset
+  qemu-system-x86_64 -boot d -cdrom os.iso -m 512M -drive file=disk.img,format=raw,if=ide -s -S #-no-reboot -d int,cpu_reset
 else
   echo "[10] Launching QEMU..."
-  qemu-system-i386 -boot d -cdrom os.iso -m 512M -drive file=disk.img,format=raw,if=ide #-s -S #-no-reboot -d int,cpu_reset
+  qemu-system-x86_64 -boot d -cdrom os.iso -m 512M -drive file=disk.img,format=raw,if=ide #-s -S #-no-reboot -d int,cpu_reset
 fi
 
 

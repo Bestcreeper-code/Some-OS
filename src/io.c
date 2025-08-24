@@ -607,38 +607,39 @@ void init_keyboard(){
 
 
 
-int write_char(char* buffer, int pos, char c) {
-    buffer[pos] = c;
+int write_char(char* buffer, int pos, char c, int size) {
+    // If size == 0, ignore size limits (unbounded)
+    if (buffer && (size == 0 || pos < size - 1)) {
+        buffer[pos] = c;
+    }
     return 1;
 }
 
-
-int write_str(char* buffer, int pos, const char* s) {
+int write_str(char* buffer, int pos, const char* s, int size) {
     int i = 0;
     while (s[i]) {
-        buffer[pos + i] = s[i];
+        if (buffer && (size == 0 || pos + i < size - 1)) {
+            buffer[pos + i] = s[i];
+        }
         i++;
     }
     return i;
 }
 
-
-int write_number(char* buffer, int pos, int num) {
-    char temp[12]; 
+int write_number(char* buffer, int pos, int num, int size) {
+    char temp[12];
     int i = 0;
     bool negative = false;
 
     if (num == 0) {
-        buffer[pos] = '0';
-        return 1;
+        return write_char(buffer, pos, '0', size);
     }
 
     if (num < 0) {
         negative = true;
-        
         if (num == (int)0x80000000) {
-            
-            return write_str(buffer, pos, "-2147483648");
+            // Special case for INT_MIN
+            return write_str(buffer, pos, "-2147483648", size);
         }
         num = -num;
     }
@@ -648,26 +649,30 @@ int write_number(char* buffer, int pos, int num) {
         num /= 10;
     }
 
+    int total_len = i + (negative ? 1 : 0);
+
+    int cur_pos = pos;
     if (negative) {
-        temp[i++] = '-';
+        if (buffer && (size == 0 || cur_pos < size - 1)) buffer[cur_pos] = '-';
+        cur_pos++;
     }
 
-    // Reverse into buffer
     for (int j = 0; j < i; j++) {
-        buffer[pos + j] = temp[i - j - 1];
+        if (buffer && (size == 0 || cur_pos < size - 1)) {
+            buffer[cur_pos] = temp[i - j - 1];
+        }
+        cur_pos++;
     }
 
-    return i;
+    return total_len;
 }
 
-
-int write_unsigned(char* buffer, int pos, uint32_t num) {
-    char temp[11]; 
+int write_unsigned(char* buffer, int pos, uint32_t num, int size) {
+    char temp[11];
     int i = 0;
 
     if (num == 0) {
-        buffer[pos] = '0';
-        return 1;
+        return write_char(buffer, pos, '0', size);
     }
 
     while (num > 0) {
@@ -675,25 +680,23 @@ int write_unsigned(char* buffer, int pos, uint32_t num) {
         num /= 10;
     }
 
-    // Reverse into buffer
+    int cur_pos = pos;
     for (int j = 0; j < i; j++) {
-        buffer[pos + j] = temp[i - j - 1];
+        if (buffer && (size == 0 || cur_pos < size - 1)) {
+            buffer[cur_pos] = temp[i - j - 1];
+        }
+        cur_pos++;
     }
-
     return i;
 }
 
-
-
-
-int write_hex32(char* buffer, int pos, uint32_t num) {
+int write_hex32(char* buffer, int pos, uint32_t num, int size) {
     const char* hex = "0123456789ABCDEF";
-    char temp[8]; 
+    char temp[8];
     int i = 0;
 
     if (num == 0) {
-        buffer[pos] = '0';
-        return 1;
+        return write_char(buffer, pos, '0', size);
     }
 
     while (num > 0) {
@@ -701,58 +704,63 @@ int write_hex32(char* buffer, int pos, uint32_t num) {
         num >>= 4;
     }
 
-    // Reverse into buffer
+    int cur_pos = pos;
     for (int j = 0; j < i; j++) {
-        buffer[pos + j] = temp[i - j - 1];
+        if (buffer && (size == 0 || cur_pos < size - 1)) {
+            buffer[cur_pos] = temp[i - j - 1];
+        }
+        cur_pos++;
     }
-
     return i;
 }
 
-int write_number_fixed_width(char* buffer, int pos, int num, int width) {
-    char temp[20]; // enough for 32-bit int digits
+int write_number_fixed_width(char* buffer, int pos, int num, int width, int size) {
+    char temp[20];
     int i = 0;
     bool negative = false;
 
-    if (num < 0) {
-        negative = true;
-        num = -num;
-    }
-
-    // Convert number to string (reverse)
     if (num == 0) {
-        temp[i++] = '0';
+        i = 1;
+        temp[0] = '0';
     } else {
+        if (num < 0) {
+            negative = true;
+            num = -num;
+        }
+
         while (num > 0) {
             temp[i++] = (num % 10) + '0';
             num /= 10;
         }
     }
+
     int digits_to_print = (width > i) ? width : i;
-
     int total_len = digits_to_print + (negative ? 1 : 0);
+
+    int cur_pos = pos;
+
     if (negative) {
-        buffer[pos++] = '-';
+        if (buffer && (size == 0 || cur_pos < size - 1)) buffer[cur_pos] = '-';
+        cur_pos++;
     }
+
     for (int pad = digits_to_print - i; pad > 0; pad--) {
-        buffer[pos++] = '0';
+        if (buffer && (size == 0 || cur_pos < size - 1)) buffer[cur_pos] = '0';
+        cur_pos++;
     }
 
-
-    int start = (i > width) ? i - width : 0;
-
-    for (int j = i - 1 - start; j >= 0; j--) {
-        buffer[pos++] = temp[j + start];
+    for (int j = i - 1; j >= 0; j--) {
+        if (buffer && (size == 0 || cur_pos < size - 1)) {
+            buffer[cur_pos] = temp[j];
+        }
+        cur_pos++;
     }
 
     return total_len;
 }
 
-
-int sprintf(char* buffer, const char* format, ...) {
-    va_list args;
-    va_start(args, format);
-
+// buffer be NULL to just calculate sizeint vsnprintf(char* buffer, int size, const char* format, va_list args) {
+int vsnprintf(char* buffer, int size, const char* format, va_list args) {
     int pos = 0;
 
     while (*format) {
@@ -760,7 +768,7 @@ int sprintf(char* buffer, const char* format, ...) {
             format++;
             if (*format == '\0') break;
 
-            // Handle %0Nd for integers (exactly N digits)
+            // Handle %0Nd for fixed width integers
             if (*format == '0') {
                 format++;
                 int width = 0;
@@ -770,14 +778,105 @@ int sprintf(char* buffer, const char* format, ...) {
                 }
                 if (*format == 'd') {
                     int val = va_arg(args, int);
-                    pos += write_number_fixed_width(buffer, pos, val, width);
-                    format++; 
+                    pos += write_number_fixed_width(buffer, pos, val, width, size);
+                    format++;
                     continue;
                 } else {
-                    
+                    if (pos < size - 1 && buffer) buffer[pos] = '%';
+                    pos++;
+                    if (pos < size - 1 && buffer) buffer[pos] = '0';
+                    pos++;
+                    const char* rewind_fmt = format;
+                    while (rewind_fmt > format - 10 && *(rewind_fmt - 1) >= '0' && *(rewind_fmt - 1) <= '9') {
+                        if (pos < size - 1 && buffer) buffer[pos] = *(rewind_fmt - 1);
+                        pos++;
+                        rewind_fmt--;
+                    }
+                    if (pos < size - 1 && buffer) buffer[pos] = *format;
+                    pos++;
+                    format++;
+                    continue;
+                }
+            }
+
+            switch (*format) {
+                case 'd': {
+                    int val = va_arg(args, int);
+                    pos += write_number(buffer, pos, val, size);
+                    break;
+                }
+                case 'u': {
+                    uint32_t val = va_arg(args, uint32_t);
+                    pos += write_unsigned(buffer, pos, val, size);
+                    break;
+                }
+                case 'x':
+                case 'X': {
+                    uint32_t val = va_arg(args, uint32_t);
+                    pos += write_hex32(buffer, pos, val, size);
+                    break;
+                }
+                case 'c': {
+                    char c = (char)va_arg(args, int);
+                    pos += write_char(buffer, pos, c, size);
+                    break;
+                }
+                case 's': {
+                    const char* s = va_arg(args, const char*);
+                    if (!s) s = "(null)";
+                    pos += write_str(buffer, pos, s, size);
+                    break;
+                }
+                case '%': {
+                    pos += write_char(buffer, pos, '%', size);
+                    break;
+                }
+                default: {
+                    pos += write_char(buffer, pos, '%', size);
+                    pos += write_char(buffer, pos, *format, size);
+                    break;
+                }
+            }
+        } else {
+            pos += write_char(buffer, pos, *format, size);
+        }
+        format++;
+    }
+
+    if (buffer && size > 0) {
+        if (pos >= size) pos = size - 1;
+        buffer[pos] = '\0';
+    }
+
+    return pos; // characters that would have been written (excluding null)
+}
+
+
+
+int vsprintf(char* buffer, const char* format, va_list args) {
+    int pos = 0;
+
+    while (*format) {
+        if (*format == '%') {
+            format++;
+            if (*format == '\0') break;
+
+            // Handle %0Nd for fixed width integers
+            if (*format == '0') {
+                format++;
+                int width = 0;
+                while (*format >= '0' && *format <= '9') {
+                    width = width * 10 + (*format - '0');
+                    format++;
+                }
+                if (*format == 'd') {
+                    int val = va_arg(args, int);
+                    pos += write_number_fixed_width(buffer, pos, val, width, 0);
+                    format++;
+                    continue;
+                } else {
                     buffer[pos++] = '%';
                     buffer[pos++] = '0';
-                    // rewind to print digits and next char literally
                     const char* rewind_fmt = format;
                     while (rewind_fmt > format - 10 && *rewind_fmt >= '0' && *rewind_fmt <= '9') {
                         buffer[pos++] = *(rewind_fmt - 1);
@@ -792,49 +891,64 @@ int sprintf(char* buffer, const char* format, ...) {
             switch (*format) {
                 case 'd': {
                     int val = va_arg(args, int);
-                    pos += write_number(buffer, pos, val);
+                    pos += write_number(buffer, pos, val, 0);
                     break;
                 }
                 case 'u': {
                     uint32_t val = va_arg(args, uint32_t);
-                    pos += write_unsigned(buffer, pos, val);
+                    pos += write_unsigned(buffer, pos, val, 0);
                     break;
                 }
                 case 'x':
                 case 'X': {
                     uint32_t val = va_arg(args, uint32_t);
-                    pos += write_hex32(buffer, pos, val);
+                    pos += write_hex32(buffer, pos, val, 0);
                     break;
                 }
                 case 'c': {
                     char c = (char)va_arg(args, int);
-                    pos += write_char(buffer, pos, c);
+                    pos += write_char(buffer, pos, c, 0);
                     break;
                 }
                 case 's': {
                     const char* s = va_arg(args, const char*);
-                    pos += write_str(buffer, pos, s);
+                    pos += write_str(buffer, pos, s, 0);
                     break;
                 }
                 case '%': {
-                    pos += write_char(buffer, pos, '%');
+                    pos += write_char(buffer, pos, '%', 0);
                     break;
                 }
                 default: {
-                    pos += write_char(buffer, pos, '%');
-                    pos += write_char(buffer, pos, *format);
+                    pos += write_char(buffer, pos, '%', 0);
+                    pos += write_char(buffer, pos, *format, 0);
                     break;
                 }
             }
         } else {
-            pos += write_char(buffer, pos, *format);
+            pos += write_char(buffer, pos, *format, 0);
         }
         format++;
     }
 
-    // Null-terminate
     buffer[pos] = '\0';
 
-    va_end(args);
     return pos; // number of characters written
+}
+
+
+int snprintf(char* buffer, int size, const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    int ret = vsnprintf(buffer, size, format, args);
+    va_end(args);
+    return ret;
+}
+
+int sprintf(char* buffer, const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    int ret = vsprintf(buffer, format, args);
+    va_end(args);
+    return ret;
 }

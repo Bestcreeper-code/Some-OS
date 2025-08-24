@@ -44,7 +44,7 @@ void app_main() {
         int string_len =16;
 
         for (int i = 0; i < string_len; i++) {
-            draw_bitmap_char(str[i], 10 + i * 8, 10, 8, 8, 0x0F, NULL, true);
+            draw_bitmap_char(str[i], 10 + i * 8, 10, 8, 8, 0x0F, NULL, true, false);
         }//bug only half renders bc too fast and wall doesnt change
 
         sleep(16);

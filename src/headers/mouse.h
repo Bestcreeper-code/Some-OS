@@ -21,5 +21,6 @@ void enable_mouse_display();
 void disable_mouse_display();
 
 bool Get_Mouse_Button(Mouse_FLAGS button);
+void Get_Mouse_Pos(short* x, short* y);
 
 #endif // MOUSE_H

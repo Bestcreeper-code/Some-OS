@@ -4,6 +4,8 @@
 #define M_PI 3.14159265358979323846
 #define DEG_TO_RAD(angle_in_degrees) ((angle_in_degrees) * M_PI / 180.0)
 
+#define abs(x) ((x) < 0 ? -(x) : (x))
+
 
 double factorial(int n);
 double pow(double base, int exp);

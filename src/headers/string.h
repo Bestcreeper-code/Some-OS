@@ -34,5 +34,7 @@ char* Concat(char** list, size_t size, char linking_char);
 bool InsertChar(char* str, uint32_t pos, char c);
 void RemoveChar(char* str, uint32_t index);
 
+//conversion functions
+int atoi(const char* str);
 
 #endif // STRING_H

@@ -78,6 +78,9 @@ void mouse_irq_handler() {
         int8_t y_move = (int8_t)mouse_bytes[2];  // Y movement delta (signed)
 
         *mouse_buttons = (*mouse_buttons & ~0x07) | (buttons & 0x07);
+        
+
+
         *mouse_x += x_move/2;
         *mouse_y -= y_move/2; // Y usually inverted 
         
@@ -95,13 +98,47 @@ bool Get_Mouse_Button(Mouse_FLAGS button){
     return (*mouse_buttons & button) != 0;
 }
 
+void Get_Mouse_Pos(short* x, short* y){
+    if(x)*x = *mouse_x;
+    if(y)*y = *mouse_y;
+}
+
+
+
 uint8_t mouse_icon[4] = {
     0x3F, 0x1E, 0x2C, 0x08 //4x6 mouse icon
 };
+uint8_t *mouse_bg = MOUSE_PREV_BG; // 4x6 = 24 bytes
 
-void Redraw_Mouse_Cursor(){
-    draw_bitmap_char(32, *mouse_x,*mouse_y, 4, 6, 0x3F, mouse_icon, false);//smol hack to print anything as a char easier(using char 32/first printable char)
+void Redraw_Mouse_Cursor() {
+    for (int dy = 0; dy < 6; dy++) {
+        for (int dx = 0; dx < 4; dx++) {
+            int px = *MOUSE_X_POS_PREV + dx;
+            int py = *MOUSE_Y_POS_PREV + dy;
+
+    
+            if (px >= 0 && px < 320 && py >= 0 && py < 200)
+                Force_put_pixel(px, py, mouse_bg[dy * 4 + dx]);
+        }
+    }
+
+    for (int dy = 0; dy < 6; dy++) {
+        for (int dx = 0; dx < 4; dx++) {
+            int px = *mouse_x + dx;
+            int py = *mouse_y + dy;
+
+    
+            if (px >= 0 && px < 320 && py >= 0 && py < 200)
+                mouse_bg[dy * 4 + dx] = get_pixel(px, py);
+        }
+    }
+
+    draw_bitmap_char(32, *mouse_x, *mouse_y, 4, 6, 0x1A, mouse_icon, false, true);
+
+    *MOUSE_X_POS_PREV = *mouse_x;
+    *MOUSE_Y_POS_PREV = *mouse_y;
 }
+
 
 void enable_mouse_display(){
     *mouse_buttons |= MOUSE_DISPLAYED_FLAG;
@@ -110,3 +147,4 @@ void enable_mouse_display(){
 void disable_mouse_display(){
     *mouse_buttons &= ~MOUSE_DISPLAYED_FLAG;
 }
+

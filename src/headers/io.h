@@ -68,14 +68,20 @@ unsigned char getc_nb();
 
 void get_string(char* buffer);
 void get_string_after_index(int start, char* buffer);
-#endif
 
-//sprintf helpers and func
+//sprintf & others
+
+
 int sprintf(char* buffer, const char* format, ...);
+int snprintf(char* buffer, int size, const char* format, ...);
+int vsprintf(char* buffer, const char* format, va_list args);
+int vsnprintf(char* buffer, int size, const char* format, va_list args);
 
-int write_char(char* buffer, int pos, char c);
-int write_str(char* buffer, int pos, const char* s);
-int write_number(char* buffer, int pos, int num);
-int write_unsigned(char* buffer, int pos, uint32_t num);
-int write_hex32(char* buffer, int pos, uint32_t num);
-int write_number_fixed_width(char* buffer, int pos, int num, int width);
+int write_char(char* buffer, int pos, char c, int size);
+int write_str(char* buffer, int pos, const char* s, int size);
+int write_number(char* buffer, int pos, int num, int size);
+int write_unsigned(char* buffer, int pos, uint32_t num, int size);
+int write_hex32(char* buffer, int pos, uint32_t num, int size);
+int write_number_fixed_width(char* buffer, int pos, int num, int width, int size);
+
+#endif
