@@ -24,7 +24,7 @@ extern void irq_dummy_handler();
 
 
 void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
-    Kern_log("Setting IDT gate %d\n", num);
+    Sys_log("Setting IDT gate %d\n", num);
     idt[num].offset_low = base & 0xFFFF;
     idt[num].selector = sel;
     idt[num].zero = 0;
@@ -41,7 +41,7 @@ void idt_init() {
     }
 
     idt_set_gate(32, (uint32_t)irq0_handler, 0x08, 0x8E); // IRQ0 (timer)
-    idt_set_gate(33, (uint32_t)irq1_handler, 0x08, 0x8E); /* IRQ1 (keyboard) */ init_keyboard();
+    idt_set_gate(33, (uint32_t)irq1_handler, 0x08, 0x8E); /* IRQ1 (keyboard) */ init_keyboard();//reset_input_buffer();
     idt_set_gate(13, (uint32_t)isr13, 0x08, 0x8E); //isr13 (General Protection Fault)
     idt_set_gate(44, (uint32_t)irq12_handler, 0x08, 0x8E); /* IRQ12 (mouse)*/init_mouse();
 

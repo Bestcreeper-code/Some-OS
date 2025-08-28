@@ -26,6 +26,8 @@
 #define GET_KEYBOARD_MOD_FLAG(flag) \
     ((*(uint8_t*) KEYBOARD_MOD_KEYS_FLAGS) & (flag))
 
+#define ControlCombo(key) CTRL_KEY_COMBO + key
+
 #define ALT_PRESSED 0x1
 #define ALTGR_PRESSED 0x2
 #define CTRL_PRESSED 0x4  
@@ -65,6 +67,8 @@ unsigned char GetInputCharNonBlocking();
 
 unsigned char getc();
 unsigned char getc_nb();
+
+void reset_input_buffer();
 
 void get_string(char* buffer);
 void get_string_after_index(int start, char* buffer);

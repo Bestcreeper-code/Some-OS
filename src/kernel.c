@@ -22,34 +22,36 @@ extern int vgaX, vgaY;
 
 
 void kmain(unsigned long magic, unsigned long addr) {
-    Kern_log("interrupts disabled.\n");
     serial_init();
-    Kern_log("Kernel starting...\n");
-    Kern_log("Kernel compiled on %s at %s\n", __DATE__, __TIME__);
-    Kern_log("with GCC ver %d.%d.%d \n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+    Sys_log("interrupts disabled.\n");
+    Sys_log("Kernel starting...\n");
+    Sys_log("Kernel compiled on %s at %s\n", __DATE__, __TIME__);
+    Sys_log("with GCC ver %d.%d.%d \n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
     
     *((char*)TASK_SWITCHING_FLAG) = 0;
-    // vga_set_mode_03h();
-    Kern_log("Setting up GDT and IDT...\n");
+
+    
+    
+    Sys_log("Setting up GDT and IDT...\n");
     initGdt();
     idt_init();
-    Kern_log("GDT and IDT set up successfully.\n");
+    Sys_log("GDT and IDT set up successfully.\n");
 
-    Kern_log("remapping PIC...\n");
+    Sys_log("remapping PIC...\n");
     pic_remap();
-    Kern_log("PIC remapped successfully.\n");
+    Sys_log("PIC remapped successfully.\n");
 
-    Kern_log("Initializing PIT...\n");
+    Sys_log("Initializing PIT...\n");
     pit_init(); 
-    Kern_log("PIT initialized.\n");
+    Sys_log("PIT initialized.\n");
     
     
     disable_mouse_display();
 
-    Kern_log("Parsing memory map...\n");
+    Sys_log("Parsing memory map...\n");
     *((uint32_t*)MULTIBOOT_INFO_ADDRESS) = addr;
     parse_memory_map( Get_multiboot_info() );
-    Kern_log("Memory map parsed.\n");
+    Sys_log("Memory map parsed.\n");
 
     vga_set_mode(0X03);
     
@@ -60,19 +62,19 @@ void kmain(unsigned long magic, unsigned long addr) {
     force_alloc(KERNEL_DATA_START, KERNEL_DATA_END - KERNEL_DATA_START);
     
 mounting:
-    Kern_log("trying to mount filesystem...\n");
+    Sys_log("trying to mount filesystem...\n");
     FRESULT res = f_mount(FatFsSys, "0:", 1);
     if (res != FR_OK) {
-        Kern_log("Failed to mount filesystem. Error code: %d\n Trying to mount again", res);
+        Sys_log("Failed to mount filesystem. Error code: %d\n Trying to mount again", res);
         goto mounting;
     } else {
-        Kern_log("Filesystem mounted successfully.\n");
+        Sys_log("Filesystem mounted successfully.\n");
         // get_string();
     }
     
     
-    Kern_log("Multiboot magic number: 0x%x\n", (void*)magic);
-    Kern_log("Multiboot info address: 0x%x\n", addr);
+    Sys_log("Multiboot magic number: 0x%x\n", (void*)magic);
+    Sys_log("Multiboot info address: 0x%x\n", addr);
     
     
     // clear_processes();
@@ -84,13 +86,15 @@ mounting:
     // *((char*)TASK_SWITCHING_FLAG) = 1;
     // Load_bin_exe("0:/console.bin");
 
+    Sys_log("Interrupts reenabled.\n");
     __asm__ volatile ("sti"); // Enable interrupts
-    Kern_log("Interrupts reenabled.\n");
+    vga_set_mode(0x3);
 
-    Kern_log("Loading login manager...\n");
+    Sys_log("Loading login manager...\n");
     Load_bin_exe("0:/SYSTEM_CORE/Security/login.bin", 0, NULL);
 
-    Kern_log("Starting console...\n");
+    Sys_log("Starting console...\n");
+    
     Start_Console();
 
     while (1) {

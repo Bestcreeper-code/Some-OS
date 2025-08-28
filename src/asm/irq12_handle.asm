@@ -1,4 +1,4 @@
-%define MOUSE_FLAGS_ADDR    0x21F6
+%define MOUSE_FLAGS_ADDR    0x21B6
 %define MOUSE_FLAG_ENABLED  1 << 7
 
 global irq12_handler

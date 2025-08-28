@@ -151,3 +151,8 @@ void reset_palette(){
 uint8_t get_color_palette_size(){
     return *color_pal_size;
 }
+
+RGBColor get_palette_color(uint8_t index){
+    if(index >= *color_pal_size) return (RGBColor){0,0,0};
+    return palette13h[index];
+}

@@ -4,6 +4,7 @@
 #include "headers/video.h"
 #include "headers/time.h"
 #include "headers/FileSystem.h"
+#include "headers/Logger.h"
 #include "headers/addresses.h"
 #include "data/globals.h"
 #include "data/KB_Layouts.h"
@@ -322,10 +323,12 @@ unsigned char getc(){
     unsigned char chr = 0;
     while(chr == 0){
         if(input_char_buffer[0]){
+            // Sys_log("[GETC] c:%c  icb:%x",input_char_buffer[0],input_char_buffer);
             chr = input_char_buffer[0];
             memcpy((void*)&input_char_buffer[0],(void*)&input_char_buffer[1],INPUT_CHAR_BUFFER_SIZE-1);
             input_char_buffer[INPUT_CHAR_BUFFER_SIZE-1] = 0;
         }
+        sleep(1);//since it fixes it smh
     }
     return chr;
 }
@@ -951,4 +954,8 @@ int sprintf(char* buffer, const char* format, ...) {
     int ret = vsprintf(buffer, format, args);
     va_end(args);
     return ret;
+}
+
+void reset_input_buffer(){
+    memset((void*)input_char_buffer, 0, INPUT_CHAR_BUFFER_SIZE);
 }

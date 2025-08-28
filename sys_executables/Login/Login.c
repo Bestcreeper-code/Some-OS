@@ -37,14 +37,14 @@ void app_main(int argc, char** argv) {
 
 
 
-    if (check_path_exists("0:/SYSTEM_CORE/Security/pwkys.dta", FT_FILE) == FR_OK) {
-    username:
+    if (check_path_exists("0:/SYSTEM_CORE/Security/kys.dta", FT_FILE) != FR_OK) {
+    new_username:
         clear_13h_screen(0x9);
         draw_bitmap_string("Create a new user:", 0, 0, 4, 6, 0x3F, NULL, true, 0);
 
         char* usrnm = NULL;
         while (usrnm == NULL || !*usrnm) {
-            usrnm = String_Input_Popup(97, 136, 4 * 12); // 12 chars
+            usrnm = String_Input_Popup(97, 136, 4 * 12, false); // 12 visible chars
         }
 
         clear_13h_screen(0x9);
@@ -53,8 +53,8 @@ void app_main(int argc, char** argv) {
 
         char* pwrd = NULL;
         while (pwrd == NULL || !*pwrd) {
-            pwrd = String_Input_Popup(97, 136, 4 * 12);
-            if (pwrd == NULL) goto username;
+            pwrd = String_Input_Popup(97, 136, 4 * 12, true);
+            if (pwrd == NULL) goto new_username;
         }
 
         int usr_len = strlen(usrnm) + 1;
@@ -114,6 +114,12 @@ login:
     uint8_t pwrd_len = buffer[1];
     uint8_t key_size = buffer[2];
 
+    if (usr_len == 0 || pwrd_len == 0 || key_size == 0 || file_size != (3 + usr_len + pwrd_len + key_size)) {
+        // Invalid data, restart setup/ make a new user
+        free(buffer);
+        goto new_username;
+    }
+
     char* username = malloc(usr_len);
     memcpy(username, &buffer[3], usr_len);
 
@@ -138,7 +144,7 @@ login:
 
         char* entered_pw = NULL;
         while (entered_pw == NULL || !*entered_pw) {
-            entered_pw = String_Input_Popup(97, 136, 4 * 12);
+            entered_pw = String_Input_Popup(97, 136, 4 * 12, true);
         }
 
         char* encrypted_entered_pw = xor_crypt(entered_pw, strlen(entered_pw) + 1, key, key_size);
@@ -174,7 +180,7 @@ login:
     free(key);
     free(buffer);
 
-    clear_13h_screen(0x9);
+    clear_13h_screen(0x34);
     draw_bitmap_string("Too many failed attempts!", 0, 0, 4, 6, 0x3F, NULL, true, 0);
 
     rtc_time_t rtc;
@@ -200,7 +206,7 @@ locked_down:
         if(rtc_to_unix_timestamp(&rtc) > ts ){
             goto login;
         };
-        clear_13h_screen(0x4);
+        clear_13h_screen(0x34);
         draw_bitmap_string("Too many failed attempts!", 0, 0, 4, 6, 0x3F, NULL, true, 0);
         draw_bitmap_string("System locked for", 0, 10, 4, 6, 0x3F, NULL, true, 0);
         

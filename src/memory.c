@@ -128,7 +128,7 @@ void parse_memory_map(multiboot_info_t* mb_info) {
     memset(map->free_regions, 0, sizeof(free_region_t) * MAX_FREE_REGIONS);
     
     if (!(checkFlag(*mb_info, 6))) {
-        Kern_log("bork");
+        Sys_log("bork");
         return;
     }
 
@@ -141,17 +141,17 @@ void parse_memory_map(multiboot_info_t* mb_info) {
                 map->free_regions[map->free_region_count].base_addr = mmap->addr;
                 map->free_regions[map->free_region_count].length = mmap->len; 
                 map->free_region_count++;
-                Kern_log("add: %p ||| len %llu\n",mmap->addr,mmap->len);
+                Sys_log("add: %x ||| len %u\n",mmap->addr,mmap->len);
             }
             
         }
         mmap = (multiboot_mmap_entry_t*)((uintptr_t)mmap + mmap->size + sizeof(mmap->size));
     }
 
-    Kern_log("Free memory regions (%d):\n", map->free_region_count);
+    Sys_log("Free memory regions (%d):\n", map->free_region_count);
     
     for (int i = 0; i < map->free_region_count; i++) {
-        Kern_log("  Region %d: Base = 0x%x, Length = 0x%x (%u bytes)\n",
+        Sys_log("  Region %d: Base = 0x%x, Length = 0x%x (%u bytes)\n",
                i,
                map->free_regions[i].base_addr,
                map->free_regions[i].length,
@@ -203,10 +203,10 @@ free_region_t* FirstRegionOfSizeOrMore(size_t size) {
 
 void print_free_regions() {
     free_region_map_t* map = get_free_region_map();
-    Kern_log("Free regions:\n");
+    Sys_log("Free regions:\n");
     for (int i = 0; i < MAX_FREE_REGIONS; i++) {
         if (map->free_regions[i].length > 0) {
-            Kern_log("[%d] base: 0x%p, size: %llu\n", i, map->free_regions[i].base_addr, map->free_regions[i].length);
+            Sys_log("[%d] base: 0x%x, size: %u\n", i, map->free_regions[i].base_addr, map->free_regions[i].length);
         }
     }
 }
@@ -217,12 +217,12 @@ uint64_t get_pter_size(void* pter){
     return *sizeaddr;
 }
 
-void* malloc(size_t _Size) {
+void* malloc_impl(size_t _Size) {
     free_region_map_t* map = get_free_region_map();
     size_t full_size = (_Size + sizeof(uint64_t) + 7) & ~7ULL;
     free_region_t* region = FirstRegionOfSizeOrMore(full_size);
     if (region == NULL || region->length < full_size) {
-        Kern_log("Couldn't find enough memory for %u bytes\n", (unsigned)_Size);
+        Sys_log("Couldn't find enough memory for %u bytes\n", (unsigned)_Size);
         print_free_regions();
         return NULL;
     }
@@ -233,13 +233,13 @@ void* malloc(size_t _Size) {
     region->base_addr += full_size;
 
 #if DEBUG_MODE == true
-    Kern_log("allocated %u bytes at %p\n", (unsigned)full_size, data);
+    Sys_log("allocated %u bytes at %x\n", (unsigned)full_size, data);
 #endif
 
     return (void*)&data[1];
 }
 
-void free(void* _Memory) {
+void free_impl(void* _Memory) {
     if (!_Memory) return;
 
     free_region_map_t* map = get_free_region_map();
@@ -254,7 +254,7 @@ void free(void* _Memory) {
             map->free_regions[i].base_addr = ((uint64_t)address - sizeof(uint64_t));
             map->free_regions[i].length = size;
 #if DEBUG_MODE == true
-            Kern_log("freeing %llu at %p\n", size, _Memory);
+            Sys_log("freeing %u at %x\n", size, _Memory);
 #endif
             break;
         }
@@ -305,7 +305,7 @@ void free(void* _Memory) {
     }
 }
 
-void* realloc(void *ptr, size_t size) {
+void* realloc_impl(void *ptr, size_t size) {
     if (size == 0) {
         free(ptr);
         return NULL;

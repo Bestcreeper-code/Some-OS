@@ -6,6 +6,7 @@
 #include "headers/vga_modes.h"
 #include "headers/loader.h"
 #include "headers/Logger.h"
+#include "headers/mouse.h"
 #include "data/textconsts.h"
 
 #define EXEC_LOAD_ADRESS 0x200000
@@ -259,8 +260,8 @@ int Load_bin_exe(const char* file_path,int argc, char** argv){
         res = f_read(&file, buffer, fileSize, &bytesRead);
         if (res == FR_OK && bytesRead == fileSize) {
             // File successfully read into buffer
-            Kern_log("File %s read successfully \n",file_path);
-
+            Sys_log("File %s read successfully \n",file_path);
+            
             // Define a function pointer to the entry point
             int (*entry)(int, char**) = (int (*)(int, char**))buffer;
 
@@ -269,19 +270,19 @@ int Load_bin_exe(const char* file_path,int argc, char** argv){
             entry(argc, argv);
 
             vga_set_mode(0x03);
-            
+            disable_mouse_display();
             ClearScreen();
 
             // Wipe the memory region after execution
             memset(buffer, 0, fileSize);
         
         } else {
-            printf("File read error: %d\n", res);
+            Sys_log("File read error(%s): %d\n", file_path, res);
         }
 
         f_close(&file);
     } else {
-        printf("Failed to open file: %d\n", res);
+        Sys_log("Failed to open file %s : %d\n", file_path, res);
     }
 }
 

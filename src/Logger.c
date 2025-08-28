@@ -37,7 +37,7 @@ void serial_write_string(const char* str) {
 
 
 
-void k_serial_logf(const char* frmt, const char* file, const char* func, int line, ...) {
+void sys_serial_logf(const char* frmt, const char* file, const char* func, int line, ...) {
     va_list args;
     va_start(args, line);
 

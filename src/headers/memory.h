@@ -1,5 +1,10 @@
+#ifndef MEMORY_H
+#define MEMORY_H
+
 #include <stdint.h>
 #include "multiboot_info.h"
+#include "Logger.h"
+#include "../data/globals.h"
 #include <stddef.h>
 #include "addresses.h"
 
@@ -26,7 +31,27 @@ void parse_memory_map(multiboot_info_t* mb_info);
 void force_alloc(uint64_t adress, uint64_t size);
 void force_free(uint64_t address, uint64_t size);
 uint64_t get_pter_size(void* pter);
+// impl funcs
+void* malloc_impl(size_t _Size);
+void free_impl(void *_Memory);
+void *realloc_impl(void *ptr, size_t size);
 
-void* malloc(size_t _Size);
-void free(void *_Memory);
-void *realloc(void *ptr, size_t size);
+// used funcs
+
+
+#if DEBUG_MODE == 1
+
+
+#define malloc(size)        (Sys_log("[Debug] called malloc"), malloc_impl(size))
+#define free(ptr)           (Sys_log("[Debug] called free"), free_impl(ptr))
+#define realloc(ptr, size)  (Sys_log("[Debug] called realloc"), realloc_impl(ptr, size))
+
+#else
+
+#define malloc              malloc_impl
+#define free                free_impl
+#define realloc             realloc_impl
+
+#endif //-DEBUG
+
+#endif //-MEMORY_H

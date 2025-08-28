@@ -27,7 +27,7 @@ extern int vgaY;
 void Start_Console();
 char* Console_Get_Command();
 
-
+char Add_Console_Request(char* command);
 
 
 #endif // CONSOLE_H

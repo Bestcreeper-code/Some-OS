@@ -16,11 +16,13 @@
 #define START_Y 25
 
 char* canvas = NULL;
+char* filepath = NULL;
 
 
 void app_main(int argc, char** argv) {
     fs_set((FATFS*)FATFS_SYS_ADDR, 0);
     vga_set_mode(0x13);
+    enable_mouse_display();
     clear_13h_screen(0x9); // dark blue
     reset_palette();
     
@@ -34,11 +36,11 @@ void app_main(int argc, char** argv) {
         && f_open(&file, argv[1], FA_READ) == FR_OK) {
         
         file_size = f_size(&file);
-        file_data = malloc(file_size + 1);
+        file_data = malloc(file_size);
         if (file_data != NULL) {
             if (f_read(&file, file_data, file_size, &br) == FR_OK && br == file_size) {
-                file_data[file_size] = '\0';
                 f_close(&file);
+                filepath = argv[1];                
                 goto done;
             }
             free(file_data);
@@ -84,7 +86,6 @@ done:
     // Copy pixel data from file_data to canvas (fixed pointer arithmetic)
     memcpy(canvas, (char*)header + header->data_start, header->height * header->width);
 
-    enable_mouse_display();
 
 
     uint8_t current_color = 0x0; // black
@@ -107,16 +108,17 @@ redraw:
 
     while (1) {
         if (redraw_ui) {
+            Draw_Rect((Vector2){0,0},320,START_Y,0x9); // clear top bar
             char temp_str[10];
-            sprintf(temp_str, "Col:%03d", current_color);
+            sprintf(temp_str, "COL:%03d", current_color);
             draw_bitmap_string(temp_str, 0, 0, 4, 6, 0, NULL, true, 1);
             Draw_Rect((Vector2){0,6},7,7,current_color);
 
-            sprintf(temp_str, "Size:%03d", brush_size);
+            sprintf(temp_str, "SIZ:%03d", brush_size);
 
-            draw_bitmap_string(temp_str, 14, 0, 4, 6, 0, NULL, true, 1);
+            draw_bitmap_string(temp_str, 50, 0, 4, 6, 0, NULL, true, 1);
             redraw_ui = false;
-            draw_bitmap_string("C: Change Color | S: change Brush Size | P: new color", 0, 15, 4, 6, 0x37, NULL, true, 1);
+            draw_bitmap_string("C: Color | X: Brush Size | P: New color | Ctrl+S save", 0, 15, 4, 6, 0x37, NULL, true, 1);
 
         }
 
@@ -160,7 +162,7 @@ redraw:
         {
         case 'c':case 'C':{
             draw_bitmap_string("Enter color index (0-255):", 80, 0, 4, 6, 0, NULL, true, 1);
-            char* input = String_Input_Popup(80, 80, 160);
+            char* input = String_Input_Popup(90, 80, 140);
             uint8_t color = atoi(input);
             free(input);
             if(color <= get_color_palette_size())current_color = color;
@@ -173,9 +175,9 @@ redraw:
             break;
         }
 
-        case 's':case 'S':{
+        case 'x':case 'X':{
             draw_bitmap_string("Enter Brush Size(max 200):", 80, 0, 4, 6, 0, NULL, true, 1);
-            char* input = String_Input_Popup(80, 80, 160);
+            char* input = String_Input_Popup(90, 80, 140);
             uint8_t chose_size = atoi(input);
             free(input);
             if(chose_size <= 200)brush_size = chose_size;
@@ -198,7 +200,7 @@ redraw:
                 char msg[25];
                 sprintf(msg,"Enter the wanted %c value",vars_names[i]);
                 draw_bitmap_string(msg, 80, 0, 4, 6, 0, NULL, true, 1);
-                char* input = String_Input_Popup(80, 80, 160);
+                char* input = String_Input_Popup(90, 80, 140);
                 *vars[i] = atoi(input);
                 free(input);
             }
@@ -207,6 +209,10 @@ redraw:
             goto redraw;
             break;
 
+        case ControlCombo('s'):case ControlCombo('S'):
+            // Save file
+            goto save_to_file;
+            break;
         default:
             break;
         }
@@ -215,6 +221,52 @@ redraw:
     }
 
 save_to_file:
+    clear_13h_screen(0x9); // dark blue
+    if (filepath == NULL) {
+ask_f_name:
+        draw_bitmap_string("Enter file name to save (e.g., file.paint):", 10, 10, 4, 6, 0, NULL, true, 1);
+        char* input = String_Input_Popup(20, 10, 280);
+        if(input == NULL || strlen(input) == 0){
+            free(input);
+            goto ask_f_name;
+        }
+        if (strcmp(&input[strlen(input) - 6], ".paint")) {
+            char* new_input = malloc(strlen(input) + 7);
+            sprintf(new_input, "%s.paint", input);
+            free(input);
+            input = new_input;
+        }
+        filepath = input;
+    }
+    // Update header colors from current palette
+    PaintFileHeader* hdr = malloc(sizeof(PaintFileHeader) + palette_size * 3 + header->width * header->height);
+    for (int i = 0; i < palette_size; i++) {
+        RGBColor color = get_palette_color(64 + i);
+        hdr->colors[i] = color;
+    }
+    memcpy(hdr, header, sizeof(PaintFileHeader));
+    hdr->data_start = sizeof(PaintFileHeader) + palette_size * 3;
+
+    memcpy((char*)hdr + hdr->data_start, canvas, header->width * header->height);
+    // Write to file
+    clear_13h_screen(0x9); // dark blue
+    FIL save_file;
+    if (f_open(&save_file, filepath, FA_WRITE | FA_CREATE_ALWAYS) == FR_OK) {
+        UINT bw;
+        if (f_write(&save_file, hdr, sizeof(PaintFileHeader) + palette_size * 3 + header->width * header->height, &bw) == FR_OK && bw > 0) {
+            f_close(&save_file);
+            draw_bitmap_string("File saved successfully!", 80, 12, 4, 6, 0x2, NULL, true, 1);
+            sleep(2000);
+        } else {
+            f_close(&save_file);
+            draw_bitmap_string("Failed to write to file!", 80, 12, 4, 6, 0x4, NULL, true, 1);
+            sleep(2000);
+        }
+    } else {
+        draw_bitmap_string("Failed to open file for writing!", 80, 12, 4, 6, 0x4, NULL, true, 1);
+        sleep(2000);
+    }
+
 
     // Cleanup (never reached currently)
     free(canvas);

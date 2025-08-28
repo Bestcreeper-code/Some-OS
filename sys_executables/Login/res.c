@@ -72,7 +72,7 @@ char* String_Input_Popup(int x, int y,int width, bool hidden) {
         // String inside the box
         if(!hidden) draw_bitmap_string(visible_str, x, y, font_w, font_h, 0X3F, NULL, true, space);
         else {
-            int hid_len = sizeof(visible_str);
+            int hid_len = strlen(visible_str);
             char* hidden_str = malloc(hid_len + 1);
             if (!hidden_str) {
                 free(buffer);
@@ -249,7 +249,7 @@ uint8_t Open_File_Edit_Popup(char* file) {
 
 char* xor_crypt(const char* value, int value_size, const char* key, int key_size) {
     char* output = malloc(value_size);
-    if (!output) return NULL;  // Always check malloc success
+    if (!output) return NULL;
 
     for (int i = 0; i < value_size; i++) {
         output[i] = value[i] ^ key[i % key_size];

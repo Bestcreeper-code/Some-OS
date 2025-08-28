@@ -39,6 +39,7 @@ gcc -m32 -g -ffreestanding -c src/vga_modes.c -o build/vga_modes.o
 gcc -m32 -g -ffreestanding -c src/loader.c -o build/loader.o
 gcc -m32 -g -ffreestanding -c src/mouse.c -o build/mouse.o
 gcc -m32 -g -ffreestanding -c src/Logger.c -o build/Logger.o
+gcc -m32 -g -ffreestanding -c src/power.c -o build/power.o
 
 # === Compile FatFs ===
 echo "[3] Compiling FatFs..."
@@ -59,7 +60,7 @@ ld -m elf_i386 -Ttext=0x100000 -z noexecstack -o kernel.elf \
   build/idt.o build/isr13.o build/dummy_handle.o build/gdt.o build/gdt_asm.o \
   build/video.o build/textconsts.o build/vga_modes.o build/loader.o \
   build/processes_asm.o build/mouse.o build/irq12_handle.o \
-  build/Logger.o 
+  build/Logger.o build/power.o
 
 
 # === Convert to binary for GRUB ===
@@ -75,7 +76,7 @@ echo "[7] Writing GRUB config..."
 cat > iso/boot/grub/grub.cfg << EOF
 set timeout=0
 set default=0
-menuentry "My OS" {
+menuentry "Creeper's OS" {
     multiboot /boot/kernel.elf
     boot
 }
@@ -97,13 +98,39 @@ else
   echo "[*] disk.img already exists, skipping creation."
 fi
 
+QEMU_CMD=(
+  qemu-system-i386
+  -m 512M
+  -boot d
+  -cdrom os.iso
+  -drive file=disk.img,format=raw,if=ide
+)
+
+# Flags
+ENABLE_GDB=false
+ENABLE_SERIAL=false
+
+# Parse args
+for arg in "$@"; do
+  case "$arg" in
+    -d) ENABLE_GDB=true ;;
+    -s) ENABLE_SERIAL=true ;;
+    *)  ;;  # ignore other args or handle more if needed
+  esac
+done
+
+# Append options conditionally
+if $ENABLE_SERIAL; then
+  QEMU_CMD+=(-serial stdio)
+fi
+
 # === Launch QEMU ===
-if [ "$1" = "-d" ]; then
+if $ENABLE_GDB; then
   echo "[10] Launching QEMU in GDB mode..."
-  qemu-system-x86_64 -boot d -cdrom os.iso -m 512M -drive file=disk.img,format=raw,if=ide -s -S #-no-reboot -d int,cpu_reset
+  "${QEMU_CMD[@]}" -s -S
 else
-  echo "[10] Launching QEMU..."
-  qemu-system-x86_64 -boot d -cdrom os.iso -m 512M -drive file=disk.img,format=raw,if=ide #-s -S #-no-reboot -d int,cpu_reset
+  echo "[10] Launching QEMU normally..."
+  "${QEMU_CMD[@]}"
 fi
 
 

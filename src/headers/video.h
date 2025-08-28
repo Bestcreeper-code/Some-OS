@@ -24,6 +24,7 @@ void set_palette_color(uint8_t index, uint8_t red, uint8_t green, uint8_t blue);
 
 uint8_t get_color_palette_size();
 uint8_t set_new13h_color(unsigned char r, unsigned char g, unsigned char b);
+RGBColor get_palette_color(uint8_t index);
 
 //no mouse check
 void Force_put_pixel(int x, int y, uint8_t color);

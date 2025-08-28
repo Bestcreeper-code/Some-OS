@@ -170,10 +170,17 @@ char* command_list[] = {
     NULL
 };
 
-
 bool Console_Process_Command(char* command) {
     int token_count = 0;
     bool result = true;
+    if (command == NULL || strlen(command) == 0) {
+        return false;
+    }
+    bool echoing = true;
+    if(command[0] == '@'){
+        echoing = false;
+        command++; 
+    }
 
     char** tokens = Split(command, ' ', 2, &token_count);
 
@@ -206,8 +213,8 @@ bool Console_Process_Command(char* command) {
     }
     else if (!strcmp(tokens[0], "echo")) {
         if (token_count > 1) {
-            printstr(tokens[1]);
-            printstr("\n");
+                printstr(tokens[1]);
+                printstr("\n");
         } else {
             result = false;
         }
@@ -222,7 +229,7 @@ bool Console_Process_Command(char* command) {
     else if (!strcmp(tokens[0], "edit")) {
         if (token_count > 1) {
             // Placeholder 
-            printstr("\n");
+            if (echoing) printstr("\n");
         } else {
             result = false;
         }
@@ -231,7 +238,7 @@ bool Console_Process_Command(char* command) {
         if (token_count < 2) {
             result = false;
         } else {
-            printf("Successfully created %s\n", tokens[1]);
+            if (echoing) printf("Successfully created %s\n", tokens[1]);
         }
     }
     else if (!strcmp(tokens[0], "mkdir")) {
@@ -240,9 +247,9 @@ bool Console_Process_Command(char* command) {
         } else {
             char* list[2] = {currpath, tokens[1]};
             if (f_mkdir(Concat(list, 2, '/')) == FR_OK) {
-                printf("Successfully created directory %s\n", tokens[1]);
+                if (echoing) printf("Successfully created directory %s\n", tokens[1]);
             } else {
-                printf("Couldn't create directory %s\n", tokens[1]);
+                if (echoing) printf("Couldn't create directory %s\n", tokens[1]);
             }
         }
     }
@@ -250,14 +257,16 @@ bool Console_Process_Command(char* command) {
         if (token_count < 2) {
             result = false;
         } else {
-            printf("Successfully removed %s\n", tokens[1]);
+            if (echoing) printf("Successfully removed %s\n", tokens[1]);
         }
     }
     else if (!strcmp(tokens[0], "time")) {
         rtc_time_t time;
         if (rtc_read_time(&time)) {
-            printf("D/M/Y: %d/%d/%d\n", time.day, time.month, time.year);
-            printf("%dH %dMin %dSec\n", time.hour, time.minute, time.second);
+            if (echoing) {
+                printf("D/M/Y: %d/%d/%d\n", time.day, time.month, time.year);
+                printf("%dH %dMin %dSec\n", time.hour, time.minute, time.second);
+            }
         }
     }
     else if (!strcmp(tokens[0], "run")) {
@@ -272,7 +281,7 @@ bool Console_Process_Command(char* command) {
         }
     }
     else {
-        printf("Unknown command %s. Type 'help' for a list of commands.\n", command);
+        if (echoing) printf("Unknown command %s. Type 'help' for a list of commands.\n", command);
         result = false;
     }
 
@@ -281,9 +290,11 @@ bool Console_Process_Command(char* command) {
 }
 
 
+char** console_requests = CONSOLE_REQUEST_QUEUE;
+
 void Start_Console() {
     memset(CONSOLE_REQUEST_QUEUE, 0,sizeof(char*) * 16);
-    char** console_requests = CONSOLE_REQUEST_QUEUE;
+    Add_Console_Request("@help");
 
     currpath = malloc(4);
     if (!currpath) {
@@ -297,22 +308,22 @@ void Start_Console() {
     set_print_color(0x82);
     printf(TitleAsciiString);
     printf("\n");
-    printf("%d", Get_multiboot_info()->framebuffer_pitch);
     set_print_color(0x0F);
 
     while (true) {
         char* command;
-        command = Console_Get_Command();
-        // if(console_requests[0] == 0)command = Console_Get_Command();
-        // else{
-        //     command = console_requests[0];
-        //     memmove(console_requests[0], console_requests[1], sizeof(char*) * 15);
-        //     console_requests[15] = NULL;
-        // }
+        bool usr_input = true;
+        if(console_requests[0] == 0)command = Console_Get_Command();
+        else{
+            command = console_requests[0];
+            memmove(&console_requests[0], &console_requests[1], sizeof(char*) * 15);
+            console_requests[15] = NULL;
+            usr_input = false;
+        }
         if (!command) continue;
 
         // Add command to history
-        if (command_History_count == MAX_HISTORY) {
+        if (command_History_count == MAX_HISTORY && usr_input) {
             // Free oldest
             free(command_History[0]);
             // Shift all left
@@ -322,9 +333,19 @@ void Start_Console() {
             command_History_count--;
         }
 
-        command_History[command_History_count++] = command;
+        if(usr_input) command_History[command_History_count++] = command;
 
         printstr("\n");
         Console_Process_Command(command);
     }
+}
+
+char Add_Console_Request(char* command){
+    for(int i = 0; i < CONSOLE_REQUEST_QUEUE_SIZE; i++){
+        if(console_requests[i] == NULL){
+            console_requests[i] = command;
+            return 1;
+        }
+    }
+    return 0;
 }
