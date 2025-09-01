@@ -36,5 +36,6 @@ void RemoveChar(char* str, uint32_t index);
 
 //conversion functions
 int atoi(const char* str);
+void itoa(int value, char* str, int base);
 
 #endif // STRING_H

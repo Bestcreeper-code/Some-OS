@@ -15,6 +15,7 @@ typedef struct {
     uint16_t year;
 } __attribute__((__packed__)) rtc_time_t;
 
+extern uint64_t* timer_ticks;
 
 void pic_remap();
 // PIT / Timer

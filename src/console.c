@@ -293,9 +293,10 @@ bool Console_Process_Command(char* command) {
 char** console_requests = CONSOLE_REQUEST_QUEUE;
 
 void Start_Console() {
-    memset(CONSOLE_REQUEST_QUEUE, 0,sizeof(char*) * 16);
-    Add_Console_Request("@help");
-
+    memset(CONSOLE_REQUEST_QUEUE, 0, sizeof(char*) * 16);
+    // Add_Console_Request("@help");
+    // int i;
+    // i/=0;
     currpath = malloc(4);
     if (!currpath) {
         printf("Path Broken");

@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-volatile uint8_t* fb = (uint8_t*)0xA0000;
+volatile uint8_t* graph_mode_fb = (uint8_t*)0xA0000;
 volatile uint8_t* color_pal_size = MODE13H_COLOR_PALETTE_SIZE;
 
 
@@ -51,7 +51,7 @@ void put_pixel(int x, int y, uint8_t color) {
 #endif
     short mx,my;
     Get_Mouse_Pos(&mx,&my);
-    fb[y * pitch + x] = color;
+    graph_mode_fb[y * pitch + x] = color;
     if(x >= mx && x < mx + 4 && y >= my && y < my + 6){
         ((uint8_t*)MOUSE_PREV_BG)[(y - my) * 4 + (x - mx)] = color;
     }
@@ -63,16 +63,16 @@ void Force_put_pixel(int x, int y, uint8_t color) {//no mouse check
 #else
     int pitch = Get_multiboot_info()->framebuffer_pitch;
 #endif
-    fb[y * pitch + x] = color;
+    graph_mode_fb[y * pitch + x] = color;
 }
 
 uint8_t get_pixel(int x, int y){
-    return fb[y * Get_multiboot_info()->framebuffer_pitch + x];
+    return graph_mode_fb[y * Get_multiboot_info()->framebuffer_pitch + x];
 }
 
 // Draw a char from 32 to 127
 //(charact, charx, chary, 4, 6, color, NULL, true) for default
-void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int width, int height, char color, void* font, bool use_default_font, bool force_draw) {
+void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int width, int height, char color, void* font, bool use_default_font, bool ignore_cursor) {
     uint8_t* font_array = (uint8_t*)font;
 
     if (use_default_font) font_array = (uint8_t*)Base_Font4x6;
@@ -85,7 +85,7 @@ void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int w
         uint8_t column = character_data[x];
         for (int y = 0; y < height; y++) {
             if ((column >> y) & 0x01) {
-                if(force_draw) Force_put_pixel(x + x_pos, y + y_pos, color);
+                if(ignore_cursor) Force_put_pixel(x + x_pos, y + y_pos, color);
                 else put_pixel(x + x_pos, y + y_pos, color);
             }
         }

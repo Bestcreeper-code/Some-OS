@@ -8,7 +8,7 @@ mkdir -p build_execs
 
 # Compile source files to object files
 
-gcc -m32 -ffreestanding -fno-pic -fno-plt -fno-pie -c sys_executables/Crash_handler/Crash_handler.c -o build_execs/Crash_handler.o
+gcc -g -m32 -ffreestanding -fno-pic -fno-plt -fno-pie -c sys_executables/Crash_handler/Crash_handler.c -o build_execs/Crash_handler.o
 
 
 
@@ -26,7 +26,7 @@ objcopy -O binary build_execs/Crash_handler.elf build_execs/crashhndl.bin
 rm -f build_execs/*.o
 readelf -r build_execs/Crash_handler.rel > build_execs/Crash_handler_rel.txt
 rm -f build_execs/*.rel
-rm -f build_execs/*.elf
+# rm -f build_execs/*.elf
 
 echo "[*] build complete:"
 echo "    Relocatable ELF (with reloc info): build_execs/Crash_handler.rel"

@@ -12,7 +12,7 @@ nasm -f elf32 src/multiboot_header.asm -o build/multiboot_header.o
 echo "[1.1] Assembling irq0 handler..."
 nasm -f elf32 src/asm/irq0_handle.asm -o build/irq0_handle.o
 nasm -f elf32 src/asm/irq12_handle.asm -o build/irq12_handle.o
-nasm -f elf32 src/asm/isr13.asm -o build/isr13.o
+nasm -f elf32 src/asm/isrs.asm -o build/isrs.o
 nasm -f elf32 src/asm/dummy_handle.asm -o build/dummy_handle.o
 nasm -f elf32 src/asm/gdt.asm -o build/gdt_asm.o
 nasm -f elf32 src/asm/keyboard_interrupt.asm -o build/keyboard_interrupt_asm.o
@@ -57,7 +57,7 @@ ld -m elf_i386 -Ttext=0x100000 -z noexecstack -o kernel.elf \
   build/time.o build/io.o build/string.o \
   build/ATA_IO.o build/FileSystem.o build/multiboot_info.o \
   build/ff.o build/diskio.o build/ffsystem.o build/ffunicode.o \
-  build/idt.o build/isr13.o build/dummy_handle.o build/gdt.o build/gdt_asm.o \
+  build/idt.o build/isrs.o build/dummy_handle.o build/gdt.o build/gdt_asm.o \
   build/video.o build/textconsts.o build/vga_modes.o build/loader.o \
   build/processes_asm.o build/mouse.o build/irq12_handle.o \
   build/Logger.o build/power.o
@@ -98,13 +98,28 @@ else
   echo "[*] disk.img already exists, skipping creation."
 fi
 
-QEMU_CMD=(
+QEMU_CMD_LIN=(
   qemu-system-i386
   -m 512M
   -boot d
   -cdrom os.iso
   -drive file=disk.img,format=raw,if=ide
+  -display gtk
+  -accel kvm
 )
+
+QEMU_CMD_WIN=(
+  qemu-system-i386
+  -m 512M
+  -boot d
+  -cdrom os.iso
+  -drive file=disk.img,format=raw,if=ide
+  -display sdl
+  -accel whpx
+) 
+#qemu-system-i386 -m 512M -boot d  -cdrom os.iso -drive file=disk.img,format=raw,if=ide -display sdl -accel whpx
+
+QEMU_CMD=("${QEMU_CMD_LIN[@]}")  # Default to Linux
 
 # Flags
 ENABLE_GDB=false
@@ -115,25 +130,23 @@ for arg in "$@"; do
   case "$arg" in
     -d) ENABLE_GDB=true ;;
     -s) ENABLE_SERIAL=true ;;
-    *)  ;;  # ignore other args or handle more if needed
+    -win) QEMU_CMD=("${QEMU_CMD_WIN[@]}") ;;  # Switch to Windows config
+    *) echo "Unknown argument: $arg" ;;
   esac
 done
 
-# Append options conditionally
+# Add serial option if requested
 if $ENABLE_SERIAL; then
   QEMU_CMD+=(-serial stdio)
 fi
 
-# === Launch QEMU ===
+# Launch
+echo "[10] Launching QEMU..."
 if $ENABLE_GDB; then
-  echo "[10] Launching QEMU in GDB mode..."
   "${QEMU_CMD[@]}" -s -S
 else
-  echo "[10] Launching QEMU normally..."
   "${QEMU_CMD[@]}"
 fi
-
-
 
 echo "[*] Build complete!"
 

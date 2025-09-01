@@ -346,3 +346,38 @@ int atoi(const char* str) {
 
     return negative ? -res : res;
 }
+
+
+void itoa(int value, char* str, int base) {
+    char buffer[33]; // Enough for 32-bit int in binary + '\0'
+    int i = 0;
+    bool is_negative = false;
+
+    if (value == 0) {
+        str[0] = '0';
+        str[1] = '\0';
+        return;
+    }
+
+    if (base == 10 && value < 0) {
+        is_negative = true;
+        value = -value;
+    }
+
+    while (value != 0) {
+        int digit = value % base;
+        buffer[i++] = (digit > 9) ? (digit - 10) + 'A' : digit + '0';
+        value /= base;
+    }
+
+    if (is_negative) {
+        buffer[i++] = '-';
+    }
+
+    // Reverse buffer into str
+    int j = 0;
+    while (i > 0) {
+        str[j++] = buffer[--i];
+    }
+    str[j] = '\0';
+}

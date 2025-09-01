@@ -120,7 +120,7 @@ cleanup:
         free(dir_content);
     }
     for (int i = 0; i < 16/*  * 512 */; i++) {
-        fb[i] = rand() % 256;  
+        graph_mode_fb[i] = rand() % 256;  
     }
     sleep(1000);
 }
