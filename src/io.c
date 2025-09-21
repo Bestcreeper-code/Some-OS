@@ -310,8 +310,8 @@ unsigned char GetInputCharNonBlocking(void) {
 
     unsigned char base_char = keymaps[current_Language][mod][keycode];
 
-    if ((GET_KEYBOARD_MOD_FLAG(CTRL_PRESSED) != 0) && base_char >= 'a' && base_char <= 'z' && !GET_KEYBOARD_MOD_FLAG(ALTGR_PRESSED)) {
-        base_char = base_char - 'a' + CTRL_KEY_COMBO;
+    if ((GET_KEYBOARD_MOD_FLAG(CTRL_PRESSED) != 0) && base_char >= 'A' && base_char <= 'z' && !GET_KEYBOARD_MOD_FLAG(ALTGR_PRESSED)) {
+        base_char = base_char - 'A' + CTRL_KEY_COMBO;
     }
 
     return base_char;
@@ -813,7 +813,7 @@ int vsnprintf(char* buffer, int size, const char* format, va_list args) {
                     pos += write_unsigned(buffer, pos, val, size);
                     break;
                 }
-                case 'x':
+                case 'x':case 'p':
                 case 'X': {
                     uint32_t val = va_arg(args, uint32_t);
                     pos += write_hex32(buffer, pos, val, size);

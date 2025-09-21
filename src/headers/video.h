@@ -16,8 +16,8 @@ extern volatile uint8_t* graph_mode_fb;
 
 void put_pixel(int x, int y, uint8_t color);
 uint8_t get_pixel(int x, int y);
-void draw_bitmap_char(const unsigned char character,int x,int y,int width,int height,char color,void* font,bool use_default_font, bool ignore_cursor);
-void draw_bitmap_string(const char* str, int x_pos, int y_pos, int width, int height, char color, void* font, bool use_default_font, int space);
+void draw_bitmap_char(const unsigned char character,int x,int y,int width,int height,char color,void* font,bool use_default_font, bool ignore_cursor, bool row_major);
+void draw_bitmap_string(const char* str, int x_pos, int y_pos, int width, int height, char color, void* font, bool use_default_font, bool row_major, int space);
 
 void clear_13h_screen(char color);
 void set_palette_color(uint8_t index, uint8_t red, uint8_t green, uint8_t blue);

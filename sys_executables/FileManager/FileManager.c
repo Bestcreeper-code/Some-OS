@@ -46,7 +46,7 @@ change_dir:
     Draw_Rect((Vector2){8, 8}, 303, 108,0x3);//white outline
     Draw_Rect((Vector2){12, 12}, 295, 100,0x9);// actual dir display area 
 
-    draw_bitmap_string(current_dir,0,0,4,6,0x12,NULL,true,1);
+    draw_bitmap_string(current_dir,0,0,4,6,0x12,NULL,true,false,1);
 
     uint8_t input = 0;
 
@@ -88,7 +88,12 @@ change_dir:
         //     break;
         case 'e':case 'E':
             char* parts[2] = {current_dir,dir_content[scroll_index + cursor_index]};
-            Open_File_Edit_Popup(Concat(parts,2,'/'));
+
+            char* conc_fullpath =Concat(parts,2,'/');
+            Open_File_Edit_Popup(conc_fullpath);
+            
+            free(conc_fullpath);
+
             goto change_dir;
             
             
@@ -105,8 +110,27 @@ change_dir:
 
         Draw_Rect((Vector2){12, 12}, 295, 100,0x9);// clear dir display area
         for(int i = 0;(i < MAX_DISPLAYED_ENTRIES  && scroll_index + i < dir_content_size );i++){
-            uint8_t text_color = i == cursor_index? 0x25 : 0x3F; //is it selected?
-            draw_bitmap_string(dir_content[scroll_index + i], 13, 13 + (i*6), 4, 6, text_color, NULL, true, 1);
+            char* curr_file_name = strdup(dir_content[scroll_index + i]);
+            if(!curr_file_name)continue;
+            uint16_t color = get_file_color(curr_file_name);
+            if(color>255)color =0X7;
+            if(curr_file_name[strlen(curr_file_name)-1] =='/')color = 0X16;
+            
+            if(i == cursor_index){
+                color = 0x25;
+                uint8_t curr_file_n_len = strlen(curr_file_name);
+                char* temp_file_name = malloc(curr_file_n_len+3);//\0 + space and <
+                if(temp_file_name){
+                    strcpy(temp_file_name, curr_file_name);
+                    temp_file_name[curr_file_n_len] = ' ';
+                    temp_file_name[curr_file_n_len+1] = '<';
+                    temp_file_name[curr_file_n_len+2] = '\0';
+                    free(curr_file_name);
+                    curr_file_name = temp_file_name;
+                }
+            }
+            draw_bitmap_string(curr_file_name, 13, 13 + (i*6), 4, 6, color, NULL, true, false,1);
+            free(curr_file_name);
         }
         input = getc();
     }

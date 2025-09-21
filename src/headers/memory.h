@@ -31,12 +31,15 @@ void parse_memory_map(multiboot_info_t* mb_info);
 void force_alloc(uint64_t adress, uint64_t size);
 void force_free(uint64_t address, uint64_t size);
 uint64_t get_pter_size(void* pter);
-// impl funcs
+
+void* aligned_malloc(size_t size, size_t alignment);
+void aligned_free(void* ptr);
+
+// debuggable funcs
 void* malloc_impl(size_t _Size);
 void free_impl(void *_Memory);
 void *realloc_impl(void *ptr, size_t size);
 
-// used funcs
 
 
 #if DEBUG_MODE == 1

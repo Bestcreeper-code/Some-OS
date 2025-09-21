@@ -143,6 +143,7 @@ isr_handler:
     push argv                ; char** argv
     push 2                   ; argc
     push file_path           ; const char* file_path
+    sti                      ; needed for some handler funcs
     call Load_bin_exe
     add esp, 12
 

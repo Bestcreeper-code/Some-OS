@@ -34,8 +34,13 @@ char* Concat(char** list, size_t size, char linking_char);
 bool InsertChar(char* str, uint32_t pos, char c);
 void RemoveChar(char* str, uint32_t index);
 
-//conversion functions
+//=====conversion functions=====
+
+//str to int
 int atoi(const char* str);
+//int to str
 void itoa(int value, char* str, int base);
 
+//allocates a lowercase copy of <str>
+char* strlow(const char* str);
 #endif // STRING_H

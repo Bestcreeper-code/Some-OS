@@ -3,7 +3,7 @@
 
 typedef struct 
 {
-    float x,y;
+    int x,y;
 } Vector2;
 
 

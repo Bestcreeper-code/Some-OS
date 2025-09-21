@@ -111,14 +111,14 @@ redraw:
             Draw_Rect((Vector2){0,0},320,START_Y,0x9); // clear top bar
             char temp_str[10];
             sprintf(temp_str, "COL:%03d", current_color);
-            draw_bitmap_string(temp_str, 0, 0, 4, 6, 0, NULL, true, 1);
+            draw_bitmap_string(temp_str, 0, 0, 4, 6, 0, NULL, true, false, 1);
             Draw_Rect((Vector2){0,6},7,7,current_color);
 
             sprintf(temp_str, "SIZ:%03d", brush_size);
 
-            draw_bitmap_string(temp_str, 50, 0, 4, 6, 0, NULL, true, 1);
+            draw_bitmap_string(temp_str, 50, 0, 4, 6, 0, NULL, true, false, 1);
             redraw_ui = false;
-            draw_bitmap_string("C: Color | X: Brush Size | P: New color | Ctrl+S save", 0, 15, 4, 6, 0x37, NULL, true, 1);
+            draw_bitmap_string("C: Color | X: Brush Size | P: New color | Ctrl+S save", 0, 15, 4, 6, 0x37, NULL, true, false, 1);
 
         }
 
@@ -161,13 +161,13 @@ redraw:
         switch (key)
         {
         case 'c':case 'C':{
-            draw_bitmap_string("Enter color index (0-255):", 80, 0, 4, 6, 0, NULL, true, 1);
+            draw_bitmap_string("Enter color index (0-255):", 80, 0, 4, 6, 0, NULL, true, false, 1);
             char* input = String_Input_Popup(90, 80, 140);
             uint8_t color = atoi(input);
             free(input);
             if(color <= get_color_palette_size())current_color = color;
             else{
-                draw_bitmap_string("Invalid color index!", 80, 12, 4, 6, 0x4, NULL, true, 1);
+                draw_bitmap_string("Invalid color index!", 80, 12, 4, 6, 0x4, NULL, true, false, 1);
                 sleep(1000);
             }
             redraw_ui = true;
@@ -176,13 +176,13 @@ redraw:
         }
 
         case 'x':case 'X':{
-            draw_bitmap_string("Enter Brush Size(max 200):", 80, 0, 4, 6, 0, NULL, true, 1);
+            draw_bitmap_string("Enter Brush Size(max 200):", 80, 0, 4, 6, 0, NULL, true, false, 1);
             char* input = String_Input_Popup(90, 80, 140);
             uint8_t chose_size = atoi(input);
             free(input);
             if(chose_size <= 200)brush_size = chose_size;
             else{
-                draw_bitmap_string("Invalid size!", 80, 12, 4, 6, 0x4, NULL, true, 1);
+                draw_bitmap_string("Invalid size!", 80, 12, 4, 6, 0x4, NULL, true, false, 1);
                 sleep(1000);
             }
             redraw_ui = true;
@@ -199,7 +199,7 @@ redraw:
                 Draw_Rect((Vector2){80, 0}, 160 , 6 , 0x09); 
                 char msg[25];
                 sprintf(msg,"Enter the wanted %c value",vars_names[i]);
-                draw_bitmap_string(msg, 80, 0, 4, 6, 0, NULL, true, 1);
+                draw_bitmap_string(msg, 80, 0, 4, 6, 0, NULL, true, false, 1);
                 char* input = String_Input_Popup(90, 80, 140);
                 *vars[i] = atoi(input);
                 free(input);
@@ -224,7 +224,7 @@ save_to_file:
     clear_13h_screen(0x9); // dark blue
     if (filepath == NULL) {
 ask_f_name:
-        draw_bitmap_string("Enter file name to save (e.g., file.paint):", 10, 10, 4, 6, 0, NULL, true, 1);
+        draw_bitmap_string("Enter file name to save (e.g., file.paint):", 10, 10, 4, 6, 0, NULL, true, false, 1);
         char* input = String_Input_Popup(20, 10, 280);
         if(input == NULL || strlen(input) == 0){
             free(input);
@@ -255,15 +255,15 @@ ask_f_name:
         UINT bw;
         if (f_write(&save_file, hdr, sizeof(PaintFileHeader) + palette_size * 3 + header->width * header->height, &bw) == FR_OK && bw > 0) {
             f_close(&save_file);
-            draw_bitmap_string("File saved successfully!", 80, 12, 4, 6, 0x2, NULL, true, 1);
+            draw_bitmap_string("File saved successfully!", 80, 12, 4, 6, 0x2, NULL, true, false, 1);
             sleep(2000);
         } else {
             f_close(&save_file);
-            draw_bitmap_string("Failed to write to file!", 80, 12, 4, 6, 0x4, NULL, true, 1);
+            draw_bitmap_string("Failed to write to file!", 80, 12, 4, 6, 0x4, NULL, true, false, 1);
             sleep(2000);
         }
     } else {
-        draw_bitmap_string("Failed to open file for writing!", 80, 12, 4, 6, 0x4, NULL, true, 1);
+        draw_bitmap_string("Failed to open file for writing!", 80, 12, 4, 6, 0x4, NULL, true, false, 1);
         sleep(2000);
     }
 

@@ -1,7 +1,7 @@
     %define CTRL_KEY_COMBO 159
 
     ; 256 chars
-    %define INPUT_CHAR_BUFFER_ADDRESS 0x223D 
+    %define INPUT_CHAR_BUFFER_ADDRESS 0x22F9
 
     global irq1_handler ; PS/2 keyboard 
 
@@ -23,6 +23,7 @@ section .text
 
         mov ecx, 0
     loop1:
+    
         cmp ecx, 256
         je no_add
         cmp BYTE [INPUT_CHAR_BUFFER_ADDRESS + ecx], 0
@@ -34,6 +35,7 @@ section .text
     end_of_loop1:
         ; Store the character in the input buffer
         mov BYTE [INPUT_CHAR_BUFFER_ADDRESS + ecx], al
+        
 
     no_add:
         ; Restore the flags and registers

@@ -11,6 +11,26 @@ typedef enum {
     MOUSE_DISPLAYED_FLAG = 1<<7
 } Mouse_FLAGS;
 
+typedef enum {
+    Curs_state_Base,
+    Curs_state_Base_SpinLoad,
+    Curs_state_Base_Qmark,
+    Curs_state_Empty1,
+    Curs_state_X,
+    Curs_state_Hglass,
+    Curs_state_arr_UL,
+    Curs_state_zoom,
+    Curs_state_unzoom,
+    Curs_state_Empty2,
+    Curs_state_Write,
+    Curs_state_width_mod,
+    Curs_state_height_mod,
+    Curs_state_Empty3,
+    Curs_state_Hand_Point,
+    Curs_state_Hand_Ungrabbed,
+    Curs_state_Hand_Grabbed,
+} Cursorstate;
+
 void init_mouse();
 
 void mouse_irq_handler(); 
@@ -22,5 +42,7 @@ void disable_mouse_display();
 
 bool Get_Mouse_Button(Mouse_FLAGS button);
 void Get_Mouse_Pos(short* x, short* y);
+
+void change_mouse_state(Cursorstate state);
 
 #endif // MOUSE_H

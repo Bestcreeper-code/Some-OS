@@ -1,3 +1,4 @@
+#include "res.h"
 #include "Graphics/graphics.h"
 #include "../../src/headers/video.h"
 #include <stddef.h>
@@ -60,7 +61,7 @@ char* String_Input_Popup(int x, int y,int width) {
         }
 
         // String inside the box
-        draw_bitmap_string(visible_str, x, y, font_w, font_h, 0X3F, NULL, true, space);
+        draw_bitmap_string(visible_str, x, y, font_w, font_h, 0X3F, NULL, true, false, space);
 
         // Get input
         char ch = getc();
@@ -185,7 +186,8 @@ uint8_t Open_File_Edit_Popup(char* file) {
                 F_EDIT_POPUP_POS_Y + 6 + (i * 10),
                 4, 6,
                 color,
-                NULL, true, 0
+                NULL, true, false,
+                0
             );
         }
 
@@ -221,5 +223,32 @@ uint8_t Open_File_Edit_Popup(char* file) {
                 break;
         }
     }
+}
+
+
+const Vector_str_chr str_to_col[] = {
+    {".bin",0X0B},
+    {".txt",0X0F},
+    {".paint",0X36},
+    {NULL,0}
+};
+
+uint16_t get_file_color(const char* name){
+    char* ext = Get_Ext(name);
+    if (!ext) return 256;
+
+    char* lowext = strlow(ext);
+    if (!lowext) return 256;
+
+    uint16_t result = 256;
+    for (int i = 0; str_to_col[i].key != NULL; i++) {
+        if (strcmp(lowext, str_to_col[i].key) == 0) {
+            result = str_to_col[i].val;
+            break;
+        }
+    }
+
+    free(lowext);
+    return result;
 }
 

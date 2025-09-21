@@ -18,7 +18,9 @@ void app_main(int argc, char** argv) {
     fs_set((FATFS*)FATFS_SYS_ADDR, 0);
     vga_set_mode(0x13);
     clear_13h_screen(0x9); // dark blue
-    
+
+    draw_bitmap_string("INIT", 320, 200, 4, 6, 0x3F, NULL, true, false, 0);
+    sleep(1000);
     FIL timefile;
 
     if(f_open(&timefile, "0:/SYSTEM_CORE/Security/locktime.tim", FA_READ) == FR_OK) {
@@ -40,7 +42,7 @@ void app_main(int argc, char** argv) {
     if (check_path_exists("0:/SYSTEM_CORE/Security/kys.dta", FT_FILE) != FR_OK) {
     new_username:
         clear_13h_screen(0x9);
-        draw_bitmap_string("Create a new user:", 0, 0, 4, 6, 0x3F, NULL, true, 0);
+        draw_bitmap_string("Create a new user:", 0, 0, 4, 6, 0x3F, NULL, true, false, 0);
 
         char* usrnm = NULL;
         while (usrnm == NULL || !*usrnm) {
@@ -48,8 +50,8 @@ void app_main(int argc, char** argv) {
         }
 
         clear_13h_screen(0x9);
-        draw_bitmap_string(usrnm, 0, 0, 4, 6, 0x3F, NULL, true, 0);
-        draw_bitmap_string("Create a new password:", 0, 10, 4, 6, 0x3F, NULL, true, 0);
+        draw_bitmap_string(usrnm, 0, 0, 4, 6, 0x3F, NULL, true,  false, 0);
+        draw_bitmap_string("Create a new password:", 0, 10, 4, 6, 0x3F, NULL, true,  false, 0);
 
         char* pwrd = NULL;
         while (pwrd == NULL || !*pwrd) {
@@ -139,8 +141,8 @@ login:
         clear_13h_screen(0x9);
         char* usrnm = malloc(usr_len + 6);
         sprintf(usrnm, "Hello %s", username);
-        draw_bitmap_string(username, 0, 0, 4, 6, 0x3F, NULL, true, 0);
-        draw_bitmap_string("Type your password:", 0, 10, 4, 6, 0x3F, NULL, true, 0);
+        draw_bitmap_string(username, 0, 0, 4, 6, 0x3F, NULL, true,  false, 0);
+        draw_bitmap_string("Type your password:", 0, 10, 4, 6, 0x3F, NULL, true,  false, 0);
 
         char* entered_pw = NULL;
         while (entered_pw == NULL || !*entered_pw) {
@@ -151,7 +153,7 @@ login:
 
         if (memcmp(encrypted_entered_pw, encrypted_pword, pwrd_len) == 0) {
             clear_13h_screen(0x9);
-            draw_bitmap_string("Access granted!", 0, 0, 4, 6, 0x3F, NULL, true, 0);
+            draw_bitmap_string("Access granted!", 0, 0, 4, 6, 0x3F, NULL, true,  false, 0);
             sleep(1000);
 
             free(encrypted_entered_pw);
@@ -165,7 +167,7 @@ login:
         } else {
             attempts++;
             clear_13h_screen(0x9);
-            draw_bitmap_string("Incorrect password!", 0, 0, 4, 6, 0x3F, NULL, true, 0);
+            draw_bitmap_string("Incorrect password!", 0, 0, 4, 6, 0x3F, NULL, true,  false, 0);
             sleep(1000);
 
             free(encrypted_entered_pw);
@@ -181,7 +183,7 @@ login:
     free(buffer);
 
     clear_13h_screen(0x34);
-    draw_bitmap_string("Too many failed attempts!", 0, 0, 4, 6, 0x3F, NULL, true, 0);
+    draw_bitmap_string("Too many failed attempts!", 0, 0, 4, 6, 0x3F, NULL, true,  false, 0);
 
     rtc_time_t rtc;
     rtc_read_time(&rtc);
@@ -207,8 +209,8 @@ locked_down:
             goto login;
         };
         clear_13h_screen(0x34);
-        draw_bitmap_string("Too many failed attempts!", 0, 0, 4, 6, 0x3F, NULL, true, 0);
-        draw_bitmap_string("System locked for", 0, 10, 4, 6, 0x3F, NULL, true, 0);
+        draw_bitmap_string("Too many failed attempts!", 0, 0, 4, 6, 0x3F, NULL, true,  false, 0);
+        draw_bitmap_string("System locked for", 0, 10, 4, 6, 0x3F, NULL, true,  false, 0);
         
         uint32_t now_ts = rtc_to_unix_timestamp(&rtc);
         uint32_t remaining = (ts > now_ts) ? (ts - now_ts) : 0;
@@ -220,7 +222,7 @@ locked_down:
         sprintf(str, "%02d H | %02d Min | %02d Sec", hours, minutes, seconds);
 
 
-        draw_bitmap_string(str, 0, 20, 4, 6, 0x3F, NULL, true, 0);
+        draw_bitmap_string(str, 0, 20, 4, 6, 0x3F, NULL, true, false, 0);
         sleep(1000);
     }
     

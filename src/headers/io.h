@@ -21,12 +21,12 @@
 #define CTRL_KEY_COMBO 159
 
 #define SET_KEYBOARD_MOD_FLAG(flag, state) \
-    (*(uint8_t*)KEYBOARD_MOD_KEYS_FLAGS) = (state) ? ((*(uint8_t*)KEYBOARD_MOD_KEYS_FLAGS) | (flag)) : ((*(uint8_t*)KEYBOARD_MOD_KEYS_FLAGS) & ~(flag))
+    (KEYBOARD_MOD_KEYS_FLAGS) = (state) ? (KEYBOARD_MOD_KEYS_FLAGS) | (flag) : ((KEYBOARD_MOD_KEYS_FLAGS) & ~(flag))
 
 #define GET_KEYBOARD_MOD_FLAG(flag) \
-    ((*(uint8_t*) KEYBOARD_MOD_KEYS_FLAGS) & (flag))
+    (( KEYBOARD_MOD_KEYS_FLAGS) & (flag))
 
-#define ControlCombo(key) CTRL_KEY_COMBO + key
+#define ControlCombo(key) CTRL_KEY_COMBO + key - 'A'
 
 #define ALT_PRESSED 0x1
 #define ALTGR_PRESSED 0x2

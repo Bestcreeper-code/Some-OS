@@ -70,7 +70,7 @@ char* String_Input_Popup(int x, int y,int width, bool hidden) {
         }
 
         // String inside the box
-        if(!hidden) draw_bitmap_string(visible_str, x, y, font_w, font_h, 0X3F, NULL, true, space);
+        if(!hidden) draw_bitmap_string(visible_str, x, y, font_w, font_h, 0X3F, NULL, true, false, space);
         else {
             int hid_len = strlen(visible_str);
             char* hidden_str = malloc(hid_len + 1);
@@ -82,7 +82,7 @@ char* String_Input_Popup(int x, int y,int width, bool hidden) {
                 hidden_str[i] = '*';
             }
             hidden_str[hid_len] = '\0';
-            draw_bitmap_string(hidden_str, x, y, font_w, font_h, 0X3F, NULL, true, space);
+            draw_bitmap_string(hidden_str, x, y, font_w, font_h, 0X3F, NULL, true, false, space);
             free(hidden_str);
         }
 
@@ -209,7 +209,7 @@ uint8_t Open_File_Edit_Popup(char* file) {
                 F_EDIT_POPUP_POS_Y + 6 + (i * 10),
                 4, 6,
                 color,
-                NULL, true, 0
+                NULL, true, false, 0
             );
         }
 

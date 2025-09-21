@@ -19,5 +19,7 @@ FRESULT check_path_exists(
 int Load_bin_exe(const char* file_path,int argc, char** argv);
 
 FRESULT change_Current_Dir(char** currdir,const char* path);
-char* Get_Dir(char* path);
-char* Get_Filename(char* path);
+
+char* Get_Dir(const char* path);
+char* Get_Filename(const char* path);
+char* Get_Ext(const char* path);

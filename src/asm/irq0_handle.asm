@@ -11,7 +11,7 @@
 ; %define KERNEL_STACK_POINTER_ADDRESS   0x2575
 
 ; %define TASK_SWITCHING_FLAG            0x223B
-%define MOUSE_FLAGS_ADDR    0x21F6
+%define MOUSE_FLAGS_ADDR    0x218A
 %define MOUSE_FLAG_ENABLED  1 << 7
 
 global irq0_handler
@@ -28,7 +28,13 @@ section .text
         pushad
         pushfd
 
+        mov al, [MOUSE_FLAGS_ADDR]       
+        test al, MOUSE_FLAG_ENABLED      ; Test bit 7
+        jz time_irq_call_label           ;  skip redraw if not set
 
+        call Redraw_Mouse_Cursor
+
+time_irq_call_label:
         call timer_irq
 
 

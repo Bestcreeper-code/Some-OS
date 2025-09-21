@@ -12,7 +12,7 @@
 #include <stdbool.h>
 
 volatile uint8_t* graph_mode_fb = (uint8_t*)0xA0000;
-volatile uint8_t* color_pal_size = MODE13H_COLOR_PALETTE_SIZE;
+volatile uint8_t* color_pal_size = (volatile uint8_t*)MODE13H_COLOR_PALETTE_SIZE_ADDR;
 
 
 
@@ -72,33 +72,69 @@ uint8_t get_pixel(int x, int y){
 
 // Draw a char from 32 to 127
 //(charact, charx, chary, 4, 6, color, NULL, true) for default
-void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int width, int height, char color, void* font, bool use_default_font, bool ignore_cursor) {
-    uint8_t* font_array = (uint8_t*)font;
-
-    if (use_default_font) font_array = (uint8_t*)Base_Font4x6;
+void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int width, int height, char color, void* font, bool use_default_font, bool ignore_cursor, bool row_major) {
     if (width <= 0 || height <= 0 || character < 32 || character > 127) return;
 
-    // Each character has 'width' bytes (1 byte per column)
-    uint8_t* character_data = &font_array[(character - 32) * width];
+    uint8_t* font_array = (uint8_t*)font;
+    if (use_default_font) {
+        font_array = (uint8_t*)Base_Font4x6;
+        height = 6;
+        width = 4;
+    }
 
-    for (int x = 0; x < width; x++) {
-        uint8_t column = character_data[x];
+    int char_index = character - 32;
+
+    if (!row_major) {
+        // --- Column-major font ---
+        int bytes_per_column = (height + 7) / 8;
+        int bytes_per_char = width * bytes_per_column;
+        uint8_t* character_data = &font_array[char_index * bytes_per_char];
+
+        for (int x = 0; x < width; x++) {
+            uint16_t column = 0;
+            for (int b = 0; b < bytes_per_column; b++) {
+                column |= character_data[x * bytes_per_column + b] << (8 * b);
+            }
+            for (int y = 0; y < height; y++) {
+                if ((column >> y) & 0x01) {
+                    if ((x + x_pos) < 320 && (y + y_pos) < 200) {
+                        if (ignore_cursor) Force_put_pixel(x + x_pos, y + y_pos, color);
+                        else put_pixel(x + x_pos, y + y_pos, color);
+                    }
+                }
+            }
+        }
+    } else {
+        // --- Row-major font ---
+        int bytes_per_row = (width + 7) / 8;
+        int bytes_per_char = height * bytes_per_row;
+        uint8_t* character_data = &font_array[char_index * bytes_per_char];
+
         for (int y = 0; y < height; y++) {
-            if ((column >> y) & 0x01) {
-                if(ignore_cursor) Force_put_pixel(x + x_pos, y + y_pos, color);
-                else put_pixel(x + x_pos, y + y_pos, color);
+            uint16_t row = 0;
+            for (int b = 0; b < bytes_per_row; b++) {
+                row |= character_data[y * bytes_per_row + b] << (8 * b);
+            }
+            for (int x = 0; x < width; x++) {
+                if ((row >> (width - 1 - x)) & 0x01) { // MSB first
+                    if ((x + x_pos) < 320 && (y + y_pos) < 200) {
+                        if (ignore_cursor) Force_put_pixel(x + x_pos, y + y_pos, color);
+                        else put_pixel(x + x_pos, y + y_pos, color);
+                    }
+                }
             }
         }
     }
 }
 
-void draw_bitmap_string(const char* str, int x_pos, int y_pos, int font_width, int font_height, char color, void* font, bool use_default_font, int space) {
+
+void draw_bitmap_string(const char* str, int x_pos, int y_pos, int font_width, int font_height, char color, void* font, bool use_default_font, bool row_major, int space) {
     if (!str) return;
 
     int cursor_x = x_pos;
 
     while (*str) {
-        draw_bitmap_char((unsigned char)*str, cursor_x, y_pos, font_width, font_height, color, font, use_default_font, false);
+        draw_bitmap_char((unsigned char)*str, cursor_x, y_pos, font_width, font_height, color, font, use_default_font, false, row_major);
         cursor_x += font_width + space;  // Move to next character position
         str++;
     }

@@ -7,7 +7,7 @@ mkdir -p build_lib
 # === Assemble ASM files ===
 echo "[1] Assembling ASM files in src/asm..."
 for asm_file in src/asm/*.asm; do
-  obj_file="build_lib/$(basename "${asm_file%.asm}.o")"
+  obj_file="build_lib/$(basename "${asm_file%.asm}_asm.o")"
   echo "  Assembling $asm_file -> $obj_file"
   nasm -f elf32 "$asm_file" -o "$obj_file"
 

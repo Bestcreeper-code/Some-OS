@@ -123,7 +123,7 @@ void force_free(uint64_t address, uint64_t size) {
 
 void parse_memory_map(multiboot_info_t* mb_info) {
     free_region_map_t* map = get_free_region_map();
-    force_alloc(FREE_REGION_MAP,sizeof(free_region_map_t));
+    force_alloc(*FREE_REGION_MAP,sizeof(free_region_map_t));
     map->free_region_count = 0;
     memset(map->free_regions, 0, sizeof(free_region_t) * MAX_FREE_REGIONS);
     
@@ -327,4 +327,32 @@ void* realloc_impl(void *ptr, size_t size) {
     free(ptr);
 
     return new_ptr;
+}
+
+void* aligned_malloc(size_t size, size_t alignment) {
+    if ((alignment & (alignment - 1)) != 0) {
+        Sys_log("Error: alignment must be power of two\n");
+        return NULL;
+    }
+
+    size_t extra = alignment - 1 + sizeof(void*);
+    void* raw = malloc_impl(size + extra);
+    if (!raw) return NULL;
+
+    uintptr_t raw_addr = (uintptr_t)raw;
+
+    uintptr_t aligned_addr = (raw_addr + sizeof(void*) + alignment - 1) & ~(alignment - 1);
+
+    ((void**)aligned_addr)[-1] = raw;
+
+    return (void*)aligned_addr;
+}
+
+void aligned_free(void* ptr) {
+    if (!ptr) return;
+
+    // Retrieve the original pointer stored before aligned memory
+    void* raw = ((void**)ptr)[-1];
+
+    free_impl(raw);
 }

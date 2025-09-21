@@ -381,3 +381,22 @@ void itoa(int value, char* str, int base) {
     }
     str[j] = '\0';
 }
+
+char* strlow(const char* str) {
+    if (str == NULL) return NULL;
+
+    size_t len = strlen(str);
+    char* newstr = malloc(len + 1);
+    if (!newstr) return NULL;
+
+    for (int i = (int)len - 1; i >= 0; i--) {
+        unsigned char chr = str[i];
+        if (chr >= 'A' && chr <= 'Z') {
+            chr += 32;
+        }
+        newstr[i] = chr;
+    }
+
+    newstr[len] = '\0';
+    return newstr;
+}

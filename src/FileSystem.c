@@ -4,7 +4,7 @@
 #include "headers/time.h"
 #include "headers/video.h"
 #include "headers/vga_modes.h"
-#include "headers/loader.h"
+// #include "headers/loader.h"
 #include "headers/Logger.h"
 #include "headers/mouse.h"
 #include "data/textconsts.h"
@@ -247,7 +247,7 @@ int Load_bin_exe(const char* file_path,int argc, char** argv){
     void* buffer;
     UINT fileSize;
 
-
+    memset((void*)0x200000,0,0x200000);
     // Open the binary file for reading
     res = f_open(&file,file_path, FA_READ);
     if (res == FR_OK) {
@@ -286,7 +286,7 @@ int Load_bin_exe(const char* file_path,int argc, char** argv){
     }
 }
 
-char* Get_Dir(char* path){
+char* Get_Dir(const char* path){
     if (!path) return NULL;
     int count;
     char** parts = Split(path, '/', 0, &count);
@@ -298,7 +298,7 @@ char* Get_Dir(char* path){
     return res;
 }
 
-char* Get_Filename(char* path){
+char* Get_Filename(const char* path){
     if (!path) return NULL;
     int count;
     char** parts = Split(path, '/', 0, &count);
@@ -307,4 +307,15 @@ char* Get_Filename(char* path){
     EndSplit(parts, count);
 
     return res;
+}
+
+char* Get_Ext(const char* path){
+    short len = strlen(path);
+    for (size_t i = len; i > 0; i--)
+    {
+        if(path[i] == '.'){
+            return (char*)&path[i];
+        }
+    }
+    return NULL;
 }

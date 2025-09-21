@@ -15,20 +15,29 @@
 #include "headers/video.h"
 #include "headers/vga_modes.h"
 #include "headers/mouse.h"
+// #include "headers/usb.h"
+#include "headers/bios.h"
+#include "headers/elf.h"
+#include "headers/disk_installer.h"
 
 #include "data/globals.h"
 
 extern int vgaX, vgaY;
 
+extern void test_16func();
+
+
 
 void kmain(unsigned long magic, unsigned long addr) {
+    
     serial_init();
+    
     Sys_log("interrupts disabled.\n");
     Sys_log("Kernel starting...\n");
     Sys_log("Kernel compiled on %s at %s\n", __DATE__, __TIME__);
     Sys_log("with GCC ver %d.%d.%d \n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
     
-    *((char*)TASK_SWITCHING_FLAG) = 0;
+    TASK_SWITCHING_FLAG = 0;
 
     
     
@@ -58,7 +67,8 @@ void kmain(unsigned long magic, unsigned long addr) {
     
     ClearScreen();
     
-    // force_alloc(KERNEL_STACK_BASE-KERNEL_STACK_SIZE ,KERNEL_STACK_SIZE);
+    
+    force_alloc(0x0, 65535);
     force_alloc(KERNEL_DATA_START, KERNEL_DATA_END - KERNEL_DATA_START);
     
 mounting:
@@ -88,12 +98,43 @@ mounting:
 
     Sys_log("Interrupts reenabled.\n");
     __asm__ volatile ("sti"); // Enable interrupts
-    vga_set_mode(0x3);
+    
+    // CRASH on use of following (and any 16x func with a bios int)
+    // Realmode_run(test_16func);
+
+    // printf("test : b==%c",*((char*)0x1010));
+    // sleep(5000);
+
+    // char* buffer;
+    // strcpy(buffer,"testing");
+    // printf(buffer);
+
+    // usb_bios_write_sector(buffer,0,1);
+    // memset(buffer,'a',8);
+    // usb_bios_write_sector(buffer,0,1);
+
+    // printf("usb size: %s",buffer);
+    // sleep(5000);
+
+
+
+
+    // vga_set_mode(0x13);
+    // clear_13h_screen(0);
+    // // enable_mouse_display();
+    // change_mouse_state(Curs_state_zoom);
+    // while (1){
+    // }
+    
+    
+   
 
     Sys_log("Loading login manager...\n");
-    Load_bin_exe("0:/SYSTEM_CORE/Security/login.bin", 0, NULL);
+    // Load_bin_exe("0:/SYSTEM_CORE/Security/login.bin", 0, NULL);
 
     Sys_log("Starting console...\n");
+    
+    
     
     Start_Console();
 

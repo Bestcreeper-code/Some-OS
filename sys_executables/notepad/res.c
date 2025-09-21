@@ -35,7 +35,7 @@ char* String_Input_Popup(int x, int y,int width) {
         }
 
         // String inside the box
-        draw_bitmap_string(visible_str, x, y, font_w, font_h, 0X3F, NULL, true, space);
+        draw_bitmap_string(visible_str, x, y, font_w, font_h, 0X3F, NULL, true,false, space);
 
         // Get input
         char ch = getc();

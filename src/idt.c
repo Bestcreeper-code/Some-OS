@@ -68,10 +68,6 @@ void idt_init() {
     idt_reg.base = (uint32_t)&idt;
     idt_reg.limit = sizeof(struct IDTEntry) * IDT_ENTRIES - 1;
     memset(&idt, 0, sizeof(idt));
-    for (int i = 32; i <= 47; i++) {
-        idt_set_gate(i, (uint32_t)irq_dummy_handler, 0x08, 0x8E);
-    }
-
     // CPU exceptions (ISRs 0-31)
     idt_set_gate(0,  (uint32_t)isr0,  0x08, 0x8E);
     idt_set_gate(1,  (uint32_t)isr1,  0x08, 0x8E);
@@ -105,9 +101,15 @@ void idt_init() {
     idt_set_gate(29, (uint32_t)isr29, 0x08, 0x8E);
     idt_set_gate(30, (uint32_t)isr30, 0x08, 0x8E);
     idt_set_gate(31, (uint32_t)isr31, 0x08, 0x8E);
-
+    //init every irq to dummy so no crashes but nothing happens
+    for (int i = 32; i <= 47; i++) {
+        idt_set_gate(i, (uint32_t)irq_dummy_handler, 0x08, 0x8E);
+    }
+    
+    
+    
     idt_set_gate(32, (uint32_t)irq0_handler, 0x08, 0x8E); // IRQ0 (timer)
-    idt_set_gate(33, (uint32_t)irq1_handler, 0x08, 0x8E); /* IRQ1 (keyboard) */ init_keyboard();//reset_input_buffer();
+    idt_set_gate(33, (uint32_t)irq1_handler, 0x08, 0x8E); /* IRQ1 (keyboard) */ init_keyboard();reset_input_buffer();
     idt_set_gate(44, (uint32_t)irq12_handler, 0x08, 0x8E); /* IRQ12 (mouse)*/init_mouse();
 
 

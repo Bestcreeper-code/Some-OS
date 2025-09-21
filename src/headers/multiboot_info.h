@@ -55,12 +55,22 @@ typedef struct {
     uint8_t  framebuffer_type;
     uint8_t  reserved[2];
 } __attribute__((__packed__)) multiboot_info_t;
-;
+
+
+
+typedef struct {
+    uint32_t mod_start;
+    uint32_t mod_end;
+    uint32_t cmdline;
+    uint32_t pad;
+} multiboot_module_t;
 
 
 
 bool checkFlag(multiboot_info_t mb_info, uint8_t index);
 
 multiboot_info_t* Get_multiboot_info();
+
+multiboot_module_t* Multibbot_Get_loaded_module(multiboot_info_t* mbinfo, const char* name);
 
 #endif // MULTIBOOT_INFO_H
