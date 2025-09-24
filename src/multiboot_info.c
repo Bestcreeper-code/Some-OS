@@ -9,7 +9,7 @@ multiboot_info_t* Get_multiboot_info(){
     return (multiboot_info_t*)*(intptr_t*)MULTIBOOT_INFO_ADDRESS;
 }
 
-multiboot_module_t* Multibbot_Get_loaded_module(multiboot_info_t* mbinfo, const char* name) {
+multiboot_module_t* Multiboot_Get_loaded_module(multiboot_info_t* mbinfo, const char* name) {
     if (mbinfo->mods_count == 0) {
         return NULL;
     }

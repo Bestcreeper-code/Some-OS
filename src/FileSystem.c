@@ -11,6 +11,17 @@
 
 #define EXEC_LOAD_ADRESS 0x200000
 
+PARTITION VolToPart[16] = {
+    {0, 0}, 
+    {0, 1}, 
+    {0, 2}, 
+    {0, 3}, 
+};//only HD rn
+
+void Set_vol_to_part_index(int index, PARTITION part) {
+    if (index < 0 || index >= (int)(sizeof(VolToPart)/sizeof(VolToPart[0]))) return;
+    VolToPart[index] = part;
+}
 
 void print_dir(const char *path)
 {
@@ -318,4 +329,38 @@ char* Get_Ext(const char* path){
         }
     }
     return NULL;
+}
+
+int FS_Mount_Main_Partition(FATFS* fat_filesys){
+
+    FIL file;
+    char label[12];
+    DWORD vsn;
+
+    for (int i = 0; i < 4; i++) {
+        char vol[4];
+        snprintf(vol, sizeof(vol), "%d:", i);  // "0:", "1:", ...
+
+        if (f_mount(fat_filesys, vol, 1) == FR_OK) {
+            if (f_getlabel(vol, label, &vsn) == FR_OK) {
+                if (strcmp(label, OS_PARTITION_LABEL ) == 0) {
+                    Sys_log("Found OS partition at %s", vol);
+                    VolToPart[0].pd = 0;
+                    VolToPart[0].pt = i;
+                    VolToPart[i].pd = 0;
+                    VolToPart[i].pt = 0;
+
+                    return 0; // Success
+                }
+            }
+            f_mount(NULL, vol, 0);  // Unmount if not the right one
+        }
+    }
+#if (DEV_BUILD == 1)
+    f_mount(fat_filesys, "0:", 1);// try to mount 0: if not found(aka a .img formatted with fat)
+    return 0;
+#endif
+    
+
+    return -1; // Not found
 }

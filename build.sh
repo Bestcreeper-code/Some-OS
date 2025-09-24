@@ -91,7 +91,7 @@ if ! $NO_BUILD; then
   gcc -m32 -g -ffreestanding -c src/Logger.c -o build/Logger.o
   gcc -m32 -g -ffreestanding -c src/power.c -o build/power.o
   gcc -m32 -g -ffreestanding -c src/bios.c -o build/bios.o
-  # gcc -m32 -g -ffreestanding -c src/usb.c -o build/usb.o
+  # gcc -m32 -g -ffreestanding -c src/disk_installer.c -o build/disk_installer.o
   gcc -m32 -g -ffreestanding -c src/elf.c -o build/elf.o
 
   # === Compile FatFs ===
@@ -114,7 +114,7 @@ if ! $NO_BUILD; then
     build/video.o build/textconsts.o build/vga_modes.o build/xhci.o \
     build/processes_asm.o build/mouse.o build/irq12_handle.o \
     build/Logger.o build/power.o build/Realmode_switcher_asm.o build/bios.o \
-    build/usb.o build/bios_utils_funcs_asm.o build/elf.o
+    build/usb.o build/bios_utils_funcs_asm.o build/elf.o #build/disk_installer.o
 
   # === Convert to binary for GRUB ===
   echo "[5] Generating kernel.bin..."

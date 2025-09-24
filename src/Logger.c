@@ -37,13 +37,20 @@ void serial_write_string(const char* str) {
 
 
 
-void sys_serial_logf(const char* frmt, const char* file, const char* func, int line, ...) {
+void sys_serial_logf(const char* format, const char* file, const char* func, int line, ...) {
     va_list args;
     va_start(args, line);
 
+    char frmt[512];
+    strcpy(frmt, format);
+    
+    if (frmt[strlen(frmt)-1] == '\n') {
+        frmt[strlen(frmt)-1] = '\0'; // Remove trailing newline since it already jumps to newline after a message
+    }
+    
     // Create the prefix: "<file:line(func)> "
     char prefix[128];
-    int prefix_len = snprintf(prefix, sizeof(prefix), "<%s:%d(%s)> ", file, line, func);
+    int prefix_len = snprintf(prefix, sizeof(prefix), "< %s:%d(%s)> ", file, line, func);
 
     // Format the message body
     char msg[512];
@@ -52,7 +59,12 @@ void sys_serial_logf(const char* frmt, const char* file, const char* func, int l
 
     
     char output[640];  
-    snprintf(output, sizeof(output), "%s%s", prefix, msg);
+    // if(frmt[strlen(frmt)-2] == '\n' ){
+        snprintf(output, sizeof(output), "%s%s", prefix, msg);
+    // } else {
+        // snprintf(output, sizeof(output), "%s%s\n", prefix, msg);
+    // }
+
 
     serial_write_string(output);
 }

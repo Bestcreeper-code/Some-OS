@@ -23,3 +23,8 @@ FRESULT change_Current_Dir(char** currdir,const char* path);
 char* Get_Dir(const char* path);
 char* Get_Filename(const char* path);
 char* Get_Ext(const char* path);
+
+void Set_vol_to_part_index(int index, PARTITION part);
+
+
+int FS_Mount_Main_Partition(FATFS* fat_filesys);

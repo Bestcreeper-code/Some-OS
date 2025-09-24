@@ -8,3 +8,5 @@ build_lib
 build
 image.png
 todo.ipynb
+usb.img
+iso/BL/grub_boot.img    

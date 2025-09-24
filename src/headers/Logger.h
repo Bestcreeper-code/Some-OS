@@ -7,7 +7,7 @@
 
 #define COM1_PORT 0x3F8  
 
-#define Sys_log(frmt, ...) sys_serial_logf(frmt, __FILE_NAME__ , __func__, __LINE__ ,##__VA_ARGS__)
+#define Sys_log(frmt , ...) sys_serial_logf(frmt, __FILE_NAME__ , __func__, __LINE__ ,##__VA_ARGS__)
 
 void serial_init();
 

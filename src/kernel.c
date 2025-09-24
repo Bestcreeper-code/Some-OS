@@ -18,18 +18,20 @@
 // #include "headers/usb.h"
 #include "headers/bios.h"
 #include "headers/elf.h"
-#include "headers/disk_installer.h"
+#include "headers/paging.h"
 
 #include "data/globals.h"
 
 extern int vgaX, vgaY;
 
-extern void test_16func();
+// extern void test_16func();
 
 
 
 void kmain(unsigned long magic, unsigned long addr) {
+
     
+
     serial_init();
     
     Sys_log("interrupts disabled.\n");
@@ -56,78 +58,73 @@ void kmain(unsigned long magic, unsigned long addr) {
     
     
     disable_mouse_display();
+    enable_cursor(0, 15);
+
+    *((uint32_t*)MULTIBOOT_INFO_ADDRESS) = addr;
+    
+
+    
 
     Sys_log("Parsing memory map...\n");
-    *((uint32_t*)MULTIBOOT_INFO_ADDRESS) = addr;
     parse_memory_map( Get_multiboot_info() );
     Sys_log("Memory map parsed.\n");
 
+    Sys_log("Setting up paging...\n");
+    //bugs for now
+    if (setup_paging() != 0) {
+        Sys_log("Paging setup failed, halting.");
+        move_cursor(0, 0);
+        printstr("Paging setup failed, halting.");
+        while (1) __asm__ volatile ("hlt");
+    }
+    Sys_log("Paging set up successfully.\n");
+
+    force_alloc((uint32_t)Get_multiboot_info(), sizeof(multiboot_info_t));
+
     vga_set_mode(0X03);
-    
+
     
     ClearScreen();
     
     
-    force_alloc(0x0, 65535);
+    force_alloc(0x0, 65535);// reserve low memory for real mode bios calls/or whatever
     force_alloc(KERNEL_DATA_START, KERNEL_DATA_END - KERNEL_DATA_START);
     
+    //-new_install
+    const char* cmdline = (const char*)Get_multiboot_info()->cmdline;
+    Sys_log("kernel called with: %s", cmdline);
+    // refer tocommented code #1 at the bottom of this file
+
+    int mount_counter = 0;
 mounting:
     Sys_log("trying to mount filesystem...\n");
-    FRESULT res = f_mount(FatFsSys, "0:", 1);
-    if (res != FR_OK) {
+    int res = FS_Mount_Main_Partition(FatFsSys);
+    
+    if (res != 0) {
         Sys_log("Failed to mount filesystem. Error code: %d\n Trying to mount again", res);
-        goto mounting;
+        mount_counter++;
+        if(mount_counter < 3)goto mounting;
+
+        move_cursor(0, 0);
+        printf("No Os partition found. if this problem persists after a restart, you may want to reinstall the OS\n (continuing to the console in 10s)");
+        sleep(10000);
+        goto end_mounting;
     } else {
         Sys_log("Filesystem mounted successfully.\n");
         // get_string();
     }
-    
+end_mounting:
     
     Sys_log("Multiboot magic number: 0x%x\n", (void*)magic);
     Sys_log("Multiboot info address: 0x%x\n", addr);
     
     
-    // clear_processes();
-    // new_process("0:/filemger.bin");
-    // sleep(2000);
     
-    enable_cursor(0, 15);
     move_cursor(0, 0);
-    // *((char*)TASK_SWITCHING_FLAG) = 1;
-    // Load_bin_exe("0:/console.bin");
 
     Sys_log("Interrupts reenabled.\n");
     __asm__ volatile ("sti"); // Enable interrupts
     
-    // CRASH on use of following (and any 16x func with a bios int)
-    // Realmode_run(test_16func);
-
-    // printf("test : b==%c",*((char*)0x1010));
-    // sleep(5000);
-
-    // char* buffer;
-    // strcpy(buffer,"testing");
-    // printf(buffer);
-
-    // usb_bios_write_sector(buffer,0,1);
-    // memset(buffer,'a',8);
-    // usb_bios_write_sector(buffer,0,1);
-
-    // printf("usb size: %s",buffer);
-    // sleep(5000);
-
-
-
-
-    // vga_set_mode(0x13);
-    // clear_13h_screen(0);
-    // // enable_mouse_display();
-    // change_mouse_state(Curs_state_zoom);
-    // while (1){
-    // }
-    
-    
-   
 
     Sys_log("Loading login manager...\n");
     // Load_bin_exe("0:/SYSTEM_CORE/Security/login.bin", 0, NULL);
@@ -158,3 +155,38 @@ __attribute__((naked)) void _start() {
 
 
 // readelf --relocs build_execs/gametest.o > relocations.txt
+
+
+
+/*
+    removed code #1:(may be used later)
+
+    __asm__ volatile ("sti");//start ints just for using the keyboard
+    printf("[Creeper OS Kernel]\n");
+    printf("overwrite disk and install OS? (yes/no):\n");
+    if(cmdline && !strcmp(cmdline, "-new_install") && !strcmp(Console_Get_Command(),"yes")){
+        __asm__ volatile ("cli");
+
+        Sys_log("New install flag detected, starting disk installer...\n");
+        multiboot_module_t* os_image_file;
+
+        os_image_file = Multiboot_Get_loaded_module(Get_multiboot_info(), "os.iso");
+        
+
+        if(!os_image_file){
+            Sys_log("Bootloader or kernel module not found, halting.");
+            return;
+        }
+        
+        // int res = Install_OS_to_disk(os_image_file);
+        if(res != 0){
+            printf("Disk installer failed with code %d, halting.", res);
+            Sys_log("Disk installer failed with code %d, halting.", res);
+            while(1)__asm__ volatile ("hlt");
+        }else{
+            Sys_log("Disk installer finished successfully.\n");
+            printf("OS installed successfully!\nYou may now remove the installer media and reboot.\n");
+            while(1)__asm__ volatile ("hlt");
+        }
+    }
+*/

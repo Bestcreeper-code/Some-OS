@@ -1,7 +1,7 @@
 #include "headers/pci.h"
 #include "headers/io.h"
 #include "headers/Logger.h"
-#include "headers/usb.h"
+// #include "headers/usb.h"
 
 #define PCI_CLASS_SERIAL 0x0C
 #define PCI_SUBCLASS_USB 0x03

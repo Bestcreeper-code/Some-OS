@@ -101,6 +101,7 @@ get_usb_drive_params_asm_end:
 test_16func:
     mov word [OUTPUT_ADDR], 'b'
     mov word [OUTPUT_ADDR+2], 0 
+    
     sti
     mov ah, 0x0E        ; BIOS teletype output
     mov al, 'A'         ; Character to print

@@ -71,6 +71,6 @@ bool checkFlag(multiboot_info_t mb_info, uint8_t index);
 
 multiboot_info_t* Get_multiboot_info();
 
-multiboot_module_t* Multibbot_Get_loaded_module(multiboot_info_t* mbinfo, const char* name);
+multiboot_module_t* Multiboot_Get_loaded_module(multiboot_info_t* mbinfo, const char* name);
 
 #endif // MULTIBOOT_INFO_H

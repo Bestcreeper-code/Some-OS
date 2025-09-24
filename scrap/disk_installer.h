@@ -1,6 +1,7 @@
 #ifndef DISK_INSTALLER_H
 #define DISK_INSTALLER_H
 
+#include "multiboot_info.h"
 #include <stdint.h>
 
 typedef struct {
@@ -31,16 +32,23 @@ typedef struct {
 typedef struct {
     uint8_t boot_code[446];
     Disk_Partition_Entry_t partition_table[4];
-    uint8_t signature[2]; //AA55h
+    uint16_t signature; //AA55h
 } __attribute__((packed)) Disk_MBR_t;
 
 
 typedef enum {
+
+    DISK_INSTALLER_RET_MKFS_FAIL = -5,
+    DISK_INSTALLER_RET_FATFS_FAIL = -4,
     DISK_INSTALLER_RET_NO_AVAILABLE_PARTIT = -3,
     DISK_INSTALLER_RET_NO_DISK = -2,
     DISK_INSTALLER_RET_MALLOC_FAIL = -1,
     DISK_INSTALLER_RET_SUCCESS = 0,
     // DISK_INSTALLER_RET_,
 } DiskInstallerRetCode;
+
+
+int Install_OS_to_disk(multiboot_module_t* bl_file);
+
 
 #endif // DISK_INSTALLER_H
