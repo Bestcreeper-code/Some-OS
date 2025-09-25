@@ -47,11 +47,11 @@ void put_pixel(int x, int y, uint8_t color) {
 #if (QEMU)
     int pitch = 320;
 #else
-    int pitch = Get_multiboot_info()->framebuffer_pitch;
+    int pitch = Multiboot_info->framebuffer_pitch;
 #endif
     short mx,my;
     Get_Mouse_Pos(&mx,&my);
-    graph_mode_fb[y * pitch + x] = color;
+    ((uint32_t*)Multiboot_info->framebuffer_addr) [y * pitch + x] = color;
     if(x >= mx && x < mx + 4 && y >= my && y < my + 6){
         ((uint8_t*)MOUSE_PREV_BG)[(y - my) * 4 + (x - mx)] = color;
     }

@@ -3,8 +3,17 @@
 
 section .text
     align 4
-    dd 0x1BADB002         ; magic number
-    dd 0x00000001         ; flags (bit 0: memory info)
-    dd -(0x1BADB002 + 0x00000001) ; checksum
+    dd 0x1BADB002
+    dd 0x05
+    dd -(0x1BADB002 + 0x05)
 
-rdtsc 
+dd 0
+dd 0
+dd 0
+dd 0
+dd 0
+
+dd 0
+dd 1024
+dd 768
+dd 32

@@ -7,7 +7,9 @@
 #include "headers/Logger.h"
 #include "headers/addresses.h"
 #include "data/globals.h"
+#include "data/textconsts.h"
 #include "data/KB_Layouts.h"
+#include "headers/multiboot_info.h"
 
 volatile uint16_t* text_mode_memory = (volatile uint16_t*)0xB8000;
 int vgaX = 0;
@@ -17,11 +19,17 @@ char current_Language = KB_LAY_AZERTY;
 
 static char print_color = 0x0F; //white on black
 
+
+// VGA TEXT BASED FUNCS
+
+
 void put_char(int x, int y,uint8_t c, uint8_t color) {
     if (x < 0 || x >= 80 || y < 0 || y >= 25) return;
     // switch(graphics_mode){
     //     case 0x03:
             text_mode_memory[y * 80 + x] = (uint16_t)c | ((uint16_t)color << 8);
+            Rect window = {.h=768, .w=1024, .x=0, .y=0};
+            vga_txt_to_gfx(window);
             // break;
 
         // case 0x13:
@@ -762,7 +770,7 @@ int write_number_fixed_width(char* buffer, int pos, int num, int width, int size
     return total_len;
 }
 
-// buffer be NULL to just calculate sizeint vsnprintf(char* buffer, int size, const char* format, va_list args) {
+// buffer be NULL to just calculate size 
 int vsnprintf(char* buffer, int size, const char* format, va_list args) {
     int pos = 0;
 
@@ -958,4 +966,55 @@ int sprintf(char* buffer, const char* format, ...) {
 
 void reset_input_buffer(){
     memset((void*)input_char_buffer, 0, INPUT_CHAR_BUFFER_SIZE);
+}
+
+
+
+
+
+// GRAPHICAL BASED FUNCS(modified vga text ones)
+
+void decode_vga_colors(uint8_t attr, uint32_t* fg, uint32_t* bg) {
+    static const uint32_t vga_colors[16] = {
+        0x000000, 0x0000AA, 0x00AA00, 0x00AAAA,
+        0xAA0000, 0xAA00AA, 0xAA5500, 0xAAAAAA,
+        0x555555, 0x5555FF, 0x55FF55, 0x55FFFF,
+        0xFF5555, 0xFF55FF, 0xFFFF55, 0xFFFFFF
+    };
+
+    *fg = vga_colors[attr & 0x0F];
+    *bg = vga_colors[(attr >> 4) & 0x0F];
+}
+
+void vga_txt_to_gfx(Rect area) {
+    for (int y = 0; y < VGA_03_HEIGHT; y++) {
+        for (int x = 0; x < VGA_03_WIDTH; x++) {
+            int index = y * VGA_03_WIDTH + x;
+            uint16_t entry = text_mode_memory[index];
+
+            char c = entry & 0xFF;
+            uint8_t attr = (entry >> 8) & 0xFF;
+
+            uint32_t fg_color, bg_color;
+            decode_vga_colors(attr, &fg_color, &bg_color);
+
+            int pixel_x = area.x + x * 4;
+            int pixel_y = area.y + y * 6;
+
+            
+            // Draw the character
+            draw_bitmap_char(
+                c,
+                pixel_x,
+                pixel_y,
+                8,
+                16,
+                fg_color,
+                font8x16,
+                false,  
+                false,  
+                true    
+            );
+        }
+    }
 }

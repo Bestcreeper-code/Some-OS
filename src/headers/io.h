@@ -10,6 +10,9 @@
 #include "string.h"
 #include "addresses.h"
 
+#define VGA_03_WIDTH  80
+#define VGA_03_HEIGHT 25
+
 #define KEY_ESCAPE     27
 #define KEY_BACKSPACE  8
 #define KEY_ENTER      '\n'
@@ -88,4 +91,6 @@ int write_unsigned(char* buffer, int pos, uint32_t num, int size);
 int write_hex32(char* buffer, int pos, uint32_t num, int size);
 int write_number_fixed_width(char* buffer, int pos, int num, int width, int size);
 
+
+void vga_txt_to_gfx(Rect area);
 #endif

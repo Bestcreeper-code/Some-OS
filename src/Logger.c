@@ -44,9 +44,9 @@ void sys_serial_logf(const char* format, const char* file, const char* func, int
     char frmt[512];
     strcpy(frmt, format);
     
-    if (frmt[strlen(frmt)-1] == '\n') {
-        frmt[strlen(frmt)-1] = '\0'; // Remove trailing newline since it already jumps to newline after a message
-    }
+    // if (frmt[strlen(frmt)-1] == '\n') {
+    //     frmt[strlen(frmt)-1] = '\0'; // Remove trailing newline since it already jumps to newline after a message
+    // }
     
     // Create the prefix: "<file:line(func)> "
     char prefix[128];

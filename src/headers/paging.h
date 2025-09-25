@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#define PD_PHYS_ADDR 0x100000
+#define PD_PHYS_ADDR 0x1000000
 #define MIN_OS_PAGES 8192
 
 typedef struct {

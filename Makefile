@@ -93,7 +93,7 @@ run: all
 		-usb \
 		-device usb-storage,drive=usbdisk \
 		-drive file=usb.img,if=none,id=usbdisk,format=raw \
-		-display gtk \
+		-device VGA,vgamem_mb=32 \
 		-serial stdio
 
 # === Run with GDB ===

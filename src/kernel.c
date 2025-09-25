@@ -27,7 +27,6 @@ extern int vgaX, vgaY;
 // extern void test_16func();
 
 
-
 void kmain(unsigned long magic, unsigned long addr) {
 
     
@@ -58,12 +57,10 @@ void kmain(unsigned long magic, unsigned long addr) {
     
     
     disable_mouse_display();
-    enable_cursor(0, 15);
+    // enable_cursor(0, 2);
 
     *((uint32_t*)MULTIBOOT_INFO_ADDRESS) = addr;
-    
-
-    
+    uint32_t* fb = (uint32_t*) Get_multiboot_info()->framebuffer_addr;    
 
     Sys_log("Parsing memory map...\n");
     parse_memory_map( Get_multiboot_info() );
@@ -78,6 +75,13 @@ void kmain(unsigned long magic, unsigned long addr) {
         while (1) __asm__ volatile ("hlt");
     }
     Sys_log("Paging set up successfully.\n");
+
+    if (setup_paging() != 0) {
+        Sys_log("Paging setup failed. Halting system.");
+        sleep(212312312);
+    }
+    Sys_log("Paging setup worked.");
+
 
     force_alloc((uint32_t)Get_multiboot_info(), sizeof(multiboot_info_t));
 

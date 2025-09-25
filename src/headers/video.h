@@ -10,6 +10,18 @@ typedef struct {
     unsigned char b;
 }  __attribute__((__packed__)) RGBColor;
 
+typedef struct {
+    uint32_t x;  
+    uint32_t y;
+    uint32_t h;
+    uint32_t w;
+} __attribute__((__packed__)) Rect;
+
+typedef struct {
+    uint32_t x;  
+    uint32_t y;
+} __attribute__((__packed__)) Vector2;
+
 
 
 extern volatile uint8_t* graph_mode_fb;
