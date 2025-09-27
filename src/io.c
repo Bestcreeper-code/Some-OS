@@ -974,6 +974,7 @@ void reset_input_buffer(){
 
 // GRAPHICAL BASED FUNCS(modified vga text ones)
 
+
 void decode_vga_colors(uint8_t attr, uint32_t* fg, uint32_t* bg) {
     static const uint32_t vga_colors[16] = {
         0x000000, 0x0000AA, 0x00AA00, 0x00AAAA,

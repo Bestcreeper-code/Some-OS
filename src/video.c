@@ -7,16 +7,26 @@
 #include "data/textconsts.h"
 #include "data/globals.h"
 #include "headers/multiboot_info.h"
+#include "headers/paging.h"
 
 #include <stdint.h>
 #include <stdbool.h>
 
-volatile uint8_t* graph_mode_fb = (uint8_t*)0xA0000;
+volatile uint32_t* graph_mode_fb = (uint32_t*)0xA0000;
 volatile uint8_t* color_pal_size = (volatile uint8_t*)MODE13H_COLOR_PALETTE_SIZE_ADDR;
 
 
 
+void init_graphics() {
+    graph_mode_fb = (volatile uint32_t*)(uint32_t)Multiboot_info->framebuffer_addr;
 
+    uint32_t fb_addr = Multiboot_info->framebuffer_addr;
+    uint32_t fb_size = Multiboot_info->framebuffer_pitch * Multiboot_info->framebuffer_height;
+
+    for (uint32_t offset = 0; offset < fb_size; offset += 0x1000) {
+        map_page(fb_addr + offset, fb_addr + offset, 1, 1, 0);
+    }
+} 
 
 
 RGBColor default_palette[64] = {//all 64 default values
@@ -43,36 +53,36 @@ void init_13h_palette() {
 
 
 
-void put_pixel(int x, int y, uint8_t color) {
+void put_pixel(int x, int y, uint32_t color) {
 #if (QEMU)
     int pitch = 320;
 #else
-    int pitch = Multiboot_info->framebuffer_pitch;
+    int pitch = Multiboot_info->framebuffer_pitch/(Multiboot_info->framebuffer_bpp/8);
 #endif
     short mx,my;
     Get_Mouse_Pos(&mx,&my);
-    ((uint32_t*)Multiboot_info->framebuffer_addr) [y * pitch + x] = color;
+    graph_mode_fb[y * pitch + x] = color;
     if(x >= mx && x < mx + 4 && y >= my && y < my + 6){
         ((uint8_t*)MOUSE_PREV_BG)[(y - my) * 4 + (x - mx)] = color;
     }
 }
 
-void Force_put_pixel(int x, int y, uint8_t color) {//no mouse check
+void Force_put_pixel(int x, int y, uint32_t color) {//no mouse check
 #if (QEMU)
     int pitch = 320;
 #else
-    int pitch = Get_multiboot_info()->framebuffer_pitch;
+    int pitch = Multiboot_info->framebuffer_pitch;
 #endif
     graph_mode_fb[y * pitch + x] = color;
 }
 
-uint8_t get_pixel(int x, int y){
-    return graph_mode_fb[y * Get_multiboot_info()->framebuffer_pitch + x];
+uint32_t get_pixel(int x, int y){
+    return graph_mode_fb[y * Multiboot_info->framebuffer_pitch + x];
 }
 
 // Draw a char from 32 to 127
 //(charact, charx, chary, 4, 6, color, NULL, true) for default
-void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int width, int height, char color, void* font, bool use_default_font, bool ignore_cursor, bool row_major) {
+void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int width, int height, uint32_t color, void* font, bool use_default_font, bool ignore_cursor, bool row_major) {
     if (width <= 0 || height <= 0 || character < 32 || character > 127) return;
 
     uint8_t* font_array = (uint8_t*)font;
@@ -97,7 +107,7 @@ void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int w
             }
             for (int y = 0; y < height; y++) {
                 if ((column >> y) & 0x01) {
-                    if ((x + x_pos) < 320 && (y + y_pos) < 200) {
+                    if ((x + x_pos) < Multiboot_info->framebuffer_width && (y + y_pos) < Multiboot_info->framebuffer_height) {
                         if (ignore_cursor) Force_put_pixel(x + x_pos, y + y_pos, color);
                         else put_pixel(x + x_pos, y + y_pos, color);
                     }
@@ -117,7 +127,7 @@ void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int w
             }
             for (int x = 0; x < width; x++) {
                 if ((row >> (width - 1 - x)) & 0x01) { // MSB first
-                    if ((x + x_pos) < 320 && (y + y_pos) < 200) {
+                    if ((x + x_pos) < Multiboot_info->framebuffer_width && (y + y_pos) < Multiboot_info->framebuffer_height) {
                         if (ignore_cursor) Force_put_pixel(x + x_pos, y + y_pos, color);
                         else put_pixel(x + x_pos, y + y_pos, color);
                     }
@@ -128,7 +138,7 @@ void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int w
 }
 
 
-void draw_bitmap_string(const char* str, int x_pos, int y_pos, int font_width, int font_height, char color, void* font, bool use_default_font, bool row_major, int space) {
+void draw_bitmap_string(const char* str, int x_pos, int y_pos, int font_width, int font_height, uint32_t color, void* font, bool use_default_font, bool row_major, int space) {
     if (!str) return;
 
     int cursor_x = x_pos;

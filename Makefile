@@ -105,8 +105,7 @@ gdb: all
 		-drive file=$(DISK_IMG),format=raw,if=ide \
 		-serial stdio \
 		-s -S \
-		-display gtk \
-		-serial stdio
+		-display gtk 
 
 # === Clean ===
 clean:

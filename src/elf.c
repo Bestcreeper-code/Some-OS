@@ -10,23 +10,53 @@
 LoadedElf* LoadElf(const char* path) {
     FIL file;
     FRESULT res = f_open(&file, path, FA_READ);
-    if (res != FR_OK) return NULL;
+    if (res != FR_OK) {
+#if DEBUG_MODE
+        Sys_log("LoadElf: Failed to open file %s\n", path);
+#endif
+        return NULL;
+    }
+#if DEBUG_MODE
+    Sys_log("LoadElf: Opened file %s\n", path);
+#endif
 
     Elf32_Ehdr ehdr;
     UINT bytesRead;
     res = f_read(&file, &ehdr, sizeof(Elf32_Ehdr), &bytesRead);
-    if (res != FR_OK || bytesRead != sizeof(Elf32_Ehdr)) return NULL;
+    if (res != FR_OK || bytesRead != sizeof(Elf32_Ehdr)) {
+#if DEBUG_MODE
+        Sys_log("LoadElf: Failed to read ELF header\n");
+#endif
+        return NULL;
+    }
 
-    //check if it's an relocatable ELF file (.rel section) )
     if (ehdr.e_ident[0] != 0x7F || ehdr.e_ident[1] != 'E' ||
-        ehdr.e_ident[2] != 'L' || ehdr.e_ident[3] != 'F') return NULL;
+        ehdr.e_ident[2] != 'L' || ehdr.e_ident[3] != 'F') {
+#if DEBUG_MODE
+        Sys_log("LoadElf: Not a valid ELF file\n");
+#endif
+        return NULL;
+    }
 
-    if (ehdr.e_type != ET_REL) return NULL;
-    
-    //load sections header table
+    if (ehdr.e_type != ET_REL) {
+#if DEBUG_MODE
+        Sys_log("LoadElf: Not a relocatable ELF\n");
+#endif
+        return NULL;
+    }
+
+#if DEBUG_MODE
+    Sys_log("LoadElf: Reading %u section headers\n", ehdr.e_shnum);
+#endif
+
     Elf32_Shdr* sections = malloc(sizeof(Elf32_Shdr) * ehdr.e_shnum);
     uint32_t* section_offsets = malloc(sizeof(uint32_t) * ehdr.e_shnum);
-    if (!sections || !section_offsets) return NULL;
+    if (!sections || !section_offsets) {
+#if DEBUG_MODE
+        Sys_log("LoadElf: Failed to allocate memory for section headers\n");
+#endif
+        return NULL;
+    }
 
     for (int i = 0; i < ehdr.e_shnum; i++) {
         f_lseek(&file, ehdr.e_shoff + i * sizeof(Elf32_Shdr));
@@ -39,10 +69,25 @@ LoadedElf* LoadElf(const char* path) {
         if (sections[i].sh_type != SHT_NOBITS && sections[i].sh_size > 0)
             max_size += sections[i].sh_size;
     }
-    // load section data
+
+#if DEBUG_MODE
+    Sys_log("LoadElf: Total memory needed for sections = %u bytes\n", max_size);
+#endif
+
     uint8_t* base = malloc(max_size);
-    if (!base) { free(sections); free(section_offsets); return NULL; }
+    if (!base) {
+#if DEBUG_MODE
+        Sys_log("LoadElf: Failed to allocate memory for ELF sections\n");
+#endif
+        free(sections);
+        free(section_offsets);
+        return NULL;
+    }
     memset(base, 0, max_size);
+
+#if DEBUG_MODE
+    Sys_log("LoadElf: Loading section data\n");
+#endif
 
     for (int i = 0; i < ehdr.e_shnum; i++) {
         if (sections[i].sh_type == SHT_NOBITS || sections[i].sh_size == 0) continue;
@@ -50,7 +95,10 @@ LoadedElf* LoadElf(const char* path) {
         f_read(&file, base + section_offsets[i], sections[i].sh_size, &bytesRead);
     }
 
-    // Apply relocations
+#if DEBUG_MODE
+    Sys_log("LoadElf: Applying relocations\n");
+#endif
+
     for (int i = 0; i < ehdr.e_shnum; i++) {
         Elf32_Shdr shdr = sections[i];
         if (shdr.sh_type != SHT_REL) continue;
@@ -76,6 +124,9 @@ LoadedElf* LoadElf(const char* path) {
                 case R_386_PC32: *patch += sym_addr - (uint32_t)patch; break;
                 case R_386_RELATIVE: *patch += (uint32_t)base; break;
             }
+#if DEBUG_MODE
+            Sys_log("LoadElf: Relocation %d applied at %p\n", j, patch);
+#endif
         }
     }
 
@@ -88,8 +139,13 @@ LoadedElf* LoadElf(const char* path) {
     elf->entry = (uint32_t)base;
 
     f_close(&file);
+#if DEBUG_MODE
+    Sys_log("LoadElf: ELF %s loaded successfully, entry=0x%x\n", path, elf->entry);
+#endif
+
     return elf;
 }
+
 
 uint32_t GetSymbol(LoadedElf* elf, const char* name) {
     for (int i = 0; i < elf->shnum; i++) {

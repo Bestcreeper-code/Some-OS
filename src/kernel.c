@@ -21,6 +21,7 @@
 #include "headers/paging.h"
 
 #include "data/globals.h"
+#include "data/textconsts.h"
 
 extern int vgaX, vgaY;
 
@@ -60,12 +61,11 @@ void kmain(unsigned long magic, unsigned long addr) {
     // enable_cursor(0, 2);
 
     *((uint32_t*)MULTIBOOT_INFO_ADDRESS) = addr;
-    uint32_t* fb = (uint32_t*) Get_multiboot_info()->framebuffer_addr;    
-
-    Sys_log("Parsing memory map...\n");
-    parse_memory_map( Get_multiboot_info() );
+    
+    
+    
     Sys_log("Memory map parsed.\n");
-
+    
     Sys_log("Setting up paging...\n");
     //bugs for now
     if (setup_paging() != 0) {
@@ -75,18 +75,25 @@ void kmain(unsigned long magic, unsigned long addr) {
         while (1) __asm__ volatile ("hlt");
     }
     Sys_log("Paging set up successfully.\n");
-
+    
     if (setup_paging() != 0) {
-        Sys_log("Paging setup failed. Halting system.");
+        Sys_log("Paging setup failed. Halting system.\n");
         sleep(212312312);
     }
-    Sys_log("Paging setup worked.");
-
-
+    Sys_log("Paging setup worked.\n");
+    
+    Sys_log("Parsing memory map...\n");
+    parse_memory_map( Get_multiboot_info() );
+    
+    Sys_log("Initialising graphics.\n");
+    init_graphics();
+    
     force_alloc((uint32_t)Get_multiboot_info(), sizeof(multiboot_info_t));
 
-    vga_set_mode(0X03);
-
+    int pitch = Multiboot_info->framebuffer_bpp;
+    
+    
+    
     
     ClearScreen();
     
@@ -96,14 +103,14 @@ void kmain(unsigned long magic, unsigned long addr) {
     
     //-new_install
     const char* cmdline = (const char*)Get_multiboot_info()->cmdline;
-    Sys_log("kernel called with: %s", cmdline);
+    Sys_log("kernel called with: %s\n", cmdline);
     // refer tocommented code #1 at the bottom of this file
 
     int mount_counter = 0;
 mounting:
-    Sys_log("trying to mount filesystem...\n");
-    int res = FS_Mount_Main_Partition(FatFsSys);
-    
+Sys_log("trying to mount filesystem...\n");
+int res = FS_Mount_Main_Partition(FatFsSys);
+
     if (res != 0) {
         Sys_log("Failed to mount filesystem. Error code: %d\n Trying to mount again", res);
         mount_counter++;
@@ -123,20 +130,34 @@ end_mounting:
     Sys_log("Multiboot info address: 0x%x\n", addr);
     
     
-    
     move_cursor(0, 0);
 
     Sys_log("Interrupts reenabled.\n");
     __asm__ volatile ("sti"); // Enable interrupts
     
+    
+    
+    // draw_bitmap_char('T',100,100,8,16,0xFFFFA500,NULL,true,false,false);
+
+    
+    for (size_t i = 0; i < 768; i++)
+    {
+        for (size_t j = 0; j < 1024; j++)
+        {
+            put_pixel(j,i,0xFFFFA500);
+        }
+        
+    }
+    draw_bitmap_string("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",120,100,8,16,0xFF0000FF,font8x16,false,true,3);
+
+    
+    // ((uint32_t*)Multiboot_info->framebuffer_addr)[1]= 0XFFFFFFFF;
 
     Sys_log("Loading login manager...\n");
-    // Load_bin_exe("0:/SYSTEM_CORE/Security/login.bin", 0, NULL);
+    LoadElf("0:/test.elf");
 
     Sys_log("Starting console...\n");
-    
-    
-    
+        
     Start_Console();
 
     while (1) {

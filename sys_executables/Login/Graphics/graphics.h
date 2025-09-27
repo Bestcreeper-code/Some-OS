@@ -1,10 +1,7 @@
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
+#include "../../../src/headers/video.h"
 
-typedef struct 
-{
-    int x,y;
-} Vector2;
 
 
 

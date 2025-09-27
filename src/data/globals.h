@@ -3,9 +3,10 @@
 #include "../../FatFs/ff.h"
 #include "../headers/addresses.h"
 
-#define DEBUG_MODE 0
+#define DEBUG_MODE 1
 #define DEV_BUILD  1 // dev features like forcing disk part to 1 if not found
 
+#define FREE_NO_MERGE 1 
 
 #define Fat_SYS_Main_Part_Max_Size 0XFFFFFFFF //max possible size of a fat partition /"use max"
 #define Fat_SYS_Main_Part_Drive_Percentage 85 //percentage of the disk to use for the main fat partition
