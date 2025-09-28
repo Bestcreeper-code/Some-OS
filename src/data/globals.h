@@ -16,4 +16,7 @@
 static char graphics_mode = 0x03;
 static FATFS* FatFsSys = (FATFS*)FATFS_SYS_ADDR;
 
+
+
+
 #endif

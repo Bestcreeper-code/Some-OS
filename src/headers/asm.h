@@ -34,6 +34,44 @@ static inline uint32_t inl(uint16_t port) {
     return ret;
 }
 
+typedef struct {
+    uint32_t eax, ebx, ecx, edx;
+    uint32_t esi, edi, ebp, esp;
+    uint32_t eip, eflags;
+    uint32_t cs, ds, es, fs, gs, ss;
+}__attribute__((packed)) cpu_registers_t;
+
+
+static inline void capture_cpu_registers(cpu_registers_t* regs) {
+    asm volatile(
+        "movl %%eax, (%0)\n\t"
+        "movl %%ebx, 4(%0)\n\t"
+        "movl %%ecx, 8(%0)\n\t"
+        "movl %%edx, 12(%0)\n\t"
+        "movl %%esi, 16(%0)\n\t"
+        "movl %%edi, 20(%0)\n\t"
+        "movl %%ebp, 24(%0)\n\t"
+        "movl %%esp, 28(%0)\n\t"
+
+        "pushfl\n\t"
+        "popl 32(%0)\n\t"
+
+        "movw %%cs, 36(%0)\n\t"
+        "movw %%ds, 38(%0)\n\t"
+        "movw %%es, 40(%0)\n\t"
+        "movw %%fs, 42(%0)\n\t"
+        "movw %%gs, 44(%0)\n\t"
+        "movw %%ss, 46(%0)\n\t"
+
+        "call 1f\n\t"
+        "1: popl 48(%0)\n\t"
+        :
+        : "r"(regs)
+        : "memory"
+    );
+}
+
+
 
 
 #endif // ASM_H

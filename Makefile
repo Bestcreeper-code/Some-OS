@@ -3,7 +3,7 @@ CC = gcc
 NASM = nasm
 LD = ld
 OBJCOPY = objcopy
-CFLAGS = -m32 -g -ffreestanding
+CFLAGS = -m32 -g -ffreestanding 
 LDFLAGS = -m elf_i386 -Ttext=0x100000 -z noexecstack
 
 SRC_DIRS = src FatFs

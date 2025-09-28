@@ -28,11 +28,20 @@ extern int vgaX, vgaY;
 // extern void test_16func();
 
 
+void fun2(){
+    
+    int i = 0/0;//====================================================
+}
+void fun1(){
+    fun2();
+}
+
 void kmain(unsigned long magic, unsigned long addr) {
 
     
 
     serial_init();
+    
     
     Sys_log("interrupts disabled.\n");
     Sys_log("Kernel starting...\n");
@@ -47,6 +56,8 @@ void kmain(unsigned long magic, unsigned long addr) {
     initGdt();
     idt_init();
     Sys_log("GDT and IDT set up successfully.\n");
+
+    
 
     Sys_log("remapping PIC...\n");
     pic_remap();
@@ -96,6 +107,7 @@ void kmain(unsigned long magic, unsigned long addr) {
     
     
     ClearScreen();
+
     
     
     force_alloc(0x0, 65535);// reserve low memory for real mode bios calls/or whatever
@@ -129,7 +141,8 @@ end_mounting:
     Sys_log("Multiboot magic number: 0x%x\n", (void*)magic);
     Sys_log("Multiboot info address: 0x%x\n", addr);
     
-    
+    Sys_log("func2:%x    func1:%x\n",fun2,fun1);
+    fun1();//====================================================
     move_cursor(0, 0);
 
     Sys_log("Interrupts reenabled.\n");
@@ -151,10 +164,12 @@ end_mounting:
     draw_bitmap_string("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",120,100,8,16,0xFF0000FF,font8x16,false,true,3);
 
     
+    
     // ((uint32_t*)Multiboot_info->framebuffer_addr)[1]= 0XFFFFFFFF;
 
     Sys_log("Loading login manager...\n");
     LoadElf("0:/test.elf");
+
 
     Sys_log("Starting console...\n");
         

@@ -1,5 +1,3 @@
-; Full ISR setup with categorized macros and handlers
-
 global isr0
 global isr1
 global isr2
@@ -33,20 +31,54 @@ global isr29
 global isr30
 global isr31
 
-extern itoa    ; int value, char* str, int base (base=10)
-extern Load_bin_exe ; (const char* file_path, int argc, char** argv)
-; extern handle_noncrash 
+extern itoa
+extern Load_bin_exe
 
 section .data
-    file_path db "0:/system_core/crashhndl.bin", 0
+file_path db "0:/system_core/crashhndl.bin", 0
 
 section .bss
-    int_indx_str resb 12
-    int_err_code_str resb 12
-    argv resd 3        ; char* argv[3]
+int_indx_str    resb 12
+int_err_code_str resb 12
+argv            resd 4
+gp_regs         resd 10
+stack_trace     resd 16
 
 section .text
 
+%macro SAVE_REGS 0
+    mov esi, gp_regs
+
+    mov eax, [esp + 4]
+    mov [esi + 0*4], eax
+
+    mov eax, [esp + 16]
+    mov [esi + 1*4], eax
+
+    mov eax, [esp + 8]
+    mov [esi + 2*4], eax
+
+    mov eax, [esp + 12]
+    mov [esi + 3*4], eax
+
+    mov eax, [esp + 28]
+    mov [esi + 4*4], eax
+
+    mov eax, [esp + 32]
+    mov [esi + 5*4], eax
+
+    mov eax, [esp + 24]
+    mov [esi + 6*4], eax
+
+    mov eax, [esp + 20]
+    mov [esi + 7*4], eax
+
+    mov eax, [esp + 40]
+    mov [esi + 8*4], eax
+
+    mov eax, [esp + 48]
+    mov [esi + 9*4], eax
+%endmacro
 
 %macro ISR_NOCRASH 1
 isr%1:
@@ -54,101 +86,104 @@ isr%1:
     iretd
 %endmacro
 
-
 %macro ISR_NOERR 1
 isr%1:
-    push dword 2147483648  ; dummy error code
-    push dword %1          ; interrupt number
+    push dword 2147483648
+    push dword %1
     pushad
+    SAVE_REGS
     call isr_handler
     popad
     add esp, 8
     iretd
 %endmacro
-
 
 %macro ISR_ERR 1
 isr%1:
-    push dword %1      ; interrupt number
+    push dword %1
     pushad
+    SAVE_REGS
     call isr_handler
     popad
     add esp, 8
     iretd
 %endmacro
 
+ISR_NOCRASH 3
+ISR_NOCRASH 4
+ISR_NOCRASH 7
+ISR_NOCRASH 9
+ISR_NOCRASH 15
+ISR_NOCRASH 16
 
-; Non-crashing ISRs
-ISR_NOCRASH 3   ; Breakpoint
-ISR_NOCRASH 4   ; Overflow
-ISR_NOCRASH 7   ; Device Not Available
-ISR_NOCRASH 9   ; Coprocessor Segment Overrun
-ISR_NOCRASH 15  ; Reserved
-ISR_NOCRASH 16  ; x87 FPU Floating Point Error
+ISR_NOERR 0
+ISR_NOERR 1
+ISR_NOERR 2
+ISR_NOERR 5
+ISR_NOERR 6
+ISR_NOERR 18
+ISR_NOERR 19
+ISR_NOERR 20
+ISR_NOERR 21
+ISR_NOERR 22
+ISR_NOERR 23
+ISR_NOERR 24
+ISR_NOERR 25
+ISR_NOERR 26
+ISR_NOERR 27
+ISR_NOERR 28
+ISR_NOERR 29
+ISR_NOERR 30
+ISR_NOERR 31
 
-; ISRs without error code (default)
-ISR_NOERR 0    ; Divide by zero
-ISR_NOERR 1    ; Debug
-ISR_NOERR 2    ; Non-maskable Interrupt (NMI)
-ISR_NOERR 5    ; Bound Range Exceeded
-ISR_NOERR 6    ; Invalid Opcode
-ISR_NOERR 18   ; Machine Check
-ISR_NOERR 19   ; SIMD Floating-Point Exception
-ISR_NOERR 20   ; Virtualization Exception
-ISR_NOERR 21   ; Control Protection Exception
-ISR_NOERR 22   ; Reserved
-ISR_NOERR 23   ; Reserved
-ISR_NOERR 24   ; Reserved
-ISR_NOERR 25   ; Reserved
-ISR_NOERR 26   ; Reserved
-ISR_NOERR 27   ; Reserved
-ISR_NOERR 28   ; Reserved
-ISR_NOERR 29   ; Reserved
-ISR_NOERR 30   ; Security Exception
-ISR_NOERR 31   ; Reserved
-
-; ISRs with error code (already pushed)
-ISR_ERR 8    ; Double Fault
-ISR_ERR 10   ; Invalid TSS
-ISR_ERR 11   ; Segment Not Present
-ISR_ERR 12   ; Stack-Segment Fault
-ISR_ERR 13   ; General Protection Fault
-ISR_ERR 14   ; Page Fault
-ISR_ERR 17   ; Alignment Check
-
-
+ISR_ERR 8
+ISR_ERR 10
+ISR_ERR 11
+ISR_ERR 12
+ISR_ERR 13
+ISR_ERR 14
+ISR_ERR 17
 
 isr_handler:
     mov eax, [esp + 32]       ; int_index
     mov ebx, [esp + 36]       ; error_code
 
-    ; Convert int_index to string
-    push 10                  ; base
-    push int_indx_str        ; buffer
-    push eax                 ; value
-    call itoa
-    add esp, 12
+    ; store faulting EIP first
+    mov edx, [gp_regs + 8*4]
+    mov [stack_trace], edx
 
-    ; Convert error_code to string
-    push 10
-    push int_err_code_str
-    push ebx
-    call itoa
-    add esp, 12
+    ; walk EBP chain for up to 8 frames
+    mov ecx, 1
+    mov esi, stack_trace
+    mov ebp, [gp_regs + 2*4]  ; original EBP
 
-    ; Prepare argv array
-    mov dword [argv], int_indx_str
-    mov dword [argv + 4], int_err_code_str
+.trace_loop:
+    test ebp, ebp
+    jz .trace_done
+    mov eax, [ebp + 4]        ; saved return address
+    test eax, eax
+    jz .trace_done
+    mov [esi + ecx*4], eax
+    inc ecx
+    cmp ecx, 8
+    je .trace_done
+    mov ebp, [ebp]             ; previous EBP
+    jmp .trace_loop
 
-    push argv                ; char** argv
-    push 2                   ; argc
-    push file_path           ; const char* file_path
-    sti                      ; needed for some handler funcs
+.trace_done:
+    mov dword [argv], eax
+    mov dword [argv + 4], ebx
+    mov dword [argv + 8], gp_regs
+    mov dword [argv + 12], stack_trace
+
+    push argv
+    push 4
+    push file_path
+    sti
     call Load_bin_exe
     add esp, 12
 
     ret
 
-
-handle_noncrash:; placeholder
+handle_noncrash:
     ret

@@ -7,6 +7,7 @@
 #include "../../src/headers/time.h"
 #include "../../src/headers/vga_modes.h"
 #include "../../src/headers/power.h"
+#include "../../src/headers/asm.h"
 
 
 
@@ -83,36 +84,86 @@ enum CrashType {
     CRASH_CODES_AMOUNT
 };
 
-void app_main(int argc, char** argv) {
-    int crash_code = 0; 
-    if (argc <2) {
-        Sys_log("Crash Handler:System crashed -> No crash info provided\n");
-        crash_code = -2147483648;
+cpu_registers_t* gp_regs;
+
+void app_main(int argc, uint32_t* argv) {
+    asm volatile("sti");//incase
+    
+    uint32_t* call_stack = NULL;
+    if (argc >= 4) {
+        call_stack = (uint32_t*)argv[3];
     }
-    char* error_code = "no_err_code";
-    if(argc >=3 && strcmp(argv[2],"2147483648"))error_code = argv[2];
-    Sys_log(" System crashed -> Crash info: %s\n", argv[1]);
 
-    vga_set_mode(0X13);
-    clear_13h_screen(0x4); 
-    draw_bitmap_string("A critical error has occurred:", 20, 20, 4, 6, 0x3F, NULL, true, 0);
 
-    if(crash_code != -2147483648)crash_code = atoi(argv[1]);
+    if (argc < 3) {
+        Sys_log("Crash Handler: Not enough crash info provided\n");
+        // handle error or early return
+        return;
+    }
+
+    int isr_index = (int)argv[0];
+    uint32_t err_code = argv[1];
+
     char* error_name;
-    if (crash_code >= 0 && crash_code < (sizeof(crash_messages) / sizeof(crash_messages[0]))){
-        error_name = (char*)crash_messages[crash_code];
-    } else error_name = "Unknown Crash";
+    if (isr_index >= 0 && isr_index < (int)(sizeof(crash_messages) / sizeof(crash_messages[0]))) {
+        error_name = (char*)crash_messages[isr_index];
+    } else {
+        error_name = "Unknown Crash";
+    }
+
+    gp_regs = (cpu_registers_t*)argv[2];
+    //padding
+    Sys_log("\n");Sys_log("\n");Sys_log("\n");Sys_log("\n");Sys_log("\n");
+    Sys_log("=======================================================================");
+
+    Sys_log("System crashed -> ISR Index: %d(%s), Error Code: %u\n", isr_index, error_name, err_code);
+
+    draw_bitmap_string("A critical error has occurred:", 20, 20, 4, 6, 0x3F, NULL, true, false, 0);
+
 
     char full_str[128];
-    sprintf(full_str, "Error Code: %s (%03d: %s)", error_name, crash_code, error_code);
+    sprintf(full_str, "Error Code: %s (%03d: %u)", error_name, isr_index, err_code);
 
-    draw_bitmap_string(full_str, 20, 40, 4, 6, 0x3F, NULL, true, 0);
+    draw_bitmap_string(full_str, 20, 40, 4, 6, 0x3F, NULL, true, false, 0);
+
+    // =====================Regs dump===============
+    draw_bitmap_string("Regs Dump:", 0, 60, 4, 6, 0x3F, NULL, true, false, 0);
+    Sys_log("Regs Dump:\n");
+    char buf[128];
     
-    reset_input_buffer();
-    draw_bitmap_string("Rebooting in 10 sec...", 20, 60, 4, 6, 0x3F, NULL, true, 0);
-    draw_bitmap_string("##########", 60, 80, 4, 6, 0x0, NULL, true, 0);
-    for(int i=0;i<10;i++){'│'
-        draw_bitmap_char('#', 60+(4*i), 80, 4, 6, 0x2, NULL, true, true);
+    sprintf(buf, "EAX: 0x%x  EBX: 0x%x  ECX: 0x%x  EDX: 0x%x", 
+            gp_regs->eax, gp_regs->ebx, gp_regs->ecx, gp_regs->edx);
+    Sys_log("%s\n",buf);
+    draw_bitmap_string(buf, 50, 60, 4, 6, 0x3F, NULL, true, false, 0);
+
+    sprintf(buf, "ESI: 0x%x  EDI: 0x%x  EBP: 0x%x  ESP: 0x%x", 
+            gp_regs->esi, gp_regs->edi, gp_regs->ebp, gp_regs->esp);
+    Sys_log("%s\n",buf);
+    draw_bitmap_string(buf, 50, 80, 4, 6, 0x3F, NULL, true, false, 0);
+
+    sprintf(buf, "EIP: 0x%x  EFLAGS: 0x%x", 
+            gp_regs->eip, gp_regs->eflags);
+    Sys_log("%s\n",buf);
+    draw_bitmap_string(buf, 50, 100, 4, 6, 0x3F, NULL, true, false, 0);
+
+        if (call_stack) {
+        Sys_log("Call stack trace:\n");
+        draw_bitmap_string("Call Stack Trace:", 0, 140, 4, 6, 0x3F, NULL, true, false, 0);
+        
+        char buf[128];
+        for (int i = 0; i < 8; i++) {
+            sprintf(buf, "0x%x", call_stack[i]);
+            Sys_log("%s\n", buf);
+            draw_bitmap_string(buf, 20, 160 + i * 20, 4, 6, 0x3F, NULL, true, false, 0);
+        }
+    }
+
+
+    draw_bitmap_string("Rebooting in 10 sec...", 20, 400, 4, 6, 0x3F, NULL, true, false, 0);
+    draw_bitmap_string("##########", 60, 420, 4, 6, 0x0, NULL, true, false, 0);
+
+    for (int i = 0; i < 10; i++) {
+        draw_bitmap_char('#', 60 + (4 * i), 420, 4, 6, 0x2, NULL, true, true, false);
         sleep(1000);
     }
     pc_reboot();
