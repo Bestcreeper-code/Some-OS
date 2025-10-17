@@ -12,8 +12,11 @@
 //y capped to 125 smh
 #define MAX_DISPLAYED_ENTRIES 15
 
+char _kernel_end = 0; 
+char _kernel_start = 0; 
 
-void app_main(int argc, char** argv) {
+void main(int argc, char** argv) {
+    Sys_log("YEYEYEYEYYEY");
     char* base_path = "0:/";
     if(argc > 1)base_path = argv[1];
     fs_set((FATFS*)FATFS_SYS_ADDR,0);

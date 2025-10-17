@@ -14,10 +14,12 @@
 #define LOCKDOWN_TIME 5*60 // seconds
 
 
-void app_main(int argc, char** argv) {
+void main(int argc, char** argv) {
+    // parse_memory_map(  );
     fs_set((FATFS*)FATFS_SYS_ADDR, 0);
-    vga_set_mode(0x13);
-    clear_13h_screen(0x9); // dark blue
+    init_graphics();
+    int fb_size = Multiboot_info->framebuffer_height * Multiboot_info->framebuffer_width*4;
+    memset((void*)graph_mode_fb,0x80,fb_size);
 
     draw_bitmap_string("INIT", 320, 200, 4, 6, 0x3F, NULL, true, false, 0);
     sleep(1000);

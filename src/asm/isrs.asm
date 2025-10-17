@@ -31,15 +31,12 @@ global isr29
 global isr30
 global isr31
 
-extern itoa
-extern Load_bin_exe
 
-section .data
-file_path db "0:/system_core/crashhndl.bin", 0
+extern __kernel_crash_handler__
 
 section .bss
-int_indx_str    resb 12
-int_err_code_str resb 12
+int_indx    resd 1
+int_err_code resd 1
 argv            resd 4
 gp_regs         resd 10
 stack_trace     resd 16
@@ -145,8 +142,11 @@ ISR_ERR 14
 ISR_ERR 17
 
 isr_handler:
-    mov eax, [esp + 32]       ; int_index
-    mov ebx, [esp + 36]       ; error_code
+    mov dword eax, [esp + 36]       ; int_index
+    mov dword ebx, [esp + 40]       ; error_code
+    
+    mov [int_indx], eax       ; int_index
+    mov [int_err_code], ebx       ; error_code
 
     ; store faulting EIP first
     mov edx, [gp_regs + 8*4]
@@ -171,6 +171,10 @@ isr_handler:
     jmp .trace_loop
 
 .trace_done:
+
+    mov eax,[int_indx]       ; int_index
+    mov ebx,[int_err_code]       ; error_code
+
     mov dword [argv], eax
     mov dword [argv + 4], ebx
     mov dword [argv + 8], gp_regs
@@ -178,9 +182,8 @@ isr_handler:
 
     push argv
     push 4
-    push file_path
     sti
-    call Load_bin_exe
+    call __kernel_crash_handler__
     add esp, 12
 
     ret

@@ -8,6 +8,7 @@
 #define SHN_UNDEF 0
 
 
+
 // === ELF Header ===
 typedef struct {
     unsigned char e_ident[EI_NIDENT];
@@ -124,13 +125,14 @@ typedef enum {
 
 // === Loaded ELF ===
 typedef struct {
-    uint8_t* mem;        // big memory buffer for all sections
+    uint8_t* mem;
     size_t size;
-    uint32_t entry;      
+    uint32_t entry;
     Elf32_Shdr* sections;
     int shnum;
-    uint8_t** section_offsets; // runtime addresses per section
+    uint32_t* section_offsets; // numeric offsets into mem
 } LoadedElf;
+
 
 
 
@@ -138,8 +140,10 @@ typedef struct {
  * Functions
  *===========================================================*/
 
+int Runelf(const char* path, int argc, char** argv);
+
 LoadedElf* LoadElf(const char* path);
-uint32_t GetSymbol(LoadedElf* elf, const char* name);
-int JumpToSymbol(LoadedElf* elf, const char* name);
+uint32_t ELF_GetSymbol(LoadedElf* elf, const char* name);
+
 
 #endif // ELF_H

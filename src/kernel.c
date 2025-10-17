@@ -28,13 +28,6 @@ extern int vgaX, vgaY;
 // extern void test_16func();
 
 
-void fun2(){
-    
-    int i = 0/0;//====================================================
-}
-void fun1(){
-    fun2();
-}
 
 void kmain(unsigned long magic, unsigned long addr) {
 
@@ -79,19 +72,17 @@ void kmain(unsigned long magic, unsigned long addr) {
     
     Sys_log("Setting up paging...\n");
     //bugs for now
-    if (setup_paging() != 0) {
+    if (setup_paging() != 0  ) {
         Sys_log("Paging setup failed, halting.");
         move_cursor(0, 0);
         printstr("Paging setup failed, halting.");
         while (1) __asm__ volatile ("hlt");
     }
+    reserve_kernel_pages();
     Sys_log("Paging set up successfully.\n");
     
-    if (setup_paging() != 0) {
-        Sys_log("Paging setup failed. Halting system.\n");
-        sleep(212312312);
-    }
-    Sys_log("Paging setup worked.\n");
+    
+    
     
     Sys_log("Parsing memory map...\n");
     parse_memory_map( Get_multiboot_info() );
@@ -141,8 +132,7 @@ end_mounting:
     Sys_log("Multiboot magic number: 0x%x\n", (void*)magic);
     Sys_log("Multiboot info address: 0x%x\n", addr);
     
-    Sys_log("func2:%x    func1:%x\n",fun2,fun1);
-    fun1();//====================================================
+    
     move_cursor(0, 0);
 
     Sys_log("Interrupts reenabled.\n");
@@ -163,12 +153,12 @@ end_mounting:
     }
     draw_bitmap_string("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",120,100,8,16,0xFF0000FF,font8x16,false,true,3);
 
-    
-    
     // ((uint32_t*)Multiboot_info->framebuffer_addr)[1]= 0XFFFFFFFF;
-
+    
     Sys_log("Loading login manager...\n");
-    LoadElf("0:/test.elf");
+
+    Runelf("0:/login.rel",4,NULL);
+    
 
 
     Sys_log("Starting console...\n");

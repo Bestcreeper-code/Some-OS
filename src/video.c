@@ -24,7 +24,7 @@ void init_graphics() {
     uint32_t fb_size = Multiboot_info->framebuffer_pitch * Multiboot_info->framebuffer_height;
 
     for (uint32_t offset = 0; offset < fb_size; offset += 0x1000) {
-        map_page(fb_addr + offset, fb_addr + offset, 1, 1, 0);
+        map_page(fb_addr + offset, fb_addr + offset, 1, 1, 0, OS_PAGE_FLAGS_UNALLOCATABLE | OS_PAGE_FLAGS_ALLOCATED);
     }
 } 
 
@@ -71,7 +71,7 @@ void Force_put_pixel(int x, int y, uint32_t color) {//no mouse check
 #if (QEMU)
     int pitch = 320;
 #else
-    int pitch = Multiboot_info->framebuffer_pitch;
+    int pitch = Multiboot_info->framebuffer_pitch/(Multiboot_info->framebuffer_bpp/8);
 #endif
     graph_mode_fb[y * pitch + x] = color;
 }

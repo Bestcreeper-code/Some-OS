@@ -770,6 +770,23 @@ int write_number_fixed_width(char* buffer, int pos, int num, int width, int size
     return total_len;
 }
 
+int write_hex32_fixed_width(char* buffer, int pos, uint32_t val, int width, int uppercase) {
+    char tmp[16];
+    int len = 0;
+    uint32_t v = val;
+
+    do {
+        int digit = v & 0xF;
+        tmp[len++] = digit < 10 ? '0' + digit : (uppercase ? 'A' : 'a') + (digit - 10);
+        v >>= 4;
+    } while (v);
+
+    while (len < width) tmp[len++] = '0';
+
+    for (int i = len-1; i >= 0; i--) buffer[pos++] = tmp[i];
+    return len;
+}
+
 // buffer be NULL to just calculate size 
 int vsnprintf(char* buffer, int size, const char* format, va_list args) {
     int pos = 0;
@@ -883,6 +900,11 @@ int vsprintf(char* buffer, const char* format, va_list args) {
                 if (*format == 'd') {
                     int val = va_arg(args, int);
                     pos += write_number_fixed_width(buffer, pos, val, width, 0);
+                    format++;
+                    continue;
+                } else if (*format == 'x' || *format == 'X') {
+                    uint32_t val = va_arg(args, uint32_t);
+                    pos += write_hex32_fixed_width(buffer, pos, val, width, *format == 'X');
                     format++;
                     continue;
                 } else {

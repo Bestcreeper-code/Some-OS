@@ -8,7 +8,7 @@
 
 
 
-void Draw_Quad(const Vector2* verts, char color) {
+void Draw_Quad(const Vector2* verts, uint32_t color) {
     // verts is an array of 4 points: verts[0], verts[1], verts[2], verts[3]
     // Find min and max Y
     int minY = verts[0].y;
@@ -50,7 +50,7 @@ void Draw_Quad(const Vector2* verts, char color) {
     }
 }
 
-void Draw_Rect(Vector2 pos, int width, int height,char color){
+void Draw_Rect(Vector2 pos, int width, int height,uint32_t color){
 #if (QEMU)
     int pitch = 512;
 #else

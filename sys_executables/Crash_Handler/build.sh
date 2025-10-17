@@ -12,20 +12,20 @@ gcc -g -m32 -ffreestanding -fno-pic -fno-plt -fno-pie -c sys_executables/Crash_h
 
 
 
-# Create relocatable ELF with relocation info preserved
-ld -m elf_i386 -r -o build_execs/Crash_handler.rel build_execs/Crash_handler.o build_lib/libsys.a
+# Create relocatable ELF with relocation info preserveds
+ld -m elf_i386 -r -o build_execs/crashhndl.rel build_execs/Crash_handler.o build_lib/libsys.a
 
 
 # Link relocatable ELF at fixed address to produce final executable ELF
-ld -m elf_i386 -nostdlib -Ttext=0x200000 -e app_main -o build_execs/Crash_handler.elf build_execs/Crash_handler.rel
+# ld -m elf_i386 -nostdlib -Ttext=0x200000 -e app_main -o build_execs/Crash_handler.elf build_execs/Crash_handler.rel
 
 # Extract flat binary from final ELF
-objcopy -O binary build_execs/Crash_handler.elf build_execs/crashhndl.bin
+# objcopy -O binary build_execs/Crash_handler.elf build_execs/crashhndl.bin
 
 
 rm -f build_execs/*.o
-readelf -r build_execs/Crash_handler.rel > build_execs/Crash_handler_rel.txt
-rm -f build_execs/*.rel
+# readelf -r build_execs/Crash_handler.rel > build_execs/Crash_handler_rel.txt
+# rm -f build_execs/*.rel
 # rm -f build_execs/*.elf
 
 echo "[*] build complete:"

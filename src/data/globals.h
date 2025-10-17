@@ -3,7 +3,10 @@
 #include "../../FatFs/ff.h"
 #include "../headers/addresses.h"
 
-#define DEBUG_MODE 1
+#define DEBUG_MODE 0
+#define PAGE_DEBUG_MODE 0
+#define MEM_DEBUG_MODE 0
+#define ELF_DEBUG_MODE 1
 #define DEV_BUILD  1 // dev features like forcing disk part to 1 if not found
 
 #define FREE_NO_MERGE 1 

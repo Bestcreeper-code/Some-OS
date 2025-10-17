@@ -83,18 +83,18 @@ enum CrashType {
     CRASH_RESERVED_31,
     CRASH_CODES_AMOUNT
 };
-
 cpu_registers_t* gp_regs;
 
 void app_main(int argc, uint32_t* argv) {
+    graph_mode_fb = (volatile uint32_t*)(uint32_t)Multiboot_info->framebuffer_addr;
     asm volatile("sti");//incase
     
     uint32_t* call_stack = NULL;
     if (argc >= 4) {
         call_stack = (uint32_t*)argv[3];
     }
-
-
+    
+    
     if (argc < 3) {
         Sys_log("Crash Handler: Not enough crash info provided\n");
         // handle error or early return
@@ -145,8 +145,8 @@ void app_main(int argc, uint32_t* argv) {
             gp_regs->eip, gp_regs->eflags);
     Sys_log("%s\n",buf);
     draw_bitmap_string(buf, 50, 100, 4, 6, 0x3F, NULL, true, false, 0);
-
-        if (call_stack) {
+    
+    if (call_stack) {
         Sys_log("Call stack trace:\n");
         draw_bitmap_string("Call Stack Trace:", 0, 140, 4, 6, 0x3F, NULL, true, false, 0);
         
@@ -158,7 +158,7 @@ void app_main(int argc, uint32_t* argv) {
         }
     }
 
-
+    
     draw_bitmap_string("Rebooting in 10 sec...", 20, 400, 4, 6, 0x3F, NULL, true, false, 0);
     draw_bitmap_string("##########", 60, 420, 4, 6, 0x0, NULL, true, false, 0);
 
@@ -167,4 +167,8 @@ void app_main(int argc, uint32_t* argv) {
         sleep(1000);
     }
     pc_reboot();
+}
+
+void _start(int argc, uint32_t* argv){
+    app_main(argc, argv);
 }
