@@ -7,6 +7,8 @@
 // #include "headers/loader.h"
 #include "headers/Logger.h"
 #include "headers/mouse.h"
+#include "headers/paging.h"
+
 #include "data/textconsts.h"
 
 #define EXEC_LOAD_ADRESS 0x200000
@@ -336,13 +338,17 @@ int FS_Mount_Main_Partition(FATFS* fat_filesys){
     FIL file;
     char label[12];
     DWORD vsn;
-
+    
     for (int i = 0; i < 4; i++) {
         char vol[4];
+        
         snprintf(vol, sizeof(vol), "%d:", i);  // "0:", "1:", ...
 
         if (f_mount(fat_filesys, vol, 1) == FR_OK) {
-            if (f_getlabel(vol, label, &vsn) == FR_OK) {
+            
+            // dump_pd();
+            if (f_getlabel(vol, label, &vsn) == FR_OK ) {
+
                 if (strcmp(label, OS_PARTITION_LABEL ) == 0) {
                     Sys_log("Found OS partition at %s", vol);
                     VolToPart[0].pd = 0;
@@ -353,14 +359,19 @@ int FS_Mount_Main_Partition(FATFS* fat_filesys){
                     return 0; // Success
                 }
             }
+            
+
             f_mount(NULL, vol, 0);  // Unmount if not the right one
         }
     }
+    
+
 #if (DEV_BUILD == 1)
     f_mount(fat_filesys, "0:", 1);// try to mount 0: if not found(aka a .img formatted with fat)
     return 0;
 #endif
     
+    Sys_log("wtf\n");
 
     return -1; // Not found
 }

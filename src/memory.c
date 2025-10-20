@@ -26,7 +26,7 @@ void force_alloc(uint32_t address, uint32_t size) {
         PTE* pte = get_pte(page_addr);
         if (!pte) continue;
 
-        pte->os_allocated = 1;
+        pte->os_unused3 = 1;
 
         uint32_t page_start = page_addr;
         uint32_t page_end = page_addr + page_size;
@@ -162,14 +162,15 @@ void parse_memory_map(multiboot_info_t* mb_info) {
             for (uintptr_t pa = base; pa < page_end; pa += _PAGE_SIZE) {
                 PTE* pte = get_pte_for_pa(pa);
                 if (!pte) continue;
-                pte->os_unallocatable = 1;
+                pte->os_unused1 = 1;
             }
         }
         
         mmap = (multiboot_mmap_entry_t*)((uintptr_t)mmap + mmap->size + sizeof(mmap->size));
     }
     
-    // Pre-allocate 3 kernel pages
+    // allocate 3 kernel pages
+    
     const int KERNEL_RESERVED_PAGES = 3;
     for (int i = 0; i < KERNEL_RESERVED_PAGES; i++) {
         uintptr_t page_addr = page_alloc(1,1,0);
@@ -188,6 +189,9 @@ void parse_memory_map(multiboot_info_t* mb_info) {
                 k_mmap->free_regions[i].base_addr,
                 k_mmap->free_regions[i].length);
     }
+
+    
+
 
     force_alloc((uint32_t)k_mmap, sizeof(free_region_map_t));
 }

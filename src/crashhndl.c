@@ -107,6 +107,7 @@ cpu_registers_t* gp_regs;
 
 
 void __kernel_crash_handler__(int argc, uint32_t* argv) {
+    Sys_log("In crash handler\n");
     asm volatile("sti");
     
     graph_mode_fb = (volatile uint32_t*)(uint32_t)Multiboot_info->framebuffer_addr;

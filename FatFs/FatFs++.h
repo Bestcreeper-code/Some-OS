@@ -1,6 +1,7 @@
 #ifndef FATFSPP_H
 #define FATFSPP_H
 #include "ff.h"
+#include "../src/headers/Logger.h"
 
 FATFS **get_fatfs_sys_array();
 

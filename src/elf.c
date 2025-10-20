@@ -8,217 +8,209 @@
 #include <stdint.h>
 #include <string.h>
 
-static uint32_t align_up(uint32_t value, uint32_t align) {
-    if (!align) return value;
-    return (value + align - 1) & ~(align - 1);
+
+
+
+bool elf_check_support(Elf32_Ehdr* elf_header, const char* path){
+    if (elf_header->e_ident[0] != ELFMAG0 ||
+         elf_header->e_ident[1] != ELFMAG1 ||
+        elf_header->e_ident[2] != ELFMAG2 || 
+        elf_header->e_ident[3] != ELFMAG3) {
+        Sys_log("invalid elf magic in %s\n", path);
+        return false;
+    }
+
+    if(elf_header->e_ident[EI_CLASS] != ELFCLASS32) {
+		Sys_log("Unsupported ELF File Class.\n");
+		return false;
+	}
+	if(elf_header->e_ident[EI_DATA] != ELFDATA2LSB) {
+		Sys_log("Unsupported ELF File byte order.\n");
+		return false;
+	}
+	if(elf_header->e_machine != EM_386) {
+		Sys_log("Unsupported ELF File target.\n");
+		return false;
+	}
+	if(elf_header->e_ident[EI_VERSION] != EV_CURRENT) {
+		Sys_log("Unsupported ELF File version.\n");
+		return false;
+	}
+
+    if(elf_header->e_type != ET_EXEC){
+        Sys_log("unsupported elf type %d in %s\n", elf_header->e_type, path);
+        return false;
+    }
+    
+    if (elf_header->e_phentsize != sizeof(Elf32_Phdr)) {
+        Sys_log("unexpected program header size in %s\n", path);
+        return false;
+    }
+
+    return true;
 }
 
-int Runelf(const char* path, int argc, char** argv) {
-    Sys_log("Runelf: loading %s\n", path);
-    LoadedElf* elf_file = LoadElf(path);
-    if (!elf_file) {
-        Sys_log("Runelf: LoadElf returned NULL\n");
-        return -1;
+LoadedElf* LoadElf(const char* path) {
+    Sys_log("Opening ELF file: %s\n", path);
+
+    FIL file;
+    FRESULT res = f_open(&file, path, FA_READ);
+    if (res != FR_OK) {
+        Sys_log("Failed to open file '%s', error code: %d\n", path, res);
+        return NULL;
     }
 
-    uintptr_t addr = ELF_GetSymbol(elf_file, "_start");
-    if (!addr) {
-        Sys_log("Runelf: _start not found\n");
-        return -2;
+    Elf32_Ehdr elf_header;
+    UINT bytesRead;
+    res = f_read(&file, &elf_header, sizeof(Elf32_Ehdr), &bytesRead);
+    if (res != FR_OK || bytesRead != sizeof(Elf32_Ehdr)) {
+        Sys_log("Failed to read ELF header from '%s'\n", path);
+        f_close(&file);
+        return NULL;
     }
 
-    Sys_log("Runelf: elf mem=%p size=%u entry=%p\n",
-            elf_file->mem, (unsigned)elf_file->size, (void*)addr);
-
-    uintptr_t mem = (uintptr_t)elf_file->mem;
-    if (addr < mem || addr >= mem + elf_file->size) {
-        Sys_log("Runelf ERROR: entry %p outside loaded region [%p - %p]\n",
-                (void*)addr, (void*)mem, (void*)(mem + elf_file->size));
-        return -3;
+    if (!elf_check_support(&elf_header, path)) {
+        Sys_log("ELF file '%s' is not supported\n", path);
+        f_close(&file);
+        return NULL;
     }
 
-    uint8_t *b = (uint8_t*)addr;
-#if ELF_DEBUG_MODE
-    Sys_log("Runelf: first bytes at entry: %x %x %x %x %x %x %x %x\n",
-            b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]);
-#endif
+    Sys_log("ELF header read successfully. Entry point: 0x%08X\n", elf_header.e_entry);
+    f_lseek(&file, elf_header.e_phoff);
 
-    int (*entry)(int, char**) = (int (*)(int, char**))addr;
-    Sys_log("Runelf: jumping to _start\n");
-    return entry(argc, argv);
-}
+    Elf32_Phdr* program_headers = malloc(sizeof(Elf32_Phdr) * elf_header.e_phnum);
+    if (!program_headers) {
+        Sys_log("Failed to allocate memory for program headers\n");
+        f_close(&file);
+        return NULL;
+    }
 
-char* create_app_vmem(uint32_t page_amount){
-    uint32_t _pages =page_alloc(page_amount,1,1); 
-    Page_Group pages = {
-        .size = page_amount,
-        .addr = 0x08048000,
+    res = f_read(&file, program_headers, sizeof(Elf32_Phdr) * elf_header.e_phnum, &bytesRead);
+    if (res != FR_OK || bytesRead != sizeof(Elf32_Phdr) * elf_header.e_phnum) {
+        Sys_log("Failed to read program headers\n");
+        free(program_headers);
+        f_close(&file);
+        return NULL;
+    }
+
+    // PDE* pde_array = create_app_vmem();
+    PD_t app_page_dir = {
+        // .pde_arr = pde_array
+    };
+
+    Page_Group* page_groups = malloc(sizeof(Page_Group) * (elf_header.e_phnum + 1)); // +1 for stack
+    if (!page_groups) {
+        Sys_log("Failed to allocate page_groups\n");
+        free(program_headers);
+        f_close(&file);
+        return NULL;
+    }
+    memset(page_groups, 0, sizeof(Page_Group) * (elf_header.e_phnum + 1));
+
+    for (int i = 0; i < elf_header.e_phnum; i++) {
+        Elf32_Phdr* phdr = &program_headers[i];
+
+        if (phdr->p_type != PT_LOAD) continue;
+
+        size_t num_pages = (phdr->p_memsz + _PAGE_SIZE - 1) / _PAGE_SIZE;
+        uintptr_t phdr_vaddr = phdr->p_vaddr;
+
+        page_addr_t segment_mem = page_alloc(num_pages, (phdr->p_flags & PF_W) ? 1 : 0, 1);
+        if (!segment_mem) {
+            Sys_log("Failed to allocate memory for segment %d\n", i);
+            for (int j = 0; j < i; j++) {
+                if (page_groups[j].size)
+                    page_free(page_groups[j].pte_bits.addr << 12, page_groups[j].size);
+            }
+            free(page_groups);
+            free(program_headers);
+            f_close(&file);
+            return NULL;
+        }
+
+        Sys_log("Segment %d -> VA: 0x%08X, PA: 0x%08X, Size: %zu bytes\n",
+            i, phdr_vaddr, segment_mem, phdr->p_memsz);
+
+        page_groups[i] = (Page_Group){
+            .size = num_pages,
+            .addr = phdr_vaddr,
+            .pte_bits = {
+                .present = 1,
+                .rw = (phdr->p_flags & PF_W) ? 1 : 0,
+                .user = 1,
+                .addr = segment_mem >> 12
+            }
+        };
+
+        f_lseek(&file, phdr->p_offset);
+        res = f_read(&file, (void*)segment_mem, phdr->p_filesz, &bytesRead);
+        if (res != FR_OK || bytesRead != phdr->p_filesz) {
+            Sys_log("Failed to read segment data for segment %d\n", i);
+            free(page_groups);
+            free(program_headers);
+            f_close(&file);
+            return NULL;
+        }
+
+        if (phdr->p_memsz > phdr->p_filesz) {
+            uintptr_t bss_start = segment_mem + phdr->p_filesz;
+            size_t bss_size = phdr->p_memsz - phdr->p_filesz;
+            memset((void*)bss_start, 0, bss_size);
+        }
+    }
+
+    // Allocate stack
+    page_addr_t app_stack = page_alloc(DEFAULT_STACK_PAGE_AMOUNT, 1, 1);
+    if (!app_stack) {
+        Sys_log("Failed to allocate stack\n");
+        pd_free(&app_page_dir);
+        free(page_groups);
+        free(program_headers);
+        f_close(&file);
+        return NULL;
+    }
+
+    Sys_log("Stack allocated at PA: 0x%08X\n", app_stack);
+
+    page_groups[elf_header.e_phnum] = (Page_Group){
+        .size = DEFAULT_STACK_PAGE_AMOUNT,
+        .addr = DEFAULT_STACK_BOTTOM_VADDR,
         .pte_bits = {
             .present = 1,
             .rw = 1,
             .user = 1,
-            .pwt = 0,
-            .pcd = 0,
-            .accessed = 0,
-            .dirty = 0,
-            .pat = 0,
-            .global = 0,
-            .os_allocated = 0,
-            .os_unallocatable = 0,
-            .os_unused = 0,
+            .addr = app_stack >> 12
         }
     };
-    char* page_dir = new_page_dir()
-}
 
-LoadedElf* LoadElf(const char* path) {
-    Sys_log("LoadElf: opening %s\n", path);
+    new_page_dir(page_groups, elf_header.e_phnum + 1, &app_page_dir); // include stack
+    free(program_headers);
+    free(page_groups);
 
-    FIL file;
-    FRESULT res = f_open(&file, path, FA_READ);
-    if (res != FR_OK) return NULL;
-
-    Elf32_Ehdr ehdr;
-    UINT bytesRead;
-    res = f_read(&file, &ehdr, sizeof(ehdr), &bytesRead);
-    if (res != FR_OK || bytesRead != sizeof(ehdr)) { f_close(&file); return NULL; }
-
-    if (ehdr.e_ident[0] != 0x7F || ehdr.e_ident[1] != 'E' ||
-        ehdr.e_ident[2] != 'L' || ehdr.e_ident[3] != 'F') {
+    LoadedElf* loaded_elf = malloc(sizeof(LoadedElf));
+    if (!loaded_elf) {
+        Sys_log("Failed to allocate LoadedElf struct\n");
+        pd_free(&app_page_dir);
         f_close(&file);
         return NULL;
     }
 
-    if (ehdr.e_type != ET_REL) {
-        Sys_log("LoadElf ERROR: not a REL ELF (e_type=%d)\n", ehdr.e_type);
+    loaded_elf->entry_point = elf_header.e_entry;
+    loaded_elf->page_dir = app_page_dir;
+    loaded_elf->stack_bottom = DEFAULT_STACK_BOTTOM_VADDR;
+    loaded_elf->stack_top = DEFAULT_STACK_TOP_VADDR;
+    loaded_elf->filename = strdup(path);
+
+    if (!loaded_elf->filename) {
+        Sys_log("strdup failed for path\n");
+        pd_free(&app_page_dir);
+        free(loaded_elf);
         f_close(&file);
         return NULL;
     }
-
-    Elf32_Shdr* sections = malloc(sizeof(Elf32_Shdr) * ehdr.e_shnum);
-    uint32_t* section_offsets = malloc(sizeof(uint32_t) * ehdr.e_shnum);
-    if (!sections || !section_offsets) {
-        free(sections); free(section_offsets); f_close(&file); return NULL;
-    }
-
-    for (int i = 0; i < ehdr.e_shnum; i++) {
-        f_lseek(&file, ehdr.e_shoff + i * sizeof(Elf32_Shdr));
-        f_read(&file, &sections[i], sizeof(Elf32_Shdr), &bytesRead);
-        if (bytesRead != sizeof(Elf32_Shdr)) {
-            free(sections); free(section_offsets); f_close(&file); return NULL;
-        }
-    }
-
-    uint32_t max_size = 0;
-    for (int i = 0; i < ehdr.e_shnum; i++) {
-        uint32_t align = sections[i].sh_addralign ? sections[i].sh_addralign : 1;
-        max_size = align_up(max_size, align);
-        section_offsets[i] = max_size; // always store offset, even if sh_size == 0
-        max_size += sections[i].sh_size;
-    }
-
-    uint32_t pages_needed = (max_size + _PAGE_SIZE - 1) / _PAGE_SIZE;
-    uint32_t base_pa = page_alloc(pages_needed, 1, 0);
-    if (!base_pa) { free(sections); free(section_offsets); f_close(&file); return NULL; }
-    uint8_t* base = (uint8_t*)(uintptr_t)base_pa;
-    memset(base, 0, pages_needed * _PAGE_SIZE);
-
-    for (int i = 0; i < ehdr.e_shnum; i++) {
-        if (!sections[i].sh_size) continue;
-        if (sections[i].sh_type == SHT_NOBITS) { memset(base + section_offsets[i], 0, sections[i].sh_size); continue; }
-        f_lseek(&file, sections[i].sh_offset);
-        f_read(&file, base + section_offsets[i], sections[i].sh_size, &bytesRead);
-        if (bytesRead != sections[i].sh_size) { page_free(base_pa, pages_needed); free(sections); free(section_offsets); f_close(&file); return NULL; }
-    }
-
-    // Relocations
-    for (int i = 0; i < ehdr.e_shnum; i++) {
-        if (sections[i].sh_type != SHT_REL) continue;
-
-        uint32_t rel_count = sections[i].sh_size / sizeof(Elf32_Rel);
-        f_lseek(&file, sections[i].sh_offset);
-
-        for (uint32_t j = 0; j < rel_count; j++) {
-            Elf32_Rel rel;
-            f_read(&file, &rel, sizeof(rel), &bytesRead);
-            if (bytesRead != sizeof(rel)) { page_free(base_pa, pages_needed); free(sections); free(section_offsets); f_close(&file); return NULL; }
-
-            uint32_t target_index = sections[i].sh_info;
-            if (target_index >= ehdr.e_shnum) continue;
-
-            uint32_t* patch = (uint32_t*)(base + section_offsets[target_index] + rel.r_offset);
-            uint32_t sym_index = ELF32_R_SYM(rel.r_info);
-            uint32_t symtab_index = sections[i].sh_link;
-            if (symtab_index >= ehdr.e_shnum) { page_free(base_pa, pages_needed); free(sections); free(section_offsets); f_close(&file); return NULL; }
-
-            Elf32_Sym* symtab = (Elf32_Sym*)(base + section_offsets[symtab_index]);
-            Elf32_Sym sym = symtab[sym_index];
-
-            uintptr_t sym_addr = 0;
-            if (sym.st_shndx != SHN_UNDEF && sym.st_shndx < ehdr.e_shnum)
-                sym_addr = (uintptr_t)(base + section_offsets[sym.st_shndx] + sym.st_value);
-
-            uint32_t orig = *patch;
-            switch (ELF32_R_TYPE(rel.r_info)) {
-                case R_386_32: *patch = orig + (uint32_t)sym_addr; break;
-                case R_386_PC32: *patch = orig + (uint32_t)sym_addr - (uint32_t)(uintptr_t)patch; break;
-                case R_386_RELATIVE: *patch = orig + (uint32_t)(uintptr_t)base; break;
-                default: page_free(base_pa, pages_needed); free(sections); free(section_offsets); f_close(&file); return NULL;
-            }
-        }
-    }
-
-    LoadedElf* elf = malloc(sizeof(LoadedElf));
-    if (!elf) { page_free(base_pa, pages_needed); free(sections); free(section_offsets); f_close(&file);Sys_log("bruhhhh"); return NULL; }
-    elf->mem = base;
-    elf->sections = sections;
-    elf->section_offsets = section_offsets;
-    elf->shnum = ehdr.e_shnum;
-    elf->size = max_size;
-    elf->entry = 0;
 
     f_close(&file);
-    return elf;
+    Sys_log("ELF file '%s' loaded successfully. Entry: 0x%08X\n", path, loaded_elf->entry_point);
+    return loaded_elf;
 }
 
-uintptr_t ELF_GetSymbol(LoadedElf* elf, const char* name) {
-    if (!elf || !name) return 0;
-
-    uint32_t* offs = elf->section_offsets;
-
-    for (int i = 0; i < elf->shnum; i++) {
-        Elf32_Shdr sh = elf->sections[i];
-        if (sh.sh_type != SHT_SYMTAB) continue;
-
-        Elf32_Sym* symtab = (Elf32_Sym*)((uint8_t*)elf->mem + offs[i]);
-        int count = sh.sh_size / sizeof(Elf32_Sym);
-        int strtab_index = sh.sh_link;
-        if (strtab_index < 0 || strtab_index >= elf->shnum) continue;
-
-        char* strtab_mem = (char*)((uint8_t*)elf->mem + offs[strtab_index]);
-
-        for (int j = 0; j < count; j++) {
-            Elf32_Sym* s = &symtab[j];
-            if (s->st_name == 0) continue;
-
-            const char* sym_name = strtab_mem + s->st_name;
-            if (!sym_name) continue;
-
-#if ELF_DEBUG_MODE
-            Sys_log("%s\n", sym_name);
-#endif
-            if (strcmp(sym_name, name) == 0) {
-                if (s->st_shndx == SHN_UNDEF || s->st_shndx >= elf->shnum) return 0;
-
-                uint32_t sec_offset = offs[s->st_shndx];
-
-#if ELF_DEBUG_MODE
-                Sys_log("Symbol %s found at %p\n", name, (void*)(elf->mem + sec_offset + s->st_value));
-#endif
-                return (uintptr_t)((uint8_t*)elf->mem + sec_offset + s->st_value);
-            }
-        }
-    }
-
-    return 0;
-}

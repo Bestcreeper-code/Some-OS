@@ -26,10 +26,10 @@
 extern int vgaX, vgaY;
 
 // extern void test_16func();
+KernelData_t kernel_data;
 
 
-
-void kmain(unsigned long magic, unsigned long addr) {
+void kmain(unsigned long magic, unsigned long mb_struct_addr) {
 
     
 
@@ -43,10 +43,12 @@ void kmain(unsigned long magic, unsigned long addr) {
     
     TASK_SWITCHING_FLAG = 0;
 
+    Sys_log("copying multiboot info struct...\n");
+    memcpy(Get_multiboot_info(), (void*)mb_struct_addr, sizeof(multiboot_info_t));  
     
-    
-    Sys_log("Setting up GDT and IDT...\n");
     initGdt();
+
+    Sys_log("Setting upIDT...\n");
     idt_init();
     Sys_log("GDT and IDT set up successfully.\n");
 
@@ -64,21 +66,23 @@ void kmain(unsigned long magic, unsigned long addr) {
     disable_mouse_display();
     // enable_cursor(0, 2);
 
-    *((uint32_t*)MULTIBOOT_INFO_ADDRESS) = addr;
+    *((uint32_t*)MULTIBOOT_INFO_ADDRESS) = mb_struct_addr;
     
     
     
     Sys_log("Memory map parsed.\n");
     
     Sys_log("Setting up paging...\n");
-    //bugs for now
+    
     if (setup_paging() != 0  ) {
+        
         Sys_log("Paging setup failed, halting.");
         move_cursor(0, 0);
         printstr("Paging setup failed, halting.");
         while (1) __asm__ volatile ("hlt");
     }
-    reserve_kernel_pages();
+    
+    
     Sys_log("Paging set up successfully.\n");
     
     
@@ -89,6 +93,7 @@ void kmain(unsigned long magic, unsigned long addr) {
     
     Sys_log("Initialising graphics.\n");
     init_graphics();
+    
     
     force_alloc((uint32_t)Get_multiboot_info(), sizeof(multiboot_info_t));
 
@@ -110,6 +115,7 @@ void kmain(unsigned long magic, unsigned long addr) {
     // refer tocommented code #1 at the bottom of this file
 
     int mount_counter = 0;
+    
 mounting:
 Sys_log("trying to mount filesystem...\n");
 int res = FS_Mount_Main_Partition(FatFsSys);
@@ -130,7 +136,7 @@ int res = FS_Mount_Main_Partition(FatFsSys);
 end_mounting:
     
     Sys_log("Multiboot magic number: 0x%x\n", (void*)magic);
-    Sys_log("Multiboot info address: 0x%x\n", addr);
+    Sys_log("Multiboot info address: 0x%x\n", mb_struct_addr);
     
     
     move_cursor(0, 0);
@@ -157,7 +163,7 @@ end_mounting:
     
     Sys_log("Loading login manager...\n");
 
-    Runelf("0:/login.rel",4,NULL);
+    LoadElf("0:/login.rel");
     
 
 

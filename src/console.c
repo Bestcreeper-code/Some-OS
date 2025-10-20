@@ -290,7 +290,7 @@ bool Console_Process_Command(char* command) {
 }
 
 
-char** console_requests = CONSOLE_REQUEST_QUEUE;
+char** console_requests = (char**)CONSOLE_REQUEST_QUEUE;
 
 void Start_Console() {
     memset(CONSOLE_REQUEST_QUEUE, 0, sizeof(char*) * 16);

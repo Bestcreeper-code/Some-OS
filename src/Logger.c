@@ -42,7 +42,9 @@ void sys_serial_logf(const char* format, const char* file, const char* func, int
     va_start(args, line);
 
     char frmt[512];
-    strcpy(frmt, format);
+    int size = strlen(format) < 512 ? strlen(format) : 511;
+    strncpy(frmt, format, size);
+    frmt[size] = '\0';
     
     // if (frmt[strlen(frmt)-1] == '\n') {
     //     frmt[strlen(frmt)-1] = '\0'; // Remove trailing newline since it already jumps to newline after a message

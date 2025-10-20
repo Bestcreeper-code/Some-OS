@@ -3416,6 +3416,7 @@ static FRESULT mount_volume (	/* FR_OK(0): successful, !=0: an error occurred */
 	BYTE mode					/* Desiered access mode to check write protection */
 )
 {
+	
 	int vol;
 	FATFS *fs;
 	DSTATUS stat;
@@ -3627,6 +3628,7 @@ static FRESULT mount_volume (	/* FR_OK(0): successful, !=0: an error occurred */
 #if FF_FS_LOCK				/* Clear file lock semaphores */
 	clear_share(fs);
 #endif
+
 	return FR_OK;
 }
 
@@ -3692,10 +3694,13 @@ FRESULT f_mount (
 	FRESULT res;
 	const TCHAR *rp = path;
 
+    
 
 	/* Get volume ID (logical drive number) */
+	
 	vol = get_ldnumber(&rp);
 	if (vol < 0) return FR_INVALID_DRIVE;
+	
 	cfs = FatFs[vol];			/* Pointer to the filesystem object of the volume */
 
 	if (cfs) {					/* Unregister current filesystem object if registered */
@@ -3729,8 +3734,10 @@ FRESULT f_mount (
 	}
 
 	if (opt == 0) return FR_OK;	/* Do not mount now, it will be mounted in subsequent file functions */
-
+    
+ 
 	res = mount_volume(&path, &fs, 0);	/* Force mounted the volume */
+	
 	LEAVE_FF(fs, res);
 }
 
@@ -5408,6 +5415,7 @@ FRESULT f_getlabel (
 	DWORD* vsn			/* Variable to store the volume serial number */
 )
 {
+	
 	FRESULT res;
 	FATFS *fs;
 	DIR dj;
@@ -5492,6 +5500,7 @@ FRESULT f_getlabel (
 			*vsn = di ? ld_32(fs->win + di) : 0;	/* Get VSN in the VBR */
 		}
 	}
+    
 
 	LEAVE_FF(fs, res);
 }

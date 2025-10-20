@@ -65,7 +65,7 @@ typedef struct {
     uint32_t pad;
 } multiboot_module_t;
 
-#define Multiboot_info ((multiboot_info_t*)*(intptr_t*)MULTIBOOT_INFO_ADDRESS)
+#define Multiboot_info (Get_multiboot_info())
 
 
 bool checkFlag(multiboot_info_t mb_info, uint8_t index);

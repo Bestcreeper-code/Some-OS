@@ -8,6 +8,8 @@
 #include "data/globals.h"
 #include "headers/multiboot_info.h"
 #include "headers/paging.h"
+#include "headers/Logger.h"
+#include "headers/math.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -22,43 +24,19 @@ void init_graphics() {
 
     uint32_t fb_addr = Multiboot_info->framebuffer_addr;
     uint32_t fb_size = Multiboot_info->framebuffer_pitch * Multiboot_info->framebuffer_height;
+    
+    Sys_log("Mapping framebuffer at 0x%x, size: %d bytes\n", fb_addr, fb_size);
 
     for (uint32_t offset = 0; offset < fb_size; offset += 0x1000) {
-        map_page(fb_addr + offset, fb_addr + offset, 1, 1, 0, OS_PAGE_FLAGS_UNALLOCATABLE | OS_PAGE_FLAGS_ALLOCATED);
+        map_page(fb_addr + offset, fb_addr + offset, 1, 1, 0);
     }
+
 } 
 
 
-RGBColor default_palette[64] = {//all 64 default values
-    {63, 63, 0},   {0, 21, 0},   {0, 63, 63},  {63, 0, 42}, {0, 0, 21},    {21, 21, 42}, {21, 0, 63},  {63, 42, 63},
-    {0, 63, 21},   {63, 0, 0},   {21, 21, 0},  {21, 0, 21}, {63, 42, 21},  {21, 42, 42}, {0, 42, 42},  {42, 21, 63},
-    {21, 42, 0},   {42, 0, 42},  {42, 42, 63}, {21, 63, 63}, {0, 42, 0},    {42, 21, 21}, {42, 63, 42}, {42, 63, 0},
-    {42, 0, 0},    {42, 42, 21}, {21, 63, 21}, {63, 21, 42}, {63, 63, 63},  {63, 21, 0},  {0, 21, 63},  {63, 63, 21},
-    {0, 21, 21},   {63, 0, 63},  {0, 0, 42},   {63, 0, 21}, {0, 63, 42},   {0, 63, 0},   {63, 42, 42}, {21, 21, 63},
-    {0, 0, 0},     {21, 0, 42},  {21, 42, 63}, {63, 42, 0}, {21, 21, 21},  {0, 42, 63},  {21, 0, 0},   {42, 21, 42},
-    {21, 42, 21},  {42, 0, 63},  {0, 42, 21},  {42, 63, 63}, {42, 21, 0},   {42, 0, 21},  {42, 42, 42}, {21, 63, 42},
-    {42, 63, 21},  {63, 21, 63}, {42, 42, 0},  {21, 63, 0}, {63, 21, 21},  {63, 63, 42}, {0, 21, 42},  {0, 0, 63},
-};
-
-RGBColor *palette13h = MODE13H_COLOR_PALETTE;
-
-
-void init_13h_palette() {
-    for (int i = 0; i < 64; i++) {
-        set_palette_color(i, default_palette[i].r, default_palette[i].g, default_palette[i].b);
-        palette13h[i] = default_palette[i];
-    }
-    *color_pal_size = 64;
-}
-
-
-
 void put_pixel(int x, int y, uint32_t color) {
-#if (QEMU)
-    int pitch = 320;
-#else
+
     int pitch = Multiboot_info->framebuffer_pitch/(Multiboot_info->framebuffer_bpp/8);
-#endif
     short mx,my;
     Get_Mouse_Pos(&mx,&my);
     graph_mode_fb[y * pitch + x] = color;
@@ -68,11 +46,8 @@ void put_pixel(int x, int y, uint32_t color) {
 }
 
 void Force_put_pixel(int x, int y, uint32_t color) {//no mouse check
-#if (QEMU)
-    int pitch = 320;
-#else
+
     int pitch = Multiboot_info->framebuffer_pitch/(Multiboot_info->framebuffer_bpp/8);
-#endif
     graph_mode_fb[y * pitch + x] = color;
 }
 
@@ -163,42 +138,6 @@ void set_palette_color(uint8_t index, uint8_t red, uint8_t green, uint8_t blue) 
     outb(0x3C9, blue >> 2);
 }
 
-uint8_t set_new13h_color(unsigned char r, unsigned char g, unsigned char b) {
-    for (uint8_t i = 0; i < *color_pal_size; i++) {
-        uint32_t diff = abs(palette13h[i].r - r);
-        diff += abs(palette13h[i].g - g);
-        diff += abs(palette13h[i].b - b);
-        diff /= 4;
-        if (diff <= 3) {
-            return i;
-        }
-    }
-
-    if (*color_pal_size == 255) {
-        return 0; // Palette full
-    }
-
-    uint8_t new_index = *color_pal_size;
-    set_palette_color(new_index, r, g, b);
-    palette13h[new_index].r = r;
-    palette13h[new_index].g = g;
-    palette13h[new_index].b = b;
-    (*color_pal_size)++;
-    return new_index;
-
-}
 
 
-void reset_palette(){
-    memcpy((void*)palette13h,(void*)default_palette,sizeof(default_palette));
-    *color_pal_size = 64;
-}
 
-uint8_t get_color_palette_size(){
-    return *color_pal_size;
-}
-
-RGBColor get_palette_color(uint8_t index){
-    if(index >= *color_pal_size) return (RGBColor){0,0,0};
-    return palette13h[index];
-}

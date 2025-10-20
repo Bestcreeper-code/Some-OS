@@ -4,42 +4,71 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include "paging.h"
+
 #define EI_NIDENT 16
 #define SHN_UNDEF 0
 
+#define DEFAULT_STACK_PAGE_AMOUNT 32
+#define DEFAULT_STACK_TOP_VADDR        0xC0000000 
+#define DEFAULT_STACK_BOTTOM_VADDR    DEFAULT_STACK_TOP_VADDR - (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE) 
 
 
-// === ELF Header ===
+
+
 typedef struct {
-    unsigned char e_ident[EI_NIDENT];
+    uint8_t       e_ident[EI_NIDENT];
     uint16_t      e_type;
     uint16_t      e_machine;
     uint32_t      e_version;
-    uint32_t      e_entry;      // Entry point
-    uint32_t      e_phoff;      // Program header table offset
-    uint32_t      e_shoff;      // Section header table offset
+    uint32_t      e_entry;
+    uint32_t      e_phoff;
+    uint32_t      e_shoff;
     uint32_t      e_flags;
     uint16_t      e_ehsize;
     uint16_t      e_phentsize;
-    uint16_t      e_phnum;      // Number of program headers
+    uint16_t      e_phnum;
     uint16_t      e_shentsize;
     uint16_t      e_shnum;
     uint16_t      e_shstrndx;
 } Elf32_Ehdr;
 
-// === Program Header ===
+
+enum Elf_Ident {
+    EI_MAG0		= 0, // 0x7F
+	EI_MAG1		= 1, // 'E'
+	EI_MAG2		= 2, // 'L'
+	EI_MAG3		= 3, // 'F'
+	EI_CLASS	= 4, // Architecture (32/64)
+	EI_DATA		= 5, // Byte Order
+	EI_VERSION	= 6, // ELF Version
+	EI_OSABI	= 7, // OS Specific
+	EI_ABIVERSION	= 8, // OS Specific
+	EI_PAD		= 9  // Padding
+};
+
+# define ELFMAG0	0x7F // e_ident[EI_MAG0]
+# define ELFMAG1	'E'  // e_ident[EI_MAG1]
+# define ELFMAG2	'L'  // e_ident[EI_MAG2]
+# define ELFMAG3	'F'  // e_ident[EI_MAG3]
+
+# define ELFDATA2LSB 1   // Little Endian
+# define ELFCLASS32	 1   // 32-bit Architecture
+
+# define EM_386		 3
+# define EV_CURRENT	 1  // ELF Current Version
+
 typedef struct {
-    uint32_t p_type;
-    uint32_t p_offset;
-    uint32_t p_vaddr;
-    uint32_t p_paddr;
-    uint32_t p_filesz;
-    uint32_t p_memsz;
-    uint32_t p_flags;
-    uint32_t p_align;
+    uint32_t p_type;    // Segment type
+    uint32_t p_offset;  // File offset
+    uint32_t p_vaddr;   // Virtual address
+    uint32_t p_paddr;   // Physical address
+    uint32_t p_filesz;  // Size in file
+    uint32_t p_memsz;   // Size in memory
+    uint32_t p_flags;   // Flags (R/W/X)
+    uint32_t p_align;   // Alignment
 } Elf32_Phdr;
 
-// Program header types
 typedef enum {
     PT_NULL    = 0,
     PT_LOAD    = 1,
@@ -51,14 +80,14 @@ typedef enum {
     PT_TLS     = 7
 } Elf32_SegmentType;
 
-// Program header flags
+
 typedef enum {
-    PF_X = 1 << 0,  // Execute
-    PF_W = 1 << 1,  // Write
-    PF_R = 1 << 2   // Read
+    PF_X = 1 << 0,  
+    PF_W = 1 << 1,  
+    PF_R = 1 << 2   
 } Elf32_SegmentFlags;
 
-// File types
+
 typedef enum {
     ET_NONE = 0, // No file type
     ET_REL  = 1, // Relocatable
@@ -67,7 +96,7 @@ typedef enum {
     ET_CORE = 4  // Core file
 } Elf32_FileType;
 
-// === Section Header ===
+
 typedef struct {
     uint32_t sh_name;
     uint32_t sh_type;
@@ -81,7 +110,7 @@ typedef struct {
     uint32_t sh_entsize;
 } Elf32_Shdr;
 
-// Section types
+
 typedef enum {
     SHT_NULL     = 0,
     SHT_PROGBITS = 1,
@@ -95,7 +124,7 @@ typedef enum {
     SHT_REL      = 9
 } Elf32_SectionType;
 
-// === Symbol Table Entry ===
+
 typedef struct {
     uint32_t st_name;   // Index into string table
     uint32_t st_value;  // Value (address or offset)
@@ -105,17 +134,17 @@ typedef struct {
     uint16_t st_shndx;  // Section index
 } Elf32_Sym;
 
-// === Relocation Entry (no addend) ===
+
 typedef struct {
     uint32_t r_offset;
     uint32_t r_info;
 } Elf32_Rel;
 
-// Relocation macros
+
 #define ELF32_R_SYM(info)  ((info) >> 8)
 #define ELF32_R_TYPE(info) ((uint8_t)(info))
 
-// Relocation types for x86
+
 typedef enum {
     R_386_NONE     = 0,
     R_386_32       = 1, // S + A
@@ -123,27 +152,20 @@ typedef enum {
     R_386_RELATIVE = 8  // B + A
 } Elf32_RelocationType;
 
-// === Loaded ELF ===
+
 typedef struct {
-    uint8_t* mem;
-    size_t size;
-    uint32_t entry;
-    Elf32_Shdr* sections;
-    int shnum;
-    uint32_t* section_offsets; // numeric offsets into mem
+    char* filename;
+
+    PD_t page_dir;
+
+    uintptr_t entry_point;
+
+    uintptr_t stack_top;
+    uintptr_t stack_bottom;
 } LoadedElf;
 
 
-
-
-/*============================================================
- * Functions
- *===========================================================*/
-
-int Runelf(const char* path, int argc, char** argv);
-
 LoadedElf* LoadElf(const char* path);
-uint32_t ELF_GetSymbol(LoadedElf* elf, const char* name);
 
 
 #endif // ELF_H

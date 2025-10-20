@@ -4,8 +4,8 @@
 section .text
     align 4
     dd 0x1BADB002
-    dd 0x05
-    dd -(0x1BADB002 + 0x05)
+    dd 0x07
+    dd -(0x1BADB002 + 0x07)
 
 dd 0
 dd 0
