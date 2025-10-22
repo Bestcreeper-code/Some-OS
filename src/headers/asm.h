@@ -34,12 +34,21 @@ static inline uint32_t inl(uint16_t port) {
     return ret;
 }
 
+typedef union {
+    uint32_t val;
+    char bytes[4];
+    void* ptr;
+    uint16_t halves[2];
+} x32register_t;
+
 typedef struct {
     uint32_t eax, ebx, ecx, edx;
     uint32_t esi, edi, ebp, esp;
     uint32_t eip, eflags;
     uint32_t cs, ds, es, fs, gs, ss;
-}__attribute__((packed)) cpu_registers_t;
+    uint32_t cr0, cr2, cr3, cr4;
+} __attribute__((packed)) cpu_registers_t;
+
 
 
 static inline void capture_cpu_registers(cpu_registers_t* regs) {

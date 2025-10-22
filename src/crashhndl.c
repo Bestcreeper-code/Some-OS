@@ -103,18 +103,16 @@ enum CrashType {
 };
 
 
-cpu_registers_t* gp_regs;
+cpu_registers_t* _cpu_regs;
 
 
 void __kernel_crash_handler__(int argc, uint32_t* argv) {
-    Sys_log("In crash handler\n");
-    asm volatile("sti");
+    Sys_log("In crash handler (%d)\n",(int)argv[0]);
     
+
     graph_mode_fb = (volatile uint32_t*)(uint32_t)Multiboot_info->framebuffer_addr;
-
-    int fb_size = Multiboot_info->framebuffer_height * Multiboot_info->framebuffer_width*4;
-
-    memset((void*)graph_mode_fb,0xFF,fb_size);
+    int fb_size = Multiboot_info->framebuffer_height * Multiboot_info->framebuffer_width * 4;
+    memset((void*)graph_mode_fb, 0, fb_size/7);
 
     uint32_t* call_stack = NULL;
     if (argc >= 4) call_stack = (uint32_t*)argv[3];
@@ -126,73 +124,93 @@ void __kernel_crash_handler__(int argc, uint32_t* argv) {
 
     int isr_index = (int)argv[0];
     uint32_t err_code = argv[1];
+    _cpu_regs = (cpu_registers_t*)argv[2];
 
-    char* error_name;
-    if (isr_index >= 0 && isr_index < (int)(sizeof(crash_messages) / sizeof(crash_messages[0]))) {
-        error_name = (char*)crash_messages[isr_index];
-    } else {
-        error_name = "Unknown Crash";
-    }
-
-    gp_regs = (cpu_registers_t*)argv[2];
+    const char* error_name = (isr_index >= 0 && isr_index < (int)(sizeof(crash_messages) / sizeof(crash_messages[0])))
+                             ? crash_messages[isr_index]
+                             : "Unknown Crash";
 
     Sys_log("\n\n\n\n\n");
     Sys_log("=======================================================================\n");
     Sys_log("System crashed -> ISR Index: %d (%s), Error Code: %u\n", isr_index, error_name, err_code);
 
-    draw_bitmap_string("A critical error has occurred:", 20, 20, 8, 16, 0x3F, font8x16, false, true, 0);
+    draw_bitmap_string("A critical error has occurred:", 20, 20, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
     Sys_log(" A critical error has occurred:\n");
 
     char full_str[128];
     sprintf(full_str, "Error Code: %s (%03d: %u)", error_name, isr_index, err_code);
-    draw_bitmap_string(full_str, 20, 40, 8, 16, 0x3F, font8x16, false, true, 0);
+    draw_bitmap_string(full_str, 20, 40, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
     Sys_log(" %s\n", full_str);
 
-    draw_bitmap_string("Regs Dump:", 0, 60, 8, 16, 0x3F, font8x16, false, true, 0);
+    draw_bitmap_string("Regs Dump:", 0, 60, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
     Sys_log(" Regs Dump:\n");
 
     char buf[128];
     sprintf(buf, "EAX: 0x%x  EBX: 0x%x  ECX: 0x%x  EDX: 0x%x", 
-            gp_regs->eax, gp_regs->ebx, gp_regs->ecx, gp_regs->edx);
-    draw_bitmap_string(buf, 100, 60, 8, 16, 0x3F, font8x16, false, true, 0);
+            _cpu_regs->eax, _cpu_regs->ebx, _cpu_regs->ecx, _cpu_regs->edx);
+    draw_bitmap_string(buf, 100, 60, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
     Sys_log(" %s\n", buf);
 
     sprintf(buf, "ESI: 0x%x  EDI: 0x%x  EBP: 0x%x  ESP: 0x%x", 
-            gp_regs->esi, gp_regs->edi, gp_regs->ebp, gp_regs->esp);
-    draw_bitmap_string(buf, 100, 80, 8, 16, 0x3F, font8x16, false, true, 0);
+            _cpu_regs->esi, _cpu_regs->edi, _cpu_regs->ebp, _cpu_regs->esp);
+    draw_bitmap_string(buf, 100, 80, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
     Sys_log(" %s\n", buf);
 
-    sprintf(buf, "EIP: 0x%x  EFLAGS: 0x%x", gp_regs->eip, gp_regs->eflags);
-    draw_bitmap_string(buf, 100, 100, 8, 16, 0x3F, font8x16, false, true, 0);
+    sprintf(buf, "EIP: 0x%x  EFLAGS: 0x%x", _cpu_regs->eip, _cpu_regs->eflags);
+    draw_bitmap_string(buf, 100, 100, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
     Sys_log(" %s\n", buf);
 
-    uint8_t* instr_ptr = (uint8_t*)gp_regs->eip;
+    // Segment Registers
+    sprintf(buf, "CS:  0x%x  DS:  0x%x  ES:  0x%x", 
+            _cpu_regs->cs, _cpu_regs->ds, _cpu_regs->es);
+    draw_bitmap_string(buf, 100, 120, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+    Sys_log(" %s\n", buf);
+
+    sprintf(buf, "FS:  0x%x  GS:  0x%x  SS:  0x%x", 
+            _cpu_regs->fs, _cpu_regs->gs, _cpu_regs->ss);
+    draw_bitmap_string(buf, 100, 140, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+    Sys_log(" %s\n", buf);
+
+    // Control Registers
+    sprintf(buf, "CR0: 0x%x  CR2: 0x%x", _cpu_regs->cr0, _cpu_regs->cr2);
+    draw_bitmap_string(buf, 100, 160, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+    Sys_log(" %s\n", buf);
+
+    sprintf(buf, "CR3: 0x%x  CR4: 0x%x", _cpu_regs->cr3, _cpu_regs->cr4);
+    draw_bitmap_string(buf, 100, 180, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+    Sys_log(" %s\n", buf);
+
+    // Instruction bytes at EIP
+    uint8_t* instr_ptr = (uint8_t*)_cpu_regs->eip;
     char instr_bytes[64];
     for (int i = 0; i < 16; i++) {
         sprintf(instr_bytes + i * 3, "%02x ", instr_ptr[i]);
     }
-    sprintf(buf,"code: %s",instr_bytes);
-    draw_bitmap_string(buf, 50, 120, 8, 16, 0x3F, font8x16, false, true, 0);
+    sprintf(buf, "Code: %s", instr_bytes);
+    draw_bitmap_string(buf, 50, 200, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
     Sys_log(" %s\n", buf);
 
+    // Call Stack Trace
     if (call_stack) {
-        draw_bitmap_string("Call Stack Trace:", 0, 140, 8, 16, 0x3F, font8x16, false, true, 0);
+        draw_bitmap_string("Call Stack Trace:", 0, 220, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
         Sys_log(" Call Stack Trace:\n");
         for (int i = 0; i < 8; i++) {
             sprintf(buf, "0x%x", call_stack[i]);
-            draw_bitmap_string(buf, 20, 160 + i * 20, 8, 16, 0x3F, font8x16, false, true, 0);
+            draw_bitmap_string(buf, 20, 240 + i * 20, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
             Sys_log(" %s\n", buf);
         }
     }
 
-    draw_bitmap_string("Rebooting in 10 sec...", 20, 400, 8, 16, 0x3F, font8x16, false, true, 0);
+    // Reboot Countdown
+    draw_bitmap_string("Rebooting in 10 sec...", 20, 420, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
     Sys_log(" Rebooting in 10 sec...\n");
-    draw_bitmap_string("##########", 60, 420, 8, 16, 0x0, font8x16, false, true, 0);
-
+    draw_bitmap_string("##########", 60, 440, 8, 16, 0x0, font8x16, false, true, 0);
+asm volatile("sti");
     for (int i = 0; i < 10; i++) {
-        draw_bitmap_char('#', 60 + (8 * i), 420, 8, 16, 0xFF00FF00, font8x16, false, true, true);
+        draw_bitmap_char('#', 60 + (8 * i), 440, 8, 16, 0xFF00FF00, font8x16, false, true, true);
         sleep(1000);
     }
 
     pc_reboot();
 }
+

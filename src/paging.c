@@ -4,7 +4,7 @@
 #include "headers/string.h"
 #include "headers/io.h"
 
-static PD_t pd;
+PD_t _k_pd;
 
 extern char _kernel_start;
 extern char _kernel_end;
@@ -30,7 +30,7 @@ int setup_paging() {
     for (uint32_t i = kstart >> 12; i < (kend + _PAGE_SIZE - 1) >> 12 && i < _page_amount; i++)
         _free_pages_bitmap[i / 8] &= ~(1 << (i % 8));
 
-    pd.pde_arr = (PDE*)page_alloc(1, 1, 0);
+    _k_pd.pde_arr = (PDE*)page_alloc(1, 1, 0);
 
     for (uint32_t i = 0; i < 1024; i++) {
         if (i * 1024 >= pages_amount) break;
@@ -50,14 +50,14 @@ int setup_paging() {
             if (page_idx == 0) pt_base[j].rw = 0;
         }
 
-        pd.pde_arr[i].present = 1;
-        pd.pde_arr[i].rw = 1;
-        pd.pde_arr[i].user = 0;
-        pd.pde_arr[i].page_size = 0;
-        pd.pde_arr[i].addr = ((uintptr_t)pt_base) >> 12;
+        _k_pd.pde_arr[i].present = 1;
+        _k_pd.pde_arr[i].rw = 1;
+        _k_pd.pde_arr[i].user = 0;
+        _k_pd.pde_arr[i].page_size = 0;
+        _k_pd.pde_arr[i].addr = ((uintptr_t)pt_base) >> 12;
     }
 
-    Sys_log("pd is at %x\n", pd.pde_arr);
+    Sys_log("pd is at %x\n", _k_pd.pde_arr);
 
     asm volatile (
         "mov %0, %%cr3 \n\t"
@@ -65,11 +65,11 @@ int setup_paging() {
         "or $0x80000000, %%eax \n\t"
         "mov %%eax, %%cr0"
         :
-        : "r"(pd.pde_arr)
+        : "r"(_k_pd.pde_arr)
         : "eax"
     );
 
-    map_page(0, 0, 1, 0, 0);
+    unmap_page(&_k_pd,0);// NULL
     
     
     return 0;
@@ -81,7 +81,7 @@ void map_page(uint32_t virtual_addr, uint32_t physical_addr, uint8_t present,
     uint32_t pd_index = (virtual_addr >> 22) & 0x3FF;
     uint32_t pt_index = (virtual_addr >> 12) & 0x3FF;
 
-    PDE* pde = &pd.pde_arr[pd_index];
+    PDE* pde = &_k_pd.pde_arr[pd_index];
 
     PTE* pt_base;
     if (!pde->present) {
@@ -108,13 +108,31 @@ void map_page(uint32_t virtual_addr, uint32_t physical_addr, uint8_t present,
     asm volatile("invlpg (%0)" : : "r"(virtual_addr) : "memory");
 }
 
+int unmap_page(PD_t* target_pd,uint32_t virtual_addr) {
+    uint32_t pd_index = (virtual_addr >> 22) & 0x3FF;
+    uint32_t pt_index = (virtual_addr >> 12) & 0x3FF;
+
+    PDE* pde = &target_pd->pde_arr[pd_index];
+    if (!pde->present) return -1;
+
+    PTE* pt_base = (PTE*)((uintptr_t)pde->addr << 12);
+    PTE* pte = &pt_base[pt_index];
+    if (!pte->present) return -2;
+
+    pte->present = 0;
+
+    asm volatile("invlpg (%0)" : : "r"(virtual_addr) : "memory");
+
+    return 0;
+}
+
 
 
 PTE* get_pte(uint32_t index) {
     uint32_t pd_index = index >> 10; 
     uint32_t pt_index = index & 0x3FF;
 
-    PDE* pde = &pd.pde_arr[pd_index];
+    PDE* pde = &_k_pd.pde_arr[pd_index];
     if (!pde->present) return NULL;
 
     PTE* pt_base = (PTE*)((uintptr_t)pde->addr << 12);
@@ -130,7 +148,7 @@ PTE* get_pte_for_pa(uint32_t pa) {
 
     if (pd_index >= 1024) return NULL;
 
-    PDE* pde = &pd.pde_arr[pd_index];
+    PDE* pde = &_k_pd.pde_arr[pd_index];
     if (!pde->present) return NULL;
 
     PTE* pt_base = (PTE*)((uintptr_t)pde->addr << 12);
@@ -199,8 +217,8 @@ page_addr_t page_alloc(size_t amount, int read_write, int user_supervisor) {
 }
 
 void dump_pd() {
-    uint32_t* pdes = (uint32_t*)pd.pde_arr;
-    Sys_log("Dumping Page Directory from %x\n", pd.pde_arr);
+    uint32_t* pdes = (uint32_t*)_k_pd.pde_arr;
+    Sys_log("Dumping Page Directory from %x\n", _k_pd.pde_arr);
     Sys_log("first pde: %x\n", ((PTE*)pdes)[0].addr * _PAGE_SIZE);
     for (int i = 0; i < 1; i++) {
         if (!(pdes[i] & 1)) continue;
@@ -237,14 +255,9 @@ void page_free(page_addr_t pa, size_t amount) {
 
 void reserve_kernel_pages() {
     Sys_log("Reserving kernel pages from %p to %p\n", &_kernel_start, &_kernel_end);
-
+    
     memset(_free_pages_bitmap, 0, ((uintptr_t)&_kernel_end / _PAGE_SIZE + 7) / 8);
-
-    // uintptr_t kstart = 0;
-    // uintptr_t kend = (uintptr_t)&_kernel_end;
-    // for (uint32_t i = kstart >> 12; i < (kend + _PAGE_SIZE - 1) >> 12 && i < _page_amount; i++){
-    //     _free_pages_bitmap[i / 8] &= ~(1 << (i % 8));
-    // }
+    
 }
 
 uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, PD_t* out_pd_t ) {

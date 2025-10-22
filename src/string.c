@@ -18,6 +18,15 @@ void* memset(void *dest, int value, size_t count) {
     }
     return dest;
 }
+
+void* dw_memset(void *dest, uint32_t value, size_t count) {
+    uint32_t *ptr = (uint32_t*)dest;
+    while (count--) {
+        *ptr++ = value;
+    }
+    return dest;
+}
+
 void* memcpy(void* dest, const void* src, size_t n) {
     if (n <= 0) return dest;
 

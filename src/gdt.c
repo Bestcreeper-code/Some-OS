@@ -2,16 +2,18 @@
 
 extern void gdt_flush(uint32_t);
 
-struct gdt_entry_struct gdt_entries[3];
+struct gdt_entry_struct gdt_entries[5];
 struct gdt_ptr_struct gdt_ptr;
 
 void initGdt(){
     gdt_ptr.limit = (sizeof(struct gdt_entry_struct)*3) - 1;
     gdt_ptr.base = (uint32_t)&gdt_entries;
     
-    setGdtGate(0,0,0,0,0); //null seg
-    setGdtGate(1, 0, 0xFFFFFFFF, 0x9A, 0xCF);// code seg
-    setGdtGate(2, 0, 0xFFFFFFFF, 0x92, 0xCF);// data seg
+    setGdtGate(0, 0, 0, 0, 0);                          // Null segment
+    setGdtGate(1, 0, 0xFFFFFFFF, 0x9A, 0xCF);           // Kernel code
+    setGdtGate(2, 0, 0xFFFFFFFF, 0x92, 0xCF);           // Kernel data
+    setGdtGate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF);           // User code
+    setGdtGate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF);           // User data
 
     gdt_flush((uint32_t)&gdt_ptr);
     

@@ -16,6 +16,7 @@ static inline void idt_flush(uint32_t idt_ptr_addr) {
 extern void irq0_handler();
 extern void irq1_handler();
 extern void irq12_handler();
+extern void _syscall_int_80_handler();
 
 extern void isr0();   // Divide Error
 extern void isr1();   // Debug Exception
@@ -68,6 +69,7 @@ void idt_init() {
     idt_reg.base = (uint32_t)&idt;
     idt_reg.limit = sizeof(struct IDTEntry) * IDT_ENTRIES - 1;
     memset(&idt, 0, sizeof(idt));
+    
     // CPU exceptions (ISRs 0-31)
     idt_set_gate(0,  (uint32_t)isr0,  0x08, 0x8E);
     idt_set_gate(1,  (uint32_t)isr1,  0x08, 0x8E);
@@ -111,6 +113,7 @@ void idt_init() {
     idt_set_gate(32, (uint32_t)irq0_handler, 0x08, 0x8E); // IRQ0 (timer)
     idt_set_gate(33, (uint32_t)irq1_handler, 0x08, 0x8E); /* IRQ1 (keyboard) */ init_keyboard();reset_input_buffer();
     idt_set_gate(44, (uint32_t)irq12_handler, 0x08, 0x8E); /* IRQ12 (mouse)*/init_mouse();
+    idt_set_gate(0X80, (uint32_t)_syscall_int_80_handler, 0x08, 0x8E); /* IRQ12 (mouse)*/init_mouse();
 
 
     idt_flush((uint32_t)&idt_reg);

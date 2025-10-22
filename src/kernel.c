@@ -19,9 +19,20 @@
 #include "headers/bios.h"
 #include "headers/elf.h"
 #include "headers/paging.h"
+#include "headers/scheduler.h"
 
 #include "data/globals.h"
 #include "data/textconsts.h"
+
+
+
+
+
+#include "../output.h"
+
+
+
+
 
 extern int vgaX, vgaY;
 
@@ -45,6 +56,7 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
 
     Sys_log("copying multiboot info struct...\n");
     memcpy(Get_multiboot_info(), (void*)mb_struct_addr, sizeof(multiboot_info_t));  
+    Sys_log("test\n");
     
     initGdt();
 
@@ -58,9 +70,6 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
     pic_remap();
     Sys_log("PIC remapped successfully.\n");
 
-    Sys_log("Initializing PIT...\n");
-    pit_init(); 
-    Sys_log("PIT initialized.\n");
     
     
     disable_mouse_display();
@@ -89,25 +98,28 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
     
     
     Sys_log("Parsing memory map...\n");
-    parse_memory_map( Get_multiboot_info() );
+    parse_memory_map((multiboot_info_t*)mb_struct_addr);
     
     Sys_log("Initialising graphics.\n");
     init_graphics();
     
+    Sys_log("Initializing PIT...\n");
+    pit_init(); 
+    Sys_log("PIT initialized.\n");
     
-    force_alloc((uint32_t)Get_multiboot_info(), sizeof(multiboot_info_t));
+    // force_alloc((uint32_t)mb_struct_addr, sizeof(multiboot_info_t));
 
     int pitch = Multiboot_info->framebuffer_bpp;
     
     
     
     
-    ClearScreen();
+    // ClearScreen();
 
     
     
-    force_alloc(0x0, 65535);// reserve low memory for real mode bios calls/or whatever
-    force_alloc(KERNEL_DATA_START, KERNEL_DATA_END - KERNEL_DATA_START);
+    // force_alloc(0x0, 65535);// reserve low memory for real mode bios calls/or whatever
+    // force_alloc(KERNEL_DATA_START, KERNEL_DATA_END - KERNEL_DATA_START);
     
     //-new_install
     const char* cmdline = (const char*)Get_multiboot_info()->cmdline;
@@ -147,28 +159,38 @@ end_mounting:
     
     
     // draw_bitmap_char('T',100,100,8,16,0xFFFFA500,NULL,true,false,false);
+    uint32_t* data = (uint32_t*)image_data;
+    //255²
+    for (size_t i = 0; i < 56; i++) {
+        for (size_t j = 0; j < 56; j++) {
+            uint32_t pixel = data[i * 56 + j];
+            // Swap red and blue
+            pixel = (pixel & 0xFF00FF00) | ((pixel & 0x00FF0000) >> 16) | ((pixel & 0x000000FF) << 16);
 
-    
-    for (size_t i = 0; i < 768; i++)
-    {
-        for (size_t j = 0; j < 1024; j++)
-        {
-            put_pixel(j,i,0xFFFFA500);
+            // Draw 3x3 block for each pixel
+            for (size_t dy = 0; dy < 7; dy++) {
+                for (size_t dx = 0; dx < 7; dx++) {
+                    put_pixel(j * 7 + dx, i * 7 + dy + 200, pixel);
+                }
+            }
         }
-        
     }
-    draw_bitmap_string("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",120,100,8,16,0xFF0000FF,font8x16,false,true,3);
 
-    // ((uint32_t*)Multiboot_info->framebuffer_addr)[1]= 0XFFFFFFFF;
+    draw_bitmap_string("CREEPER OS",0,0,8,16,0x0000FF7F,font8x16,false,true,3);
+    
+    
     
     Sys_log("Loading login manager...\n");
 
-    LoadElf("0:/login.rel");
     
-
-
+    
+    
+    // logmgr->entry_point(0, NULL);
+    
+    Sys_log("Starting sched...\n");
+    scheduler_init();
+    
     Sys_log("Starting console...\n");
-        
     Start_Console();
 
     while (1) {
@@ -179,10 +201,11 @@ end_mounting:
 // entry point
 __attribute__((naked)) void _start() {
     __asm__ volatile (
-        "push %ebx\n"       // push multiboot_info pointer (2nd arg)
-        "push %eax\n"       // push magic (1st arg)
+        
+        "push %ebx\n"       // push multiboot_info pointer
+        "push %eax\n"       // push magic
         "call kmain\n"
-        "add $8, %esp\n"    // clean up stack
+        "add $8, %esp\n"    
         "cli\n"
         "hlt\n"
         "jmp .\n"

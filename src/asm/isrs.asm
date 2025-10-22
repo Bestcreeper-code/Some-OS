@@ -38,7 +38,7 @@ section .bss
 int_indx    resd 1
 int_err_code resd 1
 argv            resd 4
-gp_regs         resd 10
+gp_regs         resd 20
 stack_trace     resd 16
 
 section .text
@@ -46,36 +46,77 @@ section .text
 %macro SAVE_REGS 0
     mov esi, gp_regs
 
-    mov eax, [esp + 4]
+    ; General-purpose registers
+    mov eax, [esp + 4]      ; EAX
     mov [esi + 0*4], eax
 
-    mov eax, [esp + 16]
+    mov eax, [esp + 16]     ; EBX
     mov [esi + 1*4], eax
 
-    mov eax, [esp + 8]
+    mov eax, [esp + 8]      ; ECX
     mov [esi + 2*4], eax
 
-    mov eax, [esp + 12]
+    mov eax, [esp + 12]     ; EDX
     mov [esi + 3*4], eax
 
-    mov eax, [esp + 28]
+    mov eax, [esp + 28]     ; ESI
     mov [esi + 4*4], eax
 
-    mov eax, [esp + 32]
+    mov eax, [esp + 32]     ; EDI
     mov [esi + 5*4], eax
 
-    mov eax, [esp + 24]
+    mov eax, [esp + 24]     ; EBP
     mov [esi + 6*4], eax
 
-    mov eax, [esp + 20]
+    mov eax, [esp + 20]     ; Original ESP (before pushad)
     mov [esi + 7*4], eax
 
-    mov eax, [esp + 40]
+    ; EIP, EFLAGS
+    mov eax, [esp + 40]     ; EIP
     mov [esi + 8*4], eax
 
-    mov eax, [esp + 48]
+    mov eax, [esp + 48]     ; EFLAGS
     mov [esi + 9*4], eax
+
+    ; Segment Registers
+    push cs
+    pop eax
+    mov [esi + 10*4], eax
+
+    push ds
+    pop eax
+    mov [esi + 11*4], eax
+
+    push es
+    pop eax
+    mov [esi + 12*4], eax
+
+    push fs
+    pop eax
+    mov [esi + 13*4], eax
+
+    push gs
+    pop eax
+    mov [esi + 14*4], eax
+
+    push ss
+    pop eax
+    mov [esi + 15*4], eax
+
+    ; Control Registers (CR0, CR2, CR3, CR4 only)
+    mov eax, cr0
+    mov [esi + 16*4], eax
+
+    mov eax, cr2
+    mov [esi + 17*4], eax
+
+    mov eax, cr3
+    mov [esi + 18*4], eax
+
+    ; mov eax, cr4 ;why tf does it cause a qemu crash
+    ; mov [esi + 19*4], eax
 %endmacro
+
 
 %macro ISR_NOCRASH 1
 isr%1:
@@ -85,6 +126,7 @@ isr%1:
 
 %macro ISR_NOERR 1
 isr%1:
+    cli
     push dword 2147483648
     push dword %1
     pushad
@@ -97,6 +139,7 @@ isr%1:
 
 %macro ISR_ERR 1
 isr%1:
+    cli
     push dword %1
     pushad
     SAVE_REGS
@@ -182,9 +225,11 @@ isr_handler:
 
     push argv
     push 4
-    sti
+    
     call __kernel_crash_handler__
     add esp, 12
+
+    sti
 
     ret
 

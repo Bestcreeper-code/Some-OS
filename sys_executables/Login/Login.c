@@ -14,6 +14,10 @@
 #define LOCKDOWN_TIME 5*60 // seconds
 
 
+char* _kernel_start = 0;
+char* _kernel_end = 0;
+
+
 void main(int argc, char** argv) {
     // parse_memory_map(  );
     fs_set((FATFS*)FATFS_SYS_ADDR, 0);

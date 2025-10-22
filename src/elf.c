@@ -9,7 +9,8 @@
 #include <string.h>
 
 
-
+extern char _kernel_start;
+extern char _kernel_end;
 
 bool elf_check_support(Elf32_Ehdr* elf_header, const char* path){
     if (elf_header->e_ident[0] != ELFMAG0 ||
@@ -93,19 +94,40 @@ LoadedElf* LoadElf(const char* path) {
         return NULL;
     }
 
-    // PDE* pde_array = create_app_vmem();
-    PD_t app_page_dir = {
-        // .pde_arr = pde_array
-    };
+    
+    PD_t app_page_dir;
 
-    Page_Group* page_groups = malloc(sizeof(Page_Group) * (elf_header.e_phnum + 1)); // +1 for stack
+    // Allocate page_groups for kernel + segments + stack
+    Page_Group* page_groups = malloc(sizeof(Page_Group) * (elf_header.e_phnum + 2));
     if (!page_groups) {
         Sys_log("Failed to allocate page_groups\n");
         free(program_headers);
         f_close(&file);
         return NULL;
     }
-    memset(page_groups, 0, sizeof(Page_Group) * (elf_header.e_phnum + 1));
+    memset(page_groups, 0, sizeof(Page_Group) * (elf_header.e_phnum + 2));
+
+    // Identity map kernel region as the first page group
+    uintptr_t kernel_start = (uintptr_t)&_kernel_start;
+    uintptr_t kernel_end = (uintptr_t)&_kernel_end;
+
+    uintptr_t id_map_start = kernel_start & ~(_PAGE_SIZE - 1);
+    uintptr_t id_map_end = kernel_end + (_PAGE_SIZE - 1) & ~(_PAGE_SIZE - 1);
+    size_t kernel_pages = (id_map_end - id_map_start) / _PAGE_SIZE;
+
+    Sys_log("mapping kernel: 0x%x - 0x%x (%u pages)\n", id_map_start, id_map_end, kernel_pages);
+
+    page_groups[0] = (Page_Group){
+        .size = kernel_pages,
+        .addr = id_map_start,
+        .pte_bits = {
+            .present = 1,
+            .rw = 1,
+            .user = 0, // kernel space
+            .addr = id_map_start >> 12
+        }
+    };
+
 
     for (int i = 0; i < elf_header.e_phnum; i++) {
         Elf32_Phdr* phdr = &program_headers[i];
@@ -128,10 +150,10 @@ LoadedElf* LoadElf(const char* path) {
             return NULL;
         }
 
-        Sys_log("Segment %d -> VA: 0x%08X, PA: 0x%08X, Size: %zu bytes\n",
+        Sys_log("Segment %d -> VA: 0x%x, PA: 0x%x, Size: %u bytes\n",
             i, phdr_vaddr, segment_mem, phdr->p_memsz);
 
-        page_groups[i] = (Page_Group){
+        page_groups[i+1] = (Page_Group){
             .size = num_pages,
             .addr = phdr_vaddr,
             .pte_bits = {
@@ -183,7 +205,7 @@ LoadedElf* LoadElf(const char* path) {
         }
     };
 
-    new_page_dir(page_groups, elf_header.e_phnum + 1, &app_page_dir); // include stack
+    new_page_dir(page_groups, elf_header.e_phnum + 2, &app_page_dir); // includes stack, segs and kernel space(mapped as u/s 0)
     free(program_headers);
     free(page_groups);
 
@@ -210,7 +232,7 @@ LoadedElf* LoadElf(const char* path) {
     }
 
     f_close(&file);
-    Sys_log("ELF file '%s' loaded successfully. Entry: 0x%08X\n", path, loaded_elf->entry_point);
+    Sys_log("ELF file '%s' loaded successfully. Entry: 0x%x\n", path, loaded_elf->entry_point);
     return loaded_elf;
 }
 

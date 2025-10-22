@@ -1,23 +1,20 @@
-; %define PTE_NAME       0 ; PTE = Process Table Entry
-; %define PTE_BASE       4
-; %define PTE_STACK_BASE 8
-; %define PTE_STACK_END  12
-; %define PTE_SIZE       16
 
-; %define PTE_SIZE_TOTAL 20 
-; %define PT_INDEX       0x2579;1byte
-; %define PT_BASE        0x257A;16 entries
-; %define KERNEL_STACK_BASE_ADDRESS      0x2571
-; %define KERNEL_STACK_POINTER_ADDRESS   0x2575
+%define MOUSE_FLAGS_K_DATA_Off    0x0004
+%define MOUSE_FLAG_ENABLED      1 << 7
 
-; %define TASK_SWITCHING_FLAG            0x223B
-%define MOUSE_FLAGS_ADDR    0x218A
-%define MOUSE_FLAG_ENABLED  1 << 7
+%define TASKSWITCH_K_DATA_Off    0x0089
+%define TASKSWITCH_ENABLED      1 
 
+;exports
 global irq0_handler
 
+;funcs
 extern timer_irq 
 extern Redraw_Mouse_Cursor
+extern _sched_next_process
+
+;vars
+extern kernel_data
 
 section .data
     counter  db 0 
@@ -28,60 +25,34 @@ section .text
         pushad
         pushfd
 
-        mov al, [MOUSE_FLAGS_ADDR]       
-        test al, MOUSE_FLAG_ENABLED      ; Test bit 7
-        jz time_irq_call_label           ;  skip redraw if not set
-
-        call Redraw_Mouse_Cursor
-
-time_irq_call_label:
+        ;call the timer tick before anything else
         call timer_irq
-
-
-    ;     cmp byte [TASK_SWITCHING_FLAG],1
-    ;     jne no_switch
-    ;     ; set the current process index to edx
-    ;     movzx eax, byte [PT_INDEX]
-    ;     mov ebx, PTE_SIZE_TOTAL
-    ;     mul ebx ;Index*entry_size result is in edx:eax 
-    ;     add eax, PT_BASE; Index*entry_size + PT_base
-
-
-    ;     cmp byte [counter],0
-    ;     je from_kernel
-    ;     jne to_kernel
         
+        lea esi, [rel kernel_data]
 
-    ; from_kernel:
-    ;     ;saving stack
-    ;     mov dword [KERNEL_STACK_POINTER_ADDRESS],esp
-    ;     mov dword [KERNEL_STACK_BASE_ADDRESS],ebp
+        ;test for the display of te mouse
+        mov al, [esi + MOUSE_FLAGS_K_DATA_Off]       
+        test al, MOUSE_FLAG_ENABLED      ; Test bit 7
 
-    ;     cmp dword [eax + PTE_NAME], 0
-    ;     je no_switch
+        jz mouse_display_skip           ;  skip redraw if not set
 
-    ;     ;setting the regs to change stack
-    ;     mov ebx, dword [eax + PTE_STACK_END]
-    ;     mov ecx, dword [eax + PTE_STACK_BASE]
+            call Redraw_Mouse_Cursor
+        mouse_display_skip:
+
+        ;test for the taskswitch flag
+        mov al, [esi + TASKSWITCH_K_DATA_Off]       
+        test al, TASKSWITCH_ENABLED      ; Test bit 1
+
+        jz taskswitch_skip           ;  skip task switch if not set
+            ; Send End of Interrupt (EOI) to PIC since wont come back if switches
+            
+            mov al, 0x20
+            out 0x20, al
+
+            call _sched_next_process
+        taskswitch_skip:
 
 
-    ;     jmp change_stack
-    ; to_kernel:
-    ;     ;saving stack
-    ;     mov dword [eax + PTE_STACK_END], esp
-    ;     mov dword [eax + PTE_STACK_BASE], ebp
-    ;     ;setting the regs to change stackA
-    ;     mov ebx, dword [KERNEL_STACK_POINTER_ADDRESS]
-    ;     mov ecx, [KERNEL_STACK_BASE_ADDRESS]
- 
-
-    ; change_stack:
-
-    ;     mov ebp, ecx
-    ;     mov esp, ebx
-    ;     xor byte [counter], 1
-    ; no_switch:
-    ;scrapped on this branch for now
         ; Send End of Interrupt (EOI) to PIC
         mov al, 0x20
         out 0x20, al

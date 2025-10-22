@@ -28,7 +28,7 @@ void init_graphics() {
     Sys_log("Mapping framebuffer at 0x%x, size: %d bytes\n", fb_addr, fb_size);
 
     for (uint32_t offset = 0; offset < fb_size; offset += 0x1000) {
-        map_page(fb_addr + offset, fb_addr + offset, 1, 1, 0);
+        map_page(fb_addr + offset, fb_addr + offset, 1, 1, 1);
     }
 
 } 

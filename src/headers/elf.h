@@ -21,7 +21,7 @@ typedef struct {
     uint16_t      e_type;
     uint16_t      e_machine;
     uint32_t      e_version;
-    uint32_t      e_entry;
+    int (*e_entry)(int, char**);
     uint32_t      e_phoff;
     uint32_t      e_shoff;
     uint32_t      e_flags;
@@ -158,7 +158,7 @@ typedef struct {
 
     PD_t page_dir;
 
-    uintptr_t entry_point;
+    int (*entry_point)(int, char**);
 
     uintptr_t stack_top;
     uintptr_t stack_bottom;

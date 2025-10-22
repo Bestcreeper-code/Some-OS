@@ -59,6 +59,9 @@ typedef struct {
 } __attribute__((packed)) Page_Group ;
 
 
+extern PD_t _k_pd;
+
+
 int setup_paging();
 void map_page(uint32_t virtual_addr, uint32_t physical_addr, uint8_t present, uint8_t rw, uint8_t user);
 PTE* get_pte(uint32_t index);
@@ -80,6 +83,8 @@ void pd_free(PD_t* pd);
 
 int v_map(PD_t* page_dir, Page_Group* groups, uint32_t group_count);
 uintptr_t PD_append_pages(PD_t* page_dir, PTE* ptes, uint32_t pte_count);
+
+int unmap_page(PD_t* target_pd,uint32_t virtual_addr);
 
 
 //Misc

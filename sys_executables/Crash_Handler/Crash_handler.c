@@ -83,7 +83,7 @@ enum CrashType {
     CRASH_RESERVED_31,
     CRASH_CODES_AMOUNT
 };
-cpu_registers_t* gp_regs;
+cpu_registers_t* _cpu_regs;
 
 void app_main(int argc, uint32_t* argv) {
     graph_mode_fb = (volatile uint32_t*)(uint32_t)Multiboot_info->framebuffer_addr;
@@ -111,7 +111,7 @@ void app_main(int argc, uint32_t* argv) {
         error_name = "Unknown Crash";
     }
 
-    gp_regs = (cpu_registers_t*)argv[2];
+    _cpu_regs = (cpu_registers_t*)argv[2];
     //padding
     Sys_log("\n");Sys_log("\n");Sys_log("\n");Sys_log("\n");Sys_log("\n");
     Sys_log("=======================================================================");
@@ -132,17 +132,17 @@ void app_main(int argc, uint32_t* argv) {
     char buf[128];
     
     sprintf(buf, "EAX: 0x%x  EBX: 0x%x  ECX: 0x%x  EDX: 0x%x", 
-            gp_regs->eax, gp_regs->ebx, gp_regs->ecx, gp_regs->edx);
+            _cpu_regs->eax, _cpu_regs->ebx, _cpu_regs->ecx, _cpu_regs->edx);
     Sys_log("%s\n",buf);
     draw_bitmap_string(buf, 50, 60, 4, 6, 0x3F, NULL, true, false, 0);
 
     sprintf(buf, "ESI: 0x%x  EDI: 0x%x  EBP: 0x%x  ESP: 0x%x", 
-            gp_regs->esi, gp_regs->edi, gp_regs->ebp, gp_regs->esp);
+            _cpu_regs->esi, _cpu_regs->edi, _cpu_regs->ebp, _cpu_regs->esp);
     Sys_log("%s\n",buf);
     draw_bitmap_string(buf, 50, 80, 4, 6, 0x3F, NULL, true, false, 0);
 
     sprintf(buf, "EIP: 0x%x  EFLAGS: 0x%x", 
-            gp_regs->eip, gp_regs->eflags);
+            _cpu_regs->eip, _cpu_regs->eflags);
     Sys_log("%s\n",buf);
     draw_bitmap_string(buf, 50, 100, 4, 6, 0x3F, NULL, true, false, 0);
     
