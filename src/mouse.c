@@ -7,9 +7,9 @@
 
 volatile uint8_t mouse_cycle = 0;//3 (1by1 bytes) per action
 volatile uint8_t mouse_bytes[3];
-volatile short* mouse_x = (volatile short*)MOUSE_X_POS_ADDR;
-volatile short* mouse_y = (volatile short*)MOUSE_Y_POS_ADDR;
-volatile uint8_t* mouse_buttons = (volatile uint8_t*)MOUSE_FLAGS_ADDR;
+volatile short* mouse_x = (volatile short*)&MOUSE_X_POS;
+volatile short* mouse_y = (volatile short*)&MOUSE_Y_POS;
+volatile uint8_t* mouse_buttons = (volatile uint8_t*)&MOUSE_FLAGS;
 
 void mouse_wait(uint8_t type) {
     if (type == 0) {
@@ -131,7 +131,7 @@ const uint8_t def_mouse_icons6x8[] = {
 //     0xFF, 0b111111, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 // };
     
-uint8_t *mouse_bg = (uint8_t*)MOUSE_PREV_BG_ADDR; 
+uint8_t *mouse_bg = (uint8_t*)MOUSE_PREV_BG; 
     
 
 static uint8_t mouse_state = 0;

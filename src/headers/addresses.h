@@ -15,7 +15,9 @@
 #define KERNEL_STACK_SIZE (32 * _PAGE_SIZE)
 
 
-typedef struct __attribute__((packed)) {
+typedef struct {
+
+    uint8_t mouse_prev_bg[256];
 
     int16_t mouse_x_pos_prev;                         
     int16_t mouse_y_pos_prev;                        
@@ -27,8 +29,7 @@ typedef struct __attribute__((packed)) {
 
     char* console_request_queue[32];                
                                                     
-
-    uint8_t task_switching_flag;                      
+                 
     uint8_t keyboard_mod_keys_flags;                 
 
     char input_char_buffer[256];                    
@@ -55,6 +56,7 @@ extern KernelData_t kernel_data;
 
 
 
+
 //fields access macros
 
 
@@ -67,7 +69,7 @@ extern KernelData_t kernel_data;
 #define MOUSE_Y_POS                                      (kernel_data.mouse_y_pos_addr)    // int16_t
 #define MOUSE_X_POS                                      (kernel_data.mouse_x_pos_addr)    // int16_t
 #define CONSOLE_REQUEST_QUEUE                            (kernel_data.console_request_queue)    // 32 char*(commands) that apps can request to the console on exit
-#define TASK_SWITCHING_FLAG                              (kernel_data.task_switching_flag)    // activate/deactivate task switching between kernel and running app
+// #define TASK_SWITCHING_FLAG                              (kernel_data.task_switching_flag)    // activate/deactivate task switching between kernel and running app
 #define KEYBOARD_MOD_KEYS_FLAGS                          (kernel_data.keyboard_mod_keys_flags)    // Modifier keys flags (shift,ctrl,...)
 #define INPUT_CHAR_BUFFER_ADDRESS                        (kernel_data.input_char_buffer)    // Buffer for 256 input chars (start)
 #define FATFS_SYS                                        (kernel_data.fatfs_sys_addr)    // FATFS system data (0x0234 bytes size)
@@ -81,10 +83,6 @@ extern KernelData_t kernel_data;
 
 
 
-// typedef struct {
-//     uintptr_t mb_info_addr;
-//     uintptr_t tick_amount_ptr;
-//     uintptr
-// } __attribute__((packed)) Sys_Info_Struct; scrapped for now since somehow breaks the adresses
+
 
 #endif // ADRESSES_H

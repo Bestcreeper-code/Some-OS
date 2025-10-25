@@ -30,6 +30,8 @@ extern _scheduler_first_process   ; Linked_PCB_t*
 
 
 _sched_next_process:
+    ;pushad |
+    ;pushfd | by irq0
     push ds
     push es
     push fs
@@ -42,12 +44,14 @@ _sched_next_process:
     ; save process's esp and ebp
     mov [esi + Linked_PCB_esp_offset], esp
     mov [esi + Linked_PCB_ebp_offset], ebp
+    ;save cr3(to be sure)
+    mov eax, cr3
+    mov [esi + Linked_PCB_page_dir_offset],eax
 
     ; setup for next process
     mov esi, [esi + Linked_PCB_next_offset]
 
-    push dword [esi + Linked_PCB_name_offset]
-    call serial_write_string
+    
 
     cmp esi, 0
     jne .found_next
@@ -55,6 +59,13 @@ _sched_next_process:
     mov esi, [_scheduler_first_process]
     
 .found_next: ;<<<<<<<<<<<<<<< maybe add flags check if needed later >>>>>>>>>>>>>>>>>
+
+    ; Code to log switchedprocs for debug
+    push dword [esi + Linked_PCB_name_offset]
+    call serial_write_string
+    add esp, 4  
+    
+
     ;load esp and ebpo
     mov ebp, [esi + Linked_PCB_ebp_offset]
     mov esp, [esi + Linked_PCB_esp_offset]

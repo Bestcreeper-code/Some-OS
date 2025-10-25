@@ -7,7 +7,7 @@
 // DEBUG flags
 #define DEBUG_MODE      0
 #define PAGE_DEBUG_MODE 0
-#define MEM_DEBUG_MODE  0
+#define MEM_DEBUG_MODE  1
 #define ELF_DEBUG_MODE  1
 #define DEV_BUILD       1
 #define SYSCALL_DEBUG   0

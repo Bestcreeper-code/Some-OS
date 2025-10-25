@@ -13,7 +13,7 @@
 #define PIT_CHANNEL0  0x40
 #define PIT_FREQUENCY 1000  // 1000 Hz = 1ms per tick
 
-uint64_t* timer_ticks = (uint64_t*)TICKS_AMOUNT_ADDR;
+uint64_t* timer_ticks = (uint64_t*)&TICKS_AMOUNT;
 
 
 #include "headers/asm.h" // for outb()

@@ -52,7 +52,7 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
     Sys_log("Kernel compiled on %s at %s\n", __DATE__, __TIME__);
     Sys_log("with GCC ver %d.%d.%d \n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
     
-    TASK_SWITCHING_FLAG = 0;
+    task_switching_flag = 0;
 
     Sys_log("copying multiboot info struct...\n");
     memcpy(Get_multiboot_info(), (void*)mb_struct_addr, sizeof(multiboot_info_t));  
@@ -100,12 +100,13 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
     Sys_log("Parsing memory map...\n");
     parse_memory_map((multiboot_info_t*)mb_struct_addr);
     
-    Sys_log("Initialising graphics.\n");
-    init_graphics();
-    
     Sys_log("Initializing PIT...\n");
     pit_init(); 
     Sys_log("PIT initialized.\n");
+    
+    Sys_log("Initialising graphics.\n");
+    init_graphics();
+    
     
     // force_alloc((uint32_t)mb_struct_addr, sizeof(multiboot_info_t));
 
@@ -118,7 +119,7 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
 
     
     
-    // force_alloc(0x0, 65535);// reserve low memory for real mode bios calls/or whatever
+    force_alloc(0x0, 65535);// reserve low memory for real mode bios calls/or whatever
     // force_alloc(KERNEL_DATA_START, KERNEL_DATA_END - KERNEL_DATA_START);
     
     //-new_install
@@ -153,8 +154,7 @@ end_mounting:
     
     move_cursor(0, 0);
 
-    Sys_log("Interrupts reenabled.\n");
-    __asm__ volatile ("sti"); // Enable interrupts
+    
     
     
     
@@ -179,17 +179,16 @@ end_mounting:
     draw_bitmap_string("CREEPER OS",0,0,8,16,0x0000FF7F,font8x16,false,true,3);
     
     
-    
-    Sys_log("Loading login manager...\n");
-
-    
-    
-    
-    // logmgr->entry_point(0, NULL);
+    Sys_log("Interrupts reenabled.\n");
+    __asm__ volatile ("sti"); // Enable interrupts
     
     Sys_log("Starting sched...\n");
     scheduler_init();
     
+    Sys_log("Loading login manager...\n");
+    //DEBUG exec_ELF("0:/test.elf"); sched just crashes when there is more than 1 process
+    // task_switching_flag = 1;
+    sleep(1000);
     Sys_log("Starting console...\n");
     Start_Console();
 

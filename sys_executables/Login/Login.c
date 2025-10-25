@@ -20,7 +20,7 @@ char* _kernel_end = 0;
 
 void main(int argc, char** argv) {
     // parse_memory_map(  );
-    fs_set((FATFS*)FATFS_SYS_ADDR, 0);
+    fs_set(FATFS_SYS, 0);
     init_graphics();
     int fb_size = Multiboot_info->framebuffer_height * Multiboot_info->framebuffer_width*4;
     memset((void*)graph_mode_fb,0x80,fb_size);

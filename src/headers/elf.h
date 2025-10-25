@@ -161,11 +161,19 @@ typedef struct {
     int (*entry_point)(int, char**);
 
     uintptr_t stack_top;
+    uint32_t esp;
     uintptr_t stack_bottom;
 } LoadedElf;
+
+typedef struct
+{
+    uint16_t pid;
+    char* name;
+} ProcessInfo;
 
 
 LoadedElf* LoadElf(const char* path);
 
+ProcessInfo exec_ELF(char* path);
 
 #endif // ELF_H

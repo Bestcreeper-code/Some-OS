@@ -107,12 +107,12 @@ cpu_registers_t* _cpu_regs;
 
 
 void __kernel_crash_handler__(int argc, uint32_t* argv) {
-    Sys_log("In crash handler (%d)\n",(int)argv[0]);
+    Sys_log("In crash handler (%d | %d)\n",(int)argv[0],(int)argv[1]);
     
 
     graph_mode_fb = (volatile uint32_t*)(uint32_t)Multiboot_info->framebuffer_addr;
     int fb_size = Multiboot_info->framebuffer_height * Multiboot_info->framebuffer_width * 4;
-    memset((void*)graph_mode_fb, 0, fb_size/7);
+    memset((void*)graph_mode_fb, 0, fb_size/5);
 
     uint32_t* call_stack = NULL;
     if (argc >= 4) call_stack = (uint32_t*)argv[3];
@@ -176,7 +176,7 @@ void __kernel_crash_handler__(int argc, uint32_t* argv) {
     draw_bitmap_string(buf, 100, 160, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
     Sys_log(" %s\n", buf);
 
-    sprintf(buf, "CR3: 0x%x  CR4: 0x%x", _cpu_regs->cr3, _cpu_regs->cr4);
+    sprintf(buf, "CR3: 0x%x ", _cpu_regs->cr3);
     draw_bitmap_string(buf, 100, 180, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
     Sys_log(" %s\n", buf);
 

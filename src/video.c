@@ -15,7 +15,7 @@
 #include <stdbool.h>
 
 volatile uint32_t* graph_mode_fb = (uint32_t*)0xA0000;
-volatile uint8_t* color_pal_size = (volatile uint8_t*)MODE13H_COLOR_PALETTE_SIZE_ADDR;
+// volatile uint8_t* color_pal_size = (volatile uint8_t*)MODE13H_COLOR_PALETTE_SIZE_ADDR;
 
 
 

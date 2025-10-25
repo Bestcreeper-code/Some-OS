@@ -1,8 +1,8 @@
 
-%define MOUSE_FLAGS_K_DATA_Off    0x0004
+%define MOUSE_FLAGS_K_DATA_Off    0x0004+256
 %define MOUSE_FLAG_ENABLED      1 << 7
 
-%define TASKSWITCH_K_DATA_Off    0x0089
+
 %define TASKSWITCH_ENABLED      1 
 
 ;exports
@@ -15,6 +15,7 @@ extern _sched_next_process
 
 ;vars
 extern kernel_data
+extern task_switching_flag
 
 section .data
     counter  db 0 
@@ -40,7 +41,7 @@ section .text
         mouse_display_skip:
 
         ;test for the taskswitch flag
-        mov al, [esi + TASKSWITCH_K_DATA_Off]       
+        mov al, [task_switching_flag]       
         test al, TASKSWITCH_ENABLED      ; Test bit 1
 
         jz taskswitch_skip           ;  skip task switch if not set
@@ -48,8 +49,11 @@ section .text
             
             mov al, 0x20
             out 0x20, al
-
-            call _sched_next_process
+            
+            ; before
+            ; call _sched_next_process
+            ; after
+            jmp _sched_next_process
         taskswitch_skip:
 
 

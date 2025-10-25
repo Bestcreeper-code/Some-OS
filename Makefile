@@ -58,6 +58,7 @@ $(MULTIBOOT_OBJ): src/multiboot_header.asm
 $(KERNEL_ELF): $(MULTIBOOT_OBJ) $(OBJECTS) | $(ISO_DIR)
 	@echo "Linking kernel ELF..."
 	$(LD) $(LDFLAGS) -o $@ $(MULTIBOOT_OBJ) $(OBJECTS)
+	cp $(KERNEL_ELF) ./
 
 # Convert ELF to flat binary for GRUB
 $(KERNEL_BIN): $(KERNEL_ELF)

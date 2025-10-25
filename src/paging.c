@@ -3,6 +3,7 @@
 #include "headers/multiboot_info.h"
 #include "headers/string.h"
 #include "headers/io.h"
+#include "headers/time.h"
 
 PD_t _k_pd;
 
@@ -100,6 +101,10 @@ void map_page(uint32_t virtual_addr, uint32_t physical_addr, uint8_t present,
     }
 
     PTE* pte = &pt_base[pt_index];
+    
+    sleep(0);//fixes all qemu jank smh
+    
+    
     pte->present = present;
     pte->rw = rw;
     pte->user = user;

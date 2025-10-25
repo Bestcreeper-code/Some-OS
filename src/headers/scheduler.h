@@ -7,6 +7,8 @@
 
 #define MAX_PID 32768
 
+typedef short pid_t;
+
 typedef struct Linked_PCB_t {
     uint16_t pid;
     char* name;
@@ -47,12 +49,13 @@ typedef struct __attribute__((packed)) ProcessStackFrame {
 
 extern Linked_PCB_t* _scheduler_current_process;
 extern Linked_PCB_t* _scheduler_first_process;
+extern uint8_t task_switching_flag;
 
 int scheduler_init();
 
-int new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, uint32_t* ebp);
+pid_t new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, uint32_t* ebp);
 
-void _setup_user_stack_sched_frame(void* stack_frame_upper, uint32_t esp, uint32_t entry);
+void _setup_user_stack_sched_frame(void* stack_frame_upper, uint32_t* esp, uint32_t entry);
 
 
 #endif // SCHEDULER_H
