@@ -55,6 +55,7 @@ section .text
             ; after
             jmp _sched_next_process
         taskswitch_skip:
+        
 
 
         ; Send End of Interrupt (EOI) to PIC

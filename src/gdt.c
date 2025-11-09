@@ -1,12 +1,14 @@
 #include "headers/gdt.h"
+#include "headers/string.h"
 
 extern void gdt_flush(uint32_t);
 
 struct gdt_entry_struct gdt_entries[5];
 struct gdt_ptr_struct gdt_ptr;
+static struct tss_entry tss;
 
 void initGdt(){
-    gdt_ptr.limit = (sizeof(struct gdt_entry_struct)*3) - 1;
+    gdt_ptr.limit = (sizeof(struct gdt_entry_struct)*5) - 1;
     gdt_ptr.base = (uint32_t)&gdt_entries;
     
     setGdtGate(0, 0, 0, 0, 0);                          // Null segment
@@ -14,9 +16,32 @@ void initGdt(){
     setGdtGate(2, 0, 0xFFFFFFFF, 0x92, 0xCF);           // Kernel data
     setGdtGate(3, 0, 0xFFFFFFFF, 0xFA, 0xCF);           // User code
     setGdtGate(4, 0, 0xFFFFFFFF, 0xF2, 0xCF);           // User data
+    // setTssGate(TSS_GDT_INDEX, (uint32_t)&tss, sizeof(tss)-1);
+
 
     gdt_flush((uint32_t)&gdt_ptr);
     
+}
+
+
+void init_tss(uint32_t esp) {
+    memset(&tss, 0, sizeof(tss));
+    tss.ss0 = 0x10;              // kernel data selector
+    tss.esp0 = esp;              // top of kernel stack
+    asm volatile("ltr %0" : : "r"(5 << 3)); // load TSS (selector = 5<<3)
+}
+
+
+
+void setTssGate(uint32_t index, uint32_t base, uint32_t limit) {
+    gdt_entries[index].base_low    = base & 0xFFFF;
+    gdt_entries[index].base_middle = (base >> 16) & 0xFF;
+    gdt_entries[index].base_high   = (base >> 24) & 0xFF;
+
+    gdt_entries[index].limit       = limit & 0xFFFF;
+    gdt_entries[index].flags       = (limit >> 16) & 0x0F; 
+    gdt_entries[index].flags      |= 0x00;  // granularity = 0
+    gdt_entries[index].access      = 0x89;  // present + type=0x9 (32-bit TSS)
 }
 
 

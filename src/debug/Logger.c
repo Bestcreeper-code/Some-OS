@@ -1,9 +1,9 @@
-#include "headers/Logger.h"
+#include "../headers/Logger.h"
 
-#include "headers/time.h"
-#include "headers/memory.h"
-#include "headers/asm.h"
-#include "headers/io.h"
+#include "../headers/time.h"
+#include "../headers/memory.h"
+#include "../headers/asm.h"
+#include "../headers/io.h"
 #include <stdbool.h>
 #include <stdarg.h>
 
@@ -69,4 +69,11 @@ void sys_serial_logf(const char* format, const char* file, const char* func, int
 
 
     serial_write_string(output);
+    if(Get_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON) && Get_Kernel_Flag(KDATA_FLAG_PAGING_ON)){
+        printstr(output);
+    }
+}
+
+void serial_log_hex(const char* label, uint32_t val) {
+    sys_serial_logf("%s: 0x%x\n", "", "", 0, label, val );
 }

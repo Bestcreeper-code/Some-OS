@@ -12,6 +12,8 @@ uint32_t max_mem;
 static free_region_map_t region_map;
 free_region_map_t* k_mmap = &region_map;
 
+extern char _kernel_end;
+
 
 static inline free_region_map_t* get_free_region_map(void) {
     return k_mmap;
@@ -136,6 +138,7 @@ void force_free(uint32_t address, uint32_t size) {
 }
 
 void parse_memory_map(multiboot_info_t* mb_info) {
+    Sys_log("Parsing memory map...\n");
     free_region_map_t* k_mmap = get_free_region_map();
     //cleanup the k_mmap
     k_mmap->free_region_count = 0;
@@ -190,10 +193,26 @@ void parse_memory_map(multiboot_info_t* mb_info) {
                 k_mmap->free_regions[i].length);
     }
 
-    
+    for (int i = 0; i < k_mmap->free_region_count; i++) {
+        free_region_t* region = &k_mmap->free_regions[i];
+
+        if (region->length == 0) continue;
+
+        if (region->base_addr < &_kernel_end) {
+            uint32_t overlap = &_kernel_end - region->base_addr;
+            if (overlap >= region->length) {
+                region->length = 0; // entire region is under kernel, remove it
+            } else {
+                region->base_addr += overlap;
+                region->length -= overlap;
+            }
+        }
+    }
+
 
 
     force_alloc((uint32_t)k_mmap, sizeof(free_region_map_t));
+    Sys_log("Memory map parsed.\n");
 }
 
 
@@ -324,7 +343,7 @@ void free_impl(void* _Memory) {
             k_mmap->free_regions[i].length = size;
 #if MEM_DEBUG_MODE
             Sys_log("freeing %u bytes at %p\n", size, _Memory);
-#endif
+#endif 
             break;
         }
     }

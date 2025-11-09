@@ -20,17 +20,19 @@ volatile uint32_t* graph_mode_fb = (uint32_t*)0xA0000;
 
 
 void init_graphics() {
+    Sys_log("Initialising graphics.\n");
     graph_mode_fb = (volatile uint32_t*)(uint32_t)Multiboot_info->framebuffer_addr;
 
     uint32_t fb_addr = Multiboot_info->framebuffer_addr;
     uint32_t fb_size = Multiboot_info->framebuffer_pitch * Multiboot_info->framebuffer_height;
     
     Sys_log("Mapping framebuffer at 0x%x, size: %d bytes\n", fb_addr, fb_size);
+    Sys_log("Mapping framebuffer at 0x%x, size: %d bytes\n", fb_addr, fb_size);
 
     for (uint32_t offset = 0; offset < fb_size; offset += 0x1000) {
-        map_page(fb_addr + offset, fb_addr + offset, 1, 1, 1);
+        k_map_page(fb_addr + offset, fb_addr + offset, 1, 1, 1);
     }
-
+    Sys_log("graphics init was sucessful\n");
 } 
 
 
@@ -130,13 +132,30 @@ void clear_13h_screen(char color) {
     memset((void*)0xA0000, color, 320 * 200);
 }
 
-void set_palette_color(uint8_t index, uint8_t red, uint8_t green, uint8_t blue) {
+void draw_rect(Rect rect, uint32_t color) {
+    if (rect.w <= 0 || rect.h <= 0) return;
 
-    outb(0x3C8, index);
-    outb(0x3C9, red >> 2);
-    outb(0x3C9, green >> 2);
-    outb(0x3C9, blue >> 2);
+    int fb_width  = Multiboot_info->framebuffer_pitch / (Multiboot_info->framebuffer_bpp / 8);
+    int fb_height = Multiboot_info->framebuffer_height;
+
+    
+    if (rect.x >= fb_width || rect.y >= fb_height) return;
+    if (rect.x + rect.w > fb_width)  rect.w = fb_width  - rect.x;
+    if (rect.y + rect.h > fb_height) rect.h = fb_height - rect.y;
+
+    volatile uint32_t* fb = graph_mode_fb + rect.y * fb_width + rect.x;
+
+    
+    for (int y = 0; y < rect.h; y++) {
+        volatile uint32_t* line = fb + y * fb_width;
+
+        
+        for (int x = 0; x < rect.w; x++) {
+            line[x] = color;
+        }
+    }
 }
+
 
 
 

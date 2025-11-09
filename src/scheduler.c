@@ -61,7 +61,7 @@ pid_t new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, uint32_t* ebp) {
     new_pcb->esp = *esp;
     new_pcb->ebp = *ebp;
     new_pcb->state = 0; 
-    new_pcb->page_dir = page_dir;
+    new_pcb->cr3 = (uintptr_t)page_dir->pde_arr;
     new_pcb->next = NULL;
     new_pcb->pid = _get_unused_pid();
 
@@ -79,6 +79,7 @@ pid_t new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, uint32_t* ebp) {
         current->next = new_pcb;
     }
 
+    pd_map_page(page_dir, (uint32_t)new_pcb, (uint32_t)new_pcb, 1, 1, 0);//identity map the pcb for sched
     
 
     return new_pcb->pid;
@@ -107,7 +108,7 @@ int kill_process(short proc_pid){
 void testing();
 
 int scheduler_init(){
-    
+    // Sys_log("Starting sched...\n");
     memset(pid_bitmap,0xFF,MAX_PID/8);
     pid_bitmap[0] &= ~(1 << 0);
 
@@ -115,40 +116,34 @@ int scheduler_init(){
             
     _scheduler_current_process = _scheduler_first_process;
 
-    task_switching_flag = 1;
+    // task_switching_flag = 1;
 
     // for(;;){Sys_log("zf\n");
     // sleep(1000);}
     return 0;
 }
 
-void _setup_user_stack_sched_frame(void* stack_frame_upper, uint32_t* v_esp, uint32_t entry){
-    ProcessStackFrame* stack_frame = stack_frame_upper-sizeof(ProcessStackFrame);
+void _setup_user_stack_sched_frame(void* stack_top, uint32_t* v_esp, uint32_t entry){
+    ProcessStackFrame* frame = (ProcessStackFrame*)((uint8_t*)stack_top - sizeof(ProcessStackFrame));
 
-    ProcessStackFrame new_frame = {
-        .eflags = 0x202,
+    frame->eax = 0;
+    frame->ebx = 0;
+    frame->ecx = 0;
+    frame->edx = 0;
+    frame->esi = 0;
+    frame->edi = 0;
+    frame->ebp = (uint32_t)*v_esp;    // optional, initial EBP = top of stack
+    frame->esp = (uint32_t)*v_esp;    // user stack top
+    frame->eip = entry;
+    frame->cs = USER_CODE_SEGMENT;
+    frame->eflags_iret = 0x202;          // IF = 1
+    frame->useresp = (uint32_t)*v_esp;
+    frame->ss = USER_DATA_SEGMENT;
 
-        .eax = 0,
-        .ebx = 0,
-        .ecx = 0,
-        .edx = 0,
-        .esp = ((uint32_t)stack_frame)+36,
-        .ebp = *v_esp,
-        .esi = 0,
-        .edi = 0,
-        
+    *v_esp -=sizeof(ProcessStackFrame);            // PCB.esp points to iret frame
 
-        .eip = entry,
-        .cs = USER_CODE_SEGMENT,
-        .eflags_iret = 0x202,
-
-        .useresp = *v_esp,
-        .ss = USER_DATA_SEGMENT
-
-    };
-
-    *v_esp -= sizeof(ProcessStackFrame);
-
-    *stack_frame = new_frame;
+    Sys_log("making a sched frame at %x (v_esp=%x)\n",stack_top,*v_esp);
 }
+
+
 

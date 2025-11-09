@@ -38,13 +38,22 @@ extern int vgaX, vgaY;
 
 // extern void test_16func();
 KernelData_t kernel_data;
+KernelData_t* kernel_data_ptr;
+
 
 
 void kmain(unsigned long magic, unsigned long mb_struct_addr) {
-
     
+    kernel_data_ptr = &kernel_data;
+
+    Set_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON, false);
+    Set_Kernel_Flag(KDATA_FLAG_PAGING_ON, false);
+    task_switching_flag = 0;
+
+
 
     serial_init();
+    
     
     
     Sys_log("interrupts disabled.\n");
@@ -52,64 +61,74 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
     Sys_log("Kernel compiled on %s at %s\n", __DATE__, __TIME__);
     Sys_log("with GCC ver %d.%d.%d \n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
     
-    task_switching_flag = 0;
+    Sys_log("Multiboot magic number: 0x%x\n", (void*)magic);
+    Sys_log("Multiboot info address: 0x%x\n", mb_struct_addr);
 
     Sys_log("copying multiboot info struct...\n");
     memcpy(Get_multiboot_info(), (void*)mb_struct_addr, sizeof(multiboot_info_t));  
-    Sys_log("test\n");
+    
     
     initGdt();
 
-    Sys_log("Setting upIDT...\n");
+    
     idt_init();
-    Sys_log("GDT and IDT set up successfully.\n");
+    
 
     
 
-    Sys_log("remapping PIC...\n");
+    
     pic_remap();
-    Sys_log("PIC remapped successfully.\n");
+    
 
     
     
     disable_mouse_display();
     // enable_cursor(0, 2);
 
-    *((uint32_t*)MULTIBOOT_INFO_ADDRESS) = mb_struct_addr;
     
     
     
-    Sys_log("Memory map parsed.\n");
+    
+    
     
     Sys_log("Setting up paging...\n");
     
     if (setup_paging() != 0  ) {
         
         Sys_log("Paging setup failed, halting.");
-        move_cursor(0, 0);
-        printstr("Paging setup failed, halting.");
+        
         while (1) __asm__ volatile ("hlt");
     }
-    
-    
+    Set_Kernel_Flag(KDATA_FLAG_PAGING_ON, true);
     Sys_log("Paging set up successfully.\n");
+
+    // page_addr_t allocated_stack_pages = page_alloc(KERNEL_STACK_PAGE_AMOUNT, 1, 0);
+    // uintptr_t allocated_stack_top = allocated_stack_pages + (KERNEL_STACK_PAGE_AMOUNT * _PAGE_SIZE);
+    // __asm__ volatile(
+    //     "movl %0, %%esp\n"
+    //     :
+    //     : "r"(allocated_stack_top)
+    // );
+    // init_tss(allocated_stack_top);
     
     
     
     
-    Sys_log("Parsing memory map...\n");
+    
     parse_memory_map((multiboot_info_t*)mb_struct_addr);
     
-    Sys_log("Initializing PIT...\n");
-    pit_init(); 
-    Sys_log("PIT initialized.\n");
     
-    Sys_log("Initialising graphics.\n");
+    pit_init(); 
+    
+    
+    
     init_graphics();
     
+    Set_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON, true);
     
-    // force_alloc((uint32_t)mb_struct_addr, sizeof(multiboot_info_t));
-
+    
+    
+    
     int pitch = Multiboot_info->framebuffer_bpp;
     
     
@@ -119,19 +138,19 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
 
     
     
-    force_alloc(0x0, 65535);// reserve low memory for real mode bios calls/or whatever
-    // force_alloc(KERNEL_DATA_START, KERNEL_DATA_END - KERNEL_DATA_START);
+    
+    force_alloc(0x0, 65535);//stop kernel from allocating low mem as it can crash
     
     //-new_install
     const char* cmdline = (const char*)Get_multiboot_info()->cmdline;
     Sys_log("kernel called with: %s\n", cmdline);
     // refer tocommented code #1 at the bottom of this file
 
-    int mount_counter = 0;
     
+    int mount_counter = 0;
 mounting:
-Sys_log("trying to mount filesystem...\n");
-int res = FS_Mount_Main_Partition(FatFsSys);
+    Sys_log("trying to mount filesystem...\n");
+    int res = FS_Mount_Main_Partition(FatFsSys);
 
     if (res != 0) {
         Sys_log("Failed to mount filesystem. Error code: %d\n Trying to mount again", res);
@@ -148,48 +167,47 @@ int res = FS_Mount_Main_Partition(FatFsSys);
     }
 end_mounting:
     
-    Sys_log("Multiboot magic number: 0x%x\n", (void*)magic);
-    Sys_log("Multiboot info address: 0x%x\n", mb_struct_addr);
     
     
-    move_cursor(0, 0);
+    
+    // move_cursor(0, 0);
 
     
     
     
     
-    // draw_bitmap_char('T',100,100,8,16,0xFFFFA500,NULL,true,false,false);
-    uint32_t* data = (uint32_t*)image_data;
-    //255²
-    for (size_t i = 0; i < 56; i++) {
-        for (size_t j = 0; j < 56; j++) {
-            uint32_t pixel = data[i * 56 + j];
-            // Swap red and blue
-            pixel = (pixel & 0xFF00FF00) | ((pixel & 0x00FF0000) >> 16) | ((pixel & 0x000000FF) << 16);
+    // // draw_bitmap_char('T',100,100,8,16,0xFFFFA500,NULL,true,false,false);
+    // uint32_t* data = (uint32_t*)image_data;
+    // //255²
+    // for (size_t i = 0; i < 56; i++) {
+    //     for (size_t j = 0; j < 56; j++) {
+    //         uint32_t pixel = data[i * 56 + j];
+    //         // Swap red and blue
+    //         pixel = (pixel & 0xFF00FF00) | ((pixel & 0x00FF0000) >> 16) | ((pixel & 0x000000FF) << 16);
 
-            // Draw 3x3 block for each pixel
-            for (size_t dy = 0; dy < 7; dy++) {
-                for (size_t dx = 0; dx < 7; dx++) {
-                    put_pixel(j * 7 + dx, i * 7 + dy + 200, pixel);
-                }
-            }
-        }
-    }
+    //         // Draw 3x3 block for each pixel
+    //         for (size_t dy = 0; dy < 7; dy++) {
+    //             for (size_t dx = 0; dx < 7; dx++) {
+    //                 put_pixel(j * 7 + dx, i * 7 + dy + 200, pixel);
+    //             }
+    //         }
+    //     }
+    // }
 
-    draw_bitmap_string("CREEPER OS",0,0,8,16,0x0000FF7F,font8x16,false,true,3);
+    // draw_bitmap_string("CREEPER OS",0,0,8,16,0x0000FF7F,font8x16,false,true,3);
     
     
-    Sys_log("Interrupts reenabled.\n");
     __asm__ volatile ("sti"); // Enable interrupts
+    Sys_log("Interrupts reenabled.\n");
     
-    Sys_log("Starting sched...\n");
+    
     scheduler_init();
     
     Sys_log("Loading login manager...\n");
-    //DEBUG exec_ELF("0:/test.elf"); sched just crashes when there is more than 1 process
+    exec_ELF("0:/loop.elf");//DEBUG sched just crashes when there is more than 1 process
     // task_switching_flag = 1;
     sleep(1000);
-    Sys_log("Starting console...\n");
+    
     Start_Console();
 
     while (1) {

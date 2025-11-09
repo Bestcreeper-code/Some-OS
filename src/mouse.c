@@ -1,5 +1,5 @@
 #include "headers/mouse.h"
-#include "headers/addresses.h"
+#include "headers/kernel_data.h"
 #include "headers/video.h"
 #include "headers/asm.h"
 #include <stdint.h>

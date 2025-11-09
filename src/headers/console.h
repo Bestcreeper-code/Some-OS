@@ -4,14 +4,15 @@
 
 
 
-#define VGA_MAX_LINES 25
-#define VGA_MAX_COLS 80
+// #define K_TERMINAL_WIDTH 25
+// #define K_TERMINAL_HEIGHT 80
 #define MAX_HISTORY 32
 #define MAX_COMMAND_LENGTH 256
 
 #include <stdint.h>
 #include <stdbool.h>
 #include "string.h"
+#include "io.h"
 
 
 

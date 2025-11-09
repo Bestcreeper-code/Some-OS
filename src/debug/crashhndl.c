@@ -1,15 +1,16 @@
-#include "headers/io.h"
-#include "headers/video.h"
-#include "headers/Logger.h"
-#include "headers/memory.h"
-#include "headers/string.h"
-#include "headers/FileSystem.h"
-#include "headers/time.h"
-#include "headers/vga_modes.h"
-#include "headers/power.h"
-#include "headers/asm.h"
-#include "headers/crashhndl.h"
-#include "data/textconsts.h"
+#include "../headers/io.h"
+#include "../headers/video.h"
+#include "../headers/Logger.h"
+#include "../headers/memory.h"
+#include "../headers/string.h"
+#include "../headers/FileSystem.h"
+#include "../headers/time.h"
+#include "../headers/vga_modes.h"
+#include "../headers/power.h"
+#include "../headers/asm.h"
+#include "../headers/crashhndl.h"
+#include "../headers/symbols.h"
+#include "../data/textconsts.h"
 
 // CPU Exceptions
 static const char* crash_messages[] = {
@@ -109,7 +110,7 @@ cpu_registers_t* _cpu_regs;
 void __kernel_crash_handler__(int argc, uint32_t* argv) {
     Sys_log("In crash handler (%d | %d)\n",(int)argv[0],(int)argv[1]);
     
-
+    
     graph_mode_fb = (volatile uint32_t*)(uint32_t)Multiboot_info->framebuffer_addr;
     int fb_size = Multiboot_info->framebuffer_height * Multiboot_info->framebuffer_width * 4;
     memset((void*)graph_mode_fb, 0, fb_size/5);
@@ -195,7 +196,7 @@ void __kernel_crash_handler__(int argc, uint32_t* argv) {
         draw_bitmap_string("Call Stack Trace:", 0, 220, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
         Sys_log(" Call Stack Trace:\n");
         for (int i = 0; i < 8; i++) {
-            sprintf(buf, "0x%x", call_stack[i]);
+            sprintf(buf, "%s", Get_Symbol(call_stack[i]).str);
             draw_bitmap_string(buf, 20, 240 + i * 20, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
             Sys_log(" %s\n", buf);
         }

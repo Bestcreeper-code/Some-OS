@@ -23,12 +23,12 @@ char* command_History[MAX_HISTORY];
 int command_History_count = 0;
 
 extern volatile uint16_t* video_memory;
-extern int vgaX, vgaY;
+extern short vgaX, vgaY;
 
 static char* currpath = 0;
 
-#define VGA_MAX_LINES 25
-#define VGA_MAX_COLS 80
+#define K_TERMINAL_WIDTH 25
+#define K_TERMINAL_HEIGHT 80
 
 // Allocate and return a malloc'd null-terminated string for the command
 char* Console_Get_Command() {
@@ -46,17 +46,17 @@ char* Console_Get_Command() {
         unsigned char c = getc();
 
         int total_length = length + start;
-        int lines_used = (total_length + VGA_MAX_COLS - 1) / VGA_MAX_COLS;
+        int lines_used = (total_length + K_TERMINAL_HEIGHT - 1) / K_TERMINAL_HEIGHT;
 
         // Prevent typing if screen filled except nav keys
-        if (lines_used >= VGA_MAX_LINES &&
+        if (lines_used >= K_TERMINAL_WIDTH &&
             c != '\n' && c != KEY_LEFT && c != KEY_RIGHT &&
             c != KEY_UP && c != KEY_DOWN) {
             continue;
         }
 
         // Scroll if at bottom line and new line or char input
-        if ((vgaY == VGA_MAX_LINES - 1) &&
+        if ((vgaY == K_TERMINAL_WIDTH - 1) &&
             (c == '\n' || (c != KEY_LEFT && c != KEY_RIGHT &&
              c != KEY_UP && c != KEY_DOWN))) {
             Scroll_Down();
@@ -114,7 +114,7 @@ char* Console_Get_Command() {
             cursor_index = length;
 
         } else if (c == '\n') {
-            if (vgaY == VGA_MAX_LINES - 1) {
+            if (vgaY == K_TERMINAL_WIDTH - 1) {
                 Scroll_Down();
                 if (input_start_line > 0) input_start_line--;
             } else {
@@ -127,8 +127,8 @@ char* Console_Get_Command() {
         }
 
         // Clear lines used by input
-        for (int i = 0; i <= lines_used && input_start_line + i < VGA_MAX_LINES; i++) {
-            for (int j = 0; j < VGA_MAX_COLS; j++) {
+        for (int i = 0; i <= lines_used && input_start_line + i < K_TERMINAL_WIDTH; i++) {
+            for (int j = 0; j < K_TERMINAL_HEIGHT; j++) {
                 put_char(j, input_start_line + i, ' ', 0x0F);
             }
         }
@@ -142,16 +142,16 @@ char* Console_Get_Command() {
         // Reprint input string with wrapping
         for (int i = 0; i < length; i++) {
             int pos = start + i;
-            int line = input_start_line + (pos / VGA_MAX_COLS);
-            int col = pos % VGA_MAX_COLS;
-            if (line >= VGA_MAX_LINES) break;
+            int line = input_start_line + (pos / K_TERMINAL_HEIGHT);
+            int col = pos % K_TERMINAL_HEIGHT;
+            if (line >= K_TERMINAL_WIDTH) break;
             put_char(col, line, buffer[i], 0x0F);
         }
 
         // Move cursor to correct position
         int cursor_pos = start + cursor_index;
-        vgaY = input_start_line + (cursor_pos / VGA_MAX_COLS);
-        vgaX = cursor_pos % VGA_MAX_COLS;
+        vgaY = input_start_line + (cursor_pos / K_TERMINAL_HEIGHT);
+        vgaX = cursor_pos % K_TERMINAL_HEIGHT;
         move_cursor(vgaX, vgaY);
     }
 }
@@ -266,7 +266,7 @@ bool Console_Process_Command(char* command) {
             result = false;
         } else {
             char* list[2] = {currpath, tokens[1]};
-            Load_bin_exe(Concat(list, 2, '\0'));
+            // Load_bin_exe(Concat(list, 2, '\0'));
         }
     }
     else {

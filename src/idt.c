@@ -66,6 +66,8 @@ void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
 }
 
 void idt_init() {
+    Sys_log("Setting up IDT...\n");
+
     idt_reg.base = (uint32_t)&idt;
     idt_reg.limit = sizeof(struct IDTEntry) * IDT_ENTRIES - 1;
     memset(&idt, 0, sizeof(idt));
@@ -117,6 +119,8 @@ void idt_init() {
 
 
     idt_flush((uint32_t)&idt_reg);
+    
+    Sys_log("IDT set up successfully.\n");
 }
 
 

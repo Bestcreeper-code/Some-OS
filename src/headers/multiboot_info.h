@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "addresses.h"
+#include "kernel_data.h"
 #define MULTIBOOT_MMAP_FREE_MEMORY 1
 
 // #define multiboot_info_storing_adress 0x26FA

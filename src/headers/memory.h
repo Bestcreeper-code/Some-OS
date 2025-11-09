@@ -6,7 +6,7 @@
 #include "multiboot_info.h"
 #include "Logger.h"
 #include "../data/globals.h"
-#include "addresses.h"
+#include "kernel_data.h"
 
 #define MULTIBOOT_MMAP_FREE_MEMORY  1
 #define MULTIBOOT_MMAP_RESERVED     2
@@ -40,8 +40,8 @@ void free_impl(void* ptr);
 void* realloc_impl(void* ptr, size_t size);
 
 
-#define malloc              malloc_impl
-#define free                free_impl
+#define malloc(size)              malloc_impl(size)//;Sys_log("\n");
+#define free(ptr)                free_impl(ptr)//;Sys_log("\n");
 #define realloc             realloc_impl
 
 #endif // MEMORY_H

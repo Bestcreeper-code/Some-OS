@@ -14,10 +14,11 @@ uint8_t _free_pages_bitmap[131072];
 uint32_t _page_amount = 0;
 
 int setup_paging() {
+    Sys_log("Setting up paging...\n");
     memset(_free_pages_bitmap, 0xFF, sizeof(_free_pages_bitmap));
     reserve_kernel_pages();
 
-    Sys_log("%X", _free_pages_bitmap[0]);
+    
 
     uint32_t pages_amount = (Get_multiboot_info()->mem_upper + 1024) / 4;
     if (pages_amount < MIN_OS_PAGES * 1.5) return -1;
@@ -72,17 +73,22 @@ int setup_paging() {
 
     unmap_page(&_k_pd,0);// NULL
     
-    
+    Sys_log("Paging set up successfully.\n");
     return 0;
 }
 
 
-void map_page(uint32_t virtual_addr, uint32_t physical_addr, uint8_t present,
+void k_map_page(uint32_t virtual_addr, uint32_t physical_addr, uint8_t present,
+              uint8_t rw, uint8_t user) {
+    pd_map_page(&_k_pd,virtual_addr,physical_addr,present,rw,user);
+}
+
+void pd_map_page(PD_t* pd, uint32_t virtual_addr, uint32_t physical_addr, uint8_t present,
               uint8_t rw, uint8_t user) {
     uint32_t pd_index = (virtual_addr >> 22) & 0x3FF;
     uint32_t pt_index = (virtual_addr >> 12) & 0x3FF;
 
-    PDE* pde = &_k_pd.pde_arr[pd_index];
+    PDE* pde = &pd->pde_arr[pd_index];  // use the passed-in pd
 
     PTE* pt_base;
     if (!pde->present) {
@@ -101,10 +107,9 @@ void map_page(uint32_t virtual_addr, uint32_t physical_addr, uint8_t present,
     }
 
     PTE* pte = &pt_base[pt_index];
-    
-    sleep(0);//fixes all qemu jank smh
-    
-    
+
+    sleep(0); // fixes all QEMU jank smh
+
     pte->present = present;
     pte->rw = rw;
     pte->user = user;
@@ -112,6 +117,7 @@ void map_page(uint32_t virtual_addr, uint32_t physical_addr, uint8_t present,
 
     asm volatile("invlpg (%0)" : : "r"(virtual_addr) : "memory");
 }
+
 
 int unmap_page(PD_t* target_pd,uint32_t virtual_addr) {
     uint32_t pd_index = (virtual_addr >> 22) & 0x3FF;
@@ -148,16 +154,7 @@ PTE* get_pte(uint32_t index) {
 
 PTE* get_pte_for_pa(uint32_t pa) {
     uint32_t index = pa >> 12;
-    uint32_t pd_index = index >> 10;
-    uint32_t pt_index = index & 0x3FF;
-
-    if (pd_index >= 1024) return NULL;
-
-    PDE* pde = &_k_pd.pde_arr[pd_index];
-    if (!pde->present) return NULL;
-
-    PTE* pt_base = (PTE*)((uintptr_t)pde->addr << 12);
-    return &pt_base[pt_index];
+    return get_pte(index);
 }
 
 
@@ -259,11 +256,19 @@ void page_free(page_addr_t pa, size_t amount) {
 
 
 void reserve_kernel_pages() {
+    uintptr_t kstart = (uintptr_t)&_kernel_start;
+    uintptr_t kend   = (uintptr_t)&_kernel_end;
+
     Sys_log("Reserving kernel pages from %p to %p\n", &_kernel_start, &_kernel_end);
-    
-    memset(_free_pages_bitmap, 0, ((uintptr_t)&_kernel_end / _PAGE_SIZE + 7) / 8);
-    
+
+    uint32_t start_page = kstart >> 12;
+    uint32_t end_page   = (kend + _PAGE_SIZE - 1) >> 12;
+
+    for (uint32_t i = start_page; i < end_page && i < _page_amount; i++) {
+        _free_pages_bitmap[i / 8] &= ~(1 << (i % 8));
+    }
 }
+
 
 uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, PD_t* out_pd_t ) {
     if (!groups || group_count == 0) return 0;

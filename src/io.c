@@ -5,13 +5,14 @@
 #include "headers/time.h"
 #include "headers/FileSystem.h"
 #include "headers/Logger.h"
-#include "headers/addresses.h"
+#include "headers/kernel_data.h"
+#include "headers/video.h"
 #include "data/globals.h"
 #include "data/textconsts.h"
 #include "data/KB_Layouts.h"
 #include "headers/multiboot_info.h"
 
-volatile uint16_t* text_mode_memory = (volatile uint16_t*)0xB8000;
+
 int vgaX = 0;
 int vgaY = 0;
 
@@ -22,74 +23,92 @@ static char print_color = 0x0F; //white on black
 
 // VGA TEXT BASED FUNCS
 
-
-void put_char(int x, int y,uint8_t c, uint8_t color) {
-    if (x < 0 || x >= 80 || y < 0 || y >= 25) return;
-    // switch(graphics_mode){
-    //     case 0x03:
-            text_mode_memory[y * 80 + x] = (uint16_t)c | ((uint16_t)color << 8);
-            Rect window = {.h=768, .w=1024, .x=0, .y=0};
-            vga_txt_to_gfx(window);
-            // break;
-
-        // case 0x13:
-        //     draw_bitmap_char(c,x * 4,y * 8,4,6,color,NULL,true);
-        //     break;
-    // }
-}
-
-char get_char(int x, int y) {
-    if (x < 0 || x >= 80 || y < 0 || y >= 25) return 0;
-    return (char)(text_mode_memory[y * 80 + x] & 0xFF);
-}
-
-void enable_cursor(uint8_t start, uint8_t end) {
-    outb(0x3D4, 0x0A);
-    outb(0x3D5, (inb(0x3D5) & 0xC0) | start);
-
-    outb(0x3D4, 0x0B);
-    outb(0x3D5, (inb(0x3D5) & 0xE0) | end);
-}
-
-
-void Scroll_Down() {
-    int i, j;
+unsigned int vga_to_32bit_color(unsigned char fg_vga_color) {
     
-    for (i = 0; i < 24; i++) { 
-        for (j = 0; j < 80; j++) { 
-            text_mode_memory[i * 80 + j] = text_mode_memory[(i + 1) * 80 + j];
-        }
+    const unsigned int vga_palette[16] = {
+        0xFFFFFF,  // Black
+        0x0000AA,  // Blue
+        0x00AA00,  // Green
+        0x00AAAA,  // Cyan
+        0xAA0000,  // Red
+        0xAA00AA,  // Magenta
+        0xAA5500,  // Brown
+        0xAAAAAA,  // Light Gray
+        0x555555,  // Dark Gray
+        0x5555FF,  // Light Blue
+        0x55FF55,  // Light Green
+        0x55FFFF,  // Light Cyan
+        0xFF5555,  // Light Red
+        0xFF55FF,  // Light Magenta
+        0xFFFF55,  // Yellow
+        0xFFFFFF   // White
+    };
+
+    
+    unsigned char fg_index = (fg_vga_color >> 4) & 0x0F;
+
+    
+    return vga_palette[fg_index];
+}
+
+const default_kterm_font_w = 8;
+const default_kterm_font_h = 16;
+
+void put_char(int x, int y, uint8_t c, uint8_t color) {
+    if (x < 0 || x >= K_TERMINAL_WIDTH || y < 0 || y >= K_TERMINAL_HEIGHT)
+        return;
+
+    int px = x * default_kterm_font_w;
+    int py = y * default_kterm_font_h;
+
+    Rect r = {.x = px, .y = py, .w = default_kterm_font_w, .h = default_kterm_font_h };
+
+    if (c <= 32 || c > 126) {
+        draw_rect(r, 0x000000);  
+        return;
     }
-    
-    for (j = 0; j < 80; j++) {
-        text_mode_memory[24 * 80 + j] = (uint16_t)' ' | ((uint16_t)0x0F << 8);
-    }
-    
-    
+
+    draw_bitmap_char(c, px, py, default_kterm_font_w, default_kterm_font_h,
+                    vga_to_32bit_color(color), font8x16, false, true, true
+                    );
 }
+
+
+
+
+
+void Scroll_Down(void) {
+    size_t bytes_per_pixel = Multiboot_info->framebuffer_bpp / 8;
+    size_t line_bytes = Multiboot_info->framebuffer_pitch * bytes_per_pixel;
+    size_t shift = default_kterm_font_h * line_bytes;
+    size_t fb_size = Multiboot_info->framebuffer_height * Multiboot_info->framebuffer_pitch * bytes_per_pixel;
+
+    uint8_t *fb = (uint8_t *)(uintptr_t)Multiboot_info->framebuffer_addr;
+    memmove(fb, fb + shift, fb_size - shift);
+    memset(fb + fb_size - shift, 0, shift);
+}
+
+
+
+
 
 void ClearScreen() {
     move_cursor(0,0);
-    for (int i = 0; i < 80*25; i++) {
-        text_mode_memory[i] = (uint16_t)' ' | ((uint16_t)0x0F << 8);
-    }
-    clear_13h_screen(1);
+
+    size_t fb_size = Multiboot_info->framebuffer_width * Multiboot_info->framebuffer_height * (Multiboot_info->framebuffer_bpp / 8);
+    memset(graph_mode_fb, 0, fb_size);
 }
+
+// short old_cmdline_cursor_pos
 
 void move_cursor(int x, int y) {
     if (x < 0) x = 0;
-    if (x >= 80) x = 79;
+    if (x >= K_TERMINAL_WIDTH) x = K_TERMINAL_WIDTH - 1;
     if (y < 0) y = 0;
-    if (y >= 25) y = 24;
+    if (y >= K_TERMINAL_HEIGHT) y = K_TERMINAL_HEIGHT - 1;
     vgaX = x;
     vgaY = y;
-
-    uint16_t pos = y * 80 + x;
-    __asm__ volatile ("outb %0, %1" : : "a"((char)0x0F), "d"((uint16_t)0x3D4));
-    __asm__ volatile ("outb %0, %1" : : "a"((char)(pos & 0xFF)), "d"((uint16_t)0x3D5));
-    __asm__ volatile ("outb %0, %1" : : "a"((char)0x0E), "d"((uint16_t)0x3D4));
-    __asm__ volatile ("outb %0, %1" : : "a"((char)((pos >> 8) & 0xFF)), "d"((uint16_t)0x3D5));
-
+    /////////////////////////////////////////////////////////////////////////////////////////////////
 }
 
 int printstr(const char* str) {
@@ -98,18 +117,18 @@ int printstr(const char* str) {
         if (*str == '\n') {
             vgaX = 0;
             vgaY++;
-            if (vgaY >= 25) {
-                vgaY = 24; 
+            if (vgaY >= K_TERMINAL_HEIGHT) {
+                vgaY = K_TERMINAL_HEIGHT -1; 
                 Scroll_Down();
             }
         } else {
             put_char(vgaX, vgaY, *str, print_color);
             vgaX++;
-            if (vgaX >= 80) {
+            if (vgaX >= K_TERMINAL_WIDTH) {
                 vgaX = 0;
                 vgaY++;
-                if (vgaY >= 25) {
-                    vgaY = 24; 
+                if (vgaY >= K_TERMINAL_HEIGHT) {
+                    vgaY = K_TERMINAL_HEIGHT -1; 
                     Scroll_Down();
                 }
             }
@@ -125,18 +144,18 @@ int printlen(const char *buffer, unsigned int length) {
         if (buffer[i] == '\n') {
             vgaX = 0;
             vgaY++;
-            if (vgaY >= 25) {
-                vgaY = 24; 
+            if (vgaY >= K_TERMINAL_HEIGHT) {
+                vgaY = K_TERMINAL_HEIGHT -1; 
                 Scroll_Down();
             }
         } else {
             put_char(vgaX, vgaY, buffer[i], print_color);
             vgaX++;
-            if (vgaX >= 80) {
+            if (vgaX >= K_TERMINAL_WIDTH) {
                 vgaX = 0;
                 vgaY++;
-                if (vgaY >= 25) {
-                    vgaY = 24; 
+                if (vgaY >= K_TERMINAL_HEIGHT) {
+                    vgaY = K_TERMINAL_HEIGHT -1; 
                     Scroll_Down();
                 }
             }
@@ -155,91 +174,9 @@ int printlen(const char *buffer, unsigned int length) {
 
 bool extended = false;
 
-volatile uint8_t* input_char_buffer = (volatile uint8_t*)INPUT_CHAR_BUFFER_ADDRESS;
+volatile uint8_t* input_char_buffer = (volatile uint8_t*)&INPUT_CHAR_BUFFER;
 
 
-
-
-// unsigned char GetInputChar() {
-//     unsigned char c = 0;
-//     while (c == 0) {
-//         uint8_t status;
-//         __asm__ __volatile__("inb $0x64, %0" : "=a"(status));
-//         if (!(status & 0x01)) continue;
-
-//         uint8_t scancode;
-//         __asm__ __volatile__("inb $0x60, %0" : "=a"(scancode));
-
-//         if (scancode == 0xE0) {
-//             extended = true;
-//             continue;
-//         }
-
-//         bool released = (scancode & 0x80) != 0;
-//         uint8_t keycode = scancode & 0x7F;
-
-//         if (extended) {
-//             switch (keycode) {
-//                 case 0x1D: ctrl_pressed = !released; break;   // Right Ctrl (extended)
-//                 case 0x38: altgr_pressed = !released; break;  // Right Alt (AltGr)
-//             }
-//             if (released) {
-//                 extended = false;
-//                 continue; // skip extended key release codes (if not caught with the switchable keys switch statement )
-//             }
-//             switch (keycode) {
-//                 case 0x48: c = KEY_UP; break;
-//                 case 0x50: c = KEY_DOWN; break;
-//                 case 0x4B: c = KEY_LEFT; break;
-//                 case 0x4D: c = KEY_RIGHT; break;
-//                 case 0x47: c = KEY_HOME; break;
-
-//                 default:
-//                     // Unknown extended code: ignore or handle here
-//                     break;
-//             }
-//             extended = false;
-//             if (c != 0) return c;
-//             continue;
-//         }
-
-//         // Handle modifier keys (non-extended)
-//         switch (keycode) {
-//             case 0x2A: // Left Shift
-//             case 0x36: // Right Shift
-//                 GET_KEYBOARD_MOD_FLAG() = !released;
-//                 break;
-//             case 0x3A: // Caps Lock
-//                 if (!released) caps_lock_on = !caps_lock_on;
-//                 break;
-//             case 0x1D: // Left Ctrl
-//                 ctrl_pressed = !released;
-//                 break;
-//             case 0x38: // Left Alt
-//                 alt_pressed = !released;
-//                 break;
-//         }
-//         if (released) continue; // ignore key releases for chars
-
-//         // Determine current modifier state
-//         KeyModifier mod = MOD_Normal;
-//         if (altgr_pressed) {
-//             mod = MOD_AltGr;
-//         } else if (shift_pressed ^ caps_lock_on) {
-//             mod = MOD_Shift;
-//         }
-
-//         unsigned char base_char = keymaps[current_Language][mod][keycode];
-
-//         // Ctrl modifies only a-z chars and only if AltGr NOT pressed
-//         if (ctrl_pressed && base_char >= 'a' && base_char <= 'z' && !altgr_pressed) {
-//             base_char = base_char -'a' + CTRL_KEY_COMBO; // Ctrl + letter → control char
-//         }
-
-//         c = base_char;
-//     }
-//     return c;
-// }
 
 
 
@@ -321,7 +258,7 @@ unsigned char GetInputCharNonBlocking(void) {
     if ((GET_KEYBOARD_MOD_FLAG(CTRL_PRESSED) != 0) && base_char >= 'A' && base_char <= 'z' && !GET_KEYBOARD_MOD_FLAG(ALTGR_PRESSED)) {
         base_char = base_char - 'A' + CTRL_KEY_COMBO;
     }
-
+    // Sys_log("%c %d",base_char,(int)base_char);
     return base_char;
 }
 
@@ -331,9 +268,14 @@ unsigned char getc(){
     unsigned char chr = 0;
     while(chr == 0){
         if(input_char_buffer[0]){
-            // Sys_log("[GETC] c:%c  icb:%x",input_char_buffer[0],input_char_buffer);
+            // Sys_log("c:%c  icb:%x \n\n",input_char_buffer[0],(int)input_char_buffer[0]);
             chr = input_char_buffer[0];
-            memcpy((void*)&input_char_buffer[0],(void*)&input_char_buffer[1],INPUT_CHAR_BUFFER_SIZE-1);
+            // Sys_log("%c %c %c %c",input_char_buffer[0],input_char_buffer[1], input_char_buffer[2], input_char_buffer[3])
+            for (int i = 0; i < INPUT_CHAR_BUFFER_SIZE-1; i++) {
+                input_char_buffer[i] = input_char_buffer[i+1];
+            }
+           
+
             input_char_buffer[INPUT_CHAR_BUFFER_SIZE-1] = 0;
         }
         sleep(1);//since it fixes it smh
@@ -585,7 +527,7 @@ int printLine(const char* str, int line){
     }
     if(*str =='\n')str++;
     amount = 0;
-    while(*str != '\0' && *str != '\n' && vgaX < 80) {
+    while(*str != '\0' && *str != '\n' && vgaX < K_TERMINAL_WIDTH) {
         put_char(vgaX, vgaY, *str, 0x0F);
         str++;
         vgaX++;
@@ -993,51 +935,3 @@ void reset_input_buffer(){
 
 
 
-
-// GRAPHICAL BASED FUNCS(modified vga text ones)
-
-
-void decode_vga_colors(uint8_t attr, uint32_t* fg, uint32_t* bg) {
-    static const uint32_t vga_colors[16] = {
-        0x000000, 0x0000AA, 0x00AA00, 0x00AAAA,
-        0xAA0000, 0xAA00AA, 0xAA5500, 0xAAAAAA,
-        0x555555, 0x5555FF, 0x55FF55, 0x55FFFF,
-        0xFF5555, 0xFF55FF, 0xFFFF55, 0xFFFFFF
-    };
-
-    *fg = vga_colors[attr & 0x0F];
-    *bg = vga_colors[(attr >> 4) & 0x0F];
-}
-
-void vga_txt_to_gfx(Rect area) {
-    for (int y = 0; y < VGA_03_HEIGHT; y++) {
-        for (int x = 0; x < VGA_03_WIDTH; x++) {
-            int index = y * VGA_03_WIDTH + x;
-            uint16_t entry = text_mode_memory[index];
-
-            char c = entry & 0xFF;
-            uint8_t attr = (entry >> 8) & 0xFF;
-
-            uint32_t fg_color, bg_color;
-            decode_vga_colors(attr, &fg_color, &bg_color);
-
-            int pixel_x = area.x + x * 4;
-            int pixel_y = area.y + y * 6;
-
-            
-            // Draw the character
-            draw_bitmap_char(
-                c,
-                pixel_x,
-                pixel_y,
-                8,
-                16,
-                fg_color,
-                font8x16,
-                false,  
-                false,  
-                true    
-            );
-        }
-    }
-}

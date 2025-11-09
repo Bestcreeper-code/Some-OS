@@ -1,11 +1,13 @@
     %define CTRL_KEY_COMBO 159
 
     ; 256 chars
-    %define INPUT_CHAR_BUFFER_ADDRESS 0x22F9
+    %define INPUT_CHAR_BUFFER_OFFSET 397
 
     global irq1_handler ; PS/2 keyboard 
 
     extern GetInputCharNonBlocking
+
+    extern kernel_data_ptr
 
 section .text
     irq1_handler:
@@ -20,13 +22,20 @@ section .text
 
         cmp al, 0
         je no_add
-
+        
         mov ecx, 0
+        
+        mov edi, dword  [kernel_data_ptr]
+        add edi, INPUT_CHAR_BUFFER_OFFSET
+        
+
+
+
     loop1:
     
         cmp ecx, 256
         je no_add
-        cmp BYTE [INPUT_CHAR_BUFFER_ADDRESS + ecx], 0
+        cmp BYTE [edi + ecx], 0
         je end_of_loop1
 
         inc ecx
@@ -34,7 +43,7 @@ section .text
 
     end_of_loop1:
         ; Store the character in the input buffer
-        mov BYTE [INPUT_CHAR_BUFFER_ADDRESS + ecx], al
+        mov BYTE [edi + ecx], al
         
 
     no_add:

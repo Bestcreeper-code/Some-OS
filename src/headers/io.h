@@ -8,10 +8,11 @@
 
 
 #include "string.h"
-#include "addresses.h"
-
-#define VGA_03_WIDTH  80
-#define VGA_03_HEIGHT 25
+#include "kernel_data.h"
+#include "multiboot_info.h"
+//1024x768
+#define K_TERMINAL_WIDTH  (Multiboot_info->framebuffer_width /8)
+#define K_TERMINAL_HEIGHT (Multiboot_info->framebuffer_height /16)
 
 #define KEY_ESCAPE     27
 #define KEY_BACKSPACE  8
@@ -45,11 +46,11 @@ extern char current_Language;
 void init_keyboard();
 // VGA/Screen output
 void put_char(int x, int y, uint8_t c, uint8_t color);
-char get_char(int x, int y);
+
 void Scroll_Down();
 void ClearScreen();
 void move_cursor(int x, int y);
-void enable_cursor(uint8_t start, uint8_t end);
+
 
 // Text Output
 int printstr(const char* str);

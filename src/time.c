@@ -20,6 +20,7 @@ uint64_t* timer_ticks = (uint64_t*)&TICKS_AMOUNT;
 
 // ----------------- PIC -----------------
 void pic_remap() {
+    Sys_log("remapping PIC...\n");
     // Initialize PICs in cascade mode
     outb(0x20, 0x11); // Start initialization (master PIC)
     outb(0xA0, 0x11); // Start initialization (slave PIC)
@@ -35,11 +36,14 @@ void pic_remap() {
     
     outb(0x21, 0x0);  // Clear master PIC mask (enable all IRQs)
     outb(0xA1, 0x0);  // Clear slave PIC mask (enable all IRQs)
+
+    Sys_log("PIC remapped successfully.\n");
 }
 
 // ----------------- PIT -----------------
 
 void pit_init() {
+    Sys_log("Initializing PIT...\n");
     force_alloc(TICKS_AMOUNT,sizeof(uint64_t));
     *timer_ticks =0;
     
@@ -48,6 +52,7 @@ void pit_init() {
     outb(PIT_COMMAND, 0x36);                 // Channel 0, lobyte/hibyte, mode 3
     outb(PIT_CHANNEL0, divisor & 0xFF);      // Low byte
     outb(PIT_CHANNEL0, (divisor >> 8) & 0xFF); // High byte
+    Sys_log("PIT initialized.\n");
 }
 
 

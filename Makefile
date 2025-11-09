@@ -3,7 +3,7 @@ CC = gcc
 NASM = nasm
 LD = ld
 OBJCOPY = objcopy
-CFLAGS = -m32 -g -ffreestanding 
+CFLAGS = -m32 -g -ffreestanding -Isrc
 LDFLAGS = -m elf_i386 -T linker.ld -z noexecstack
 
 
@@ -108,6 +108,23 @@ gdb: all
 		-serial stdio \
 		-s -S \
 		-display gtk 
+
+
+noreboot: all
+	qemu-system-i386 \
+		-m 512M \
+		-boot d \
+		-cdrom $(ISO_FILE) \
+		-drive file=$(DISK_IMG),format=raw,if=ide \
+		-serial stdio \
+		-s -S \
+		-display gtk \
+		-no-reboot \
+		-d int,cpu_reset,unimp,guest_errors \
+		-D qemu-emulogs.txt
+
+
+
 
 # === Clean ===
 clean:

@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "addresses.h"
+#include "kernel_data.h"
 // #define TICKS_AMOUNT_POINTER 0x2700
 
 typedef struct {

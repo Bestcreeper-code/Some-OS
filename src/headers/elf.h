@@ -160,9 +160,9 @@ typedef struct {
 
     int (*entry_point)(int, char**);
 
-    uintptr_t stack_top;
-    uint32_t esp;
-    uintptr_t stack_bottom;
+    uintptr_t ph_stack_top;
+    uint32_t v_esp;
+    uintptr_t ph_stack_bottom;
 } LoadedElf;
 
 typedef struct

@@ -12,7 +12,7 @@
 #define CONSOLE_REQUEST_QUEUE_SIZE 32
 
 #define KERNEL_STACK_BASE 0xFFFFF
-#define KERNEL_STACK_SIZE (32 * _PAGE_SIZE)
+#define KERNEL_STACK_PAGE_AMOUNT (32)
 
 
 typedef struct {
@@ -48,12 +48,15 @@ typedef struct {
     uint64_t ticks_amount;                          
                                                    
 
-    uint8_t free_region_map[0x804];                
+    uint8_t free_region_map[0x804];  
+    
+    uint32_t kernel_flags[2];
                                                    
 } KernelData_t;
 
-extern KernelData_t kernel_data;
 
+extern KernelData_t kernel_data;
+extern KernelData_t* kernel_data_ptr;
 
 
 
@@ -71,7 +74,7 @@ extern KernelData_t kernel_data;
 #define CONSOLE_REQUEST_QUEUE                            (kernel_data.console_request_queue)    // 32 char*(commands) that apps can request to the console on exit
 // #define TASK_SWITCHING_FLAG                              (kernel_data.task_switching_flag)    // activate/deactivate task switching between kernel and running app
 #define KEYBOARD_MOD_KEYS_FLAGS                          (kernel_data.keyboard_mod_keys_flags)    // Modifier keys flags (shift,ctrl,...)
-#define INPUT_CHAR_BUFFER_ADDRESS                        (kernel_data.input_char_buffer)    // Buffer for 256 input chars (start)
+#define INPUT_CHAR_BUFFER                                (kernel_data.input_char_buffer)    // Buffer for 256 input chars (start)
 #define FATFS_SYS                                        (kernel_data.fatfs_sys_addr)    // FATFS system data (0x0234 bytes size)
 #define KERNEL_STACK_BASE_STORE_ADDRESS                  (kernel_data.kernel_stack_base_store_address)    // uint32, address storing kernel EbP
 #define KERNEL_STACK_POINTER_STORE_ADDRESS               (kernel_data.kernel_stack_pointer_store_address)    // uint32 | the address of the kernel ESP
@@ -81,8 +84,13 @@ extern KernelData_t kernel_data;
 #define FREE_REGION_MAP                                  (kernel_data.free_region_map)    // 2052 Bytes or 0x804 Bytes (free_region_map_t)
 
 
+typedef enum {
+    KDATA_FLAG_KERNEL_TERMINAL_ON,
+    KDATA_FLAG_PAGING_ON,
+}Kernel_Data_Flag;
 
-
+int Get_Kernel_Flag(Kernel_Data_Flag flag);
+int Set_Kernel_Flag(Kernel_Data_Flag flag, bool value);
 
 
 #endif // ADRESSES_H

@@ -118,10 +118,10 @@ LoadedElf* LoadElf(const char* path) {
     memset(page_groups, 0, sizeof(Page_Group) * (elf_header.e_phnum + 2));
 
     uintptr_t kernel_start = (uintptr_t)&_kernel_start;
-    uintptr_t kernel_end = (uintptr_t)&_kernel_end;
+    uintptr_t kernel_end   = (uintptr_t)&_kernel_end;
     uintptr_t id_map_start = kernel_start & ~(_PAGE_SIZE - 1);
-    uintptr_t id_map_end = (kernel_end + (_PAGE_SIZE - 1)) & ~(_PAGE_SIZE - 1);
-    size_t kernel_pages = (id_map_end - id_map_start) / _PAGE_SIZE;
+    uintptr_t id_map_end   = (kernel_end + (_PAGE_SIZE - 1)) & ~(_PAGE_SIZE - 1);
+    size_t kernel_pages    = (id_map_end - id_map_start) / _PAGE_SIZE;
 
 #if ELF_DEBUG_MODE
     Sys_log("Mapping kernel: 0x%x - 0x%x (%u pages)\n", id_map_start, id_map_end, kernel_pages);
@@ -133,6 +133,8 @@ LoadedElf* LoadElf(const char* path) {
         .pte_bits = {.present = 1, .rw = 1, .user = 0, .addr = id_map_start >> 12}
     };
 
+    //pt_load segs 
+    int seg_index = 0;
     for (int i = 0; i < elf_header.e_phnum; i++) {
         Elf32_Phdr* phdr = &program_headers[i];
         if (phdr->p_type != PT_LOAD) continue;
@@ -142,9 +144,11 @@ LoadedElf* LoadElf(const char* path) {
         page_addr_t segment_mem = page_alloc(num_pages, (phdr->p_flags & PF_W) ? 1 : 0, 1);
         if (!segment_mem) {
             Sys_log("Failed to allocate memory for segment %d\n", i);
-            for (int j = 0; j < i; j++)
-                if (page_groups[j].size)
-                    page_free(page_groups[j].pte_bits.addr << 12, page_groups[j].size);
+            //free segs page
+            for (int j = 0; j < seg_index; j++) {
+                if (page_groups[j+1].size)
+                    page_free(page_groups[j+1].pte_bits.addr << 12, page_groups[j+1].size);
+            }
             free(page_groups);
             free(program_headers);
             f_close(&file);
@@ -152,19 +156,25 @@ LoadedElf* LoadElf(const char* path) {
         }
 
 #if ELF_DEBUG_MODE
-        Sys_log("Segment %d -> VA: 0x%x, PA: 0x%x, Size: %u bytes\n", i, phdr_vaddr, segment_mem, phdr->p_memsz);
+        Sys_log("Segment %d -> VA: 0x%x, PA: 0x%x, Size: %u bytes\n", seg_index, phdr_vaddr, segment_mem, phdr->p_memsz);
 #endif
 
-        page_groups[i+1] = (Page_Group){
+        page_groups[seg_index+1] = (Page_Group){
             .size = num_pages,
             .addr = phdr_vaddr,
             .pte_bits = {.present = 1, .rw = (phdr->p_flags & PF_W) ? 1 : 0, .user = 1, .addr = segment_mem >> 12}
         };
+        seg_index++;
 
         f_lseek(&file, phdr->p_offset);
         res = f_read(&file, (void*)segment_mem, phdr->p_filesz, &bytesRead);
         if (res != FR_OK || bytesRead != phdr->p_filesz) {
             Sys_log("Failed to read segment data for segment %d\n", i);
+            //free segs pages
+            for (int j = 0; j < seg_index; j++) {
+                if (page_groups[j+1].size)
+                    page_free(page_groups[j+1].pte_bits.addr << 12, page_groups[j+1].size);
+            }
             free(page_groups);
             free(program_headers);
             f_close(&file);
@@ -176,10 +186,16 @@ LoadedElf* LoadElf(const char* path) {
         }
     }
 
-    page_addr_t app_stack = page_alloc(DEFAULT_STACK_PAGE_AMOUNT, 1, 1);
-    if (!app_stack) {
+    //stack
+
+    page_addr_t stack_pa = page_alloc(DEFAULT_STACK_PAGE_AMOUNT, 1, 1);
+    if (!stack_pa) {
         Sys_log("Failed to allocate stack\n");
-        pd_free(&app_page_dir);
+        
+        for (int j = 0; j < seg_index; j++) {
+            if (page_groups[j+1].size)
+                page_free(page_groups[j+1].pte_bits.addr << 12, page_groups[j+1].size);
+        }
         free(page_groups);
         free(program_headers);
         f_close(&file);
@@ -187,16 +203,20 @@ LoadedElf* LoadElf(const char* path) {
     }
 
 #if ELF_DEBUG_MODE
-    Sys_log("Stack allocated at PA: 0x%08X\n", app_stack);
+    Sys_log("Stack physical allocated at PA: 0x%x (pages: %u)\n", stack_pa, (unsigned)DEFAULT_STACK_PAGE_AMOUNT);
 #endif
 
-    page_groups[elf_header.e_phnum] = (Page_Group){
+    // map stack
+    uintptr_t stack_v_bottom = DEFAULT_STACK_TOP_VADDR - (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
+    page_groups[seg_index+1] = (Page_Group){
         .size = DEFAULT_STACK_PAGE_AMOUNT,
-        .addr = DEFAULT_STACK_BOTTOM_VADDR,
-        .pte_bits = {.present = 1, .rw = 1, .user = 1, .addr = app_stack >> 12}
+        .addr = stack_v_bottom,
+        .pte_bits = {.present = 1, .rw = 1, .user = 1, .addr = stack_pa >> 12}
     };
 
-    new_page_dir(page_groups, elf_header.e_phnum + 2, &app_page_dir);
+    //make pd
+    new_page_dir(page_groups, seg_index + 2, &app_page_dir);
+
     free(program_headers);
     free(page_groups);
 
@@ -208,27 +228,23 @@ LoadedElf* LoadElf(const char* path) {
         return NULL;
     }
 
-    loaded_elf->entry_point = elf_header.e_entry;
-    loaded_elf->page_dir = app_page_dir;
-    loaded_elf->stack_bottom = app_stack;
-    loaded_elf->esp = DEFAULT_STACK_BOTTOM_VADDR;
-    loaded_elf->stack_top = app_stack + DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE;
-    loaded_elf->filename = (path);
-
-    if (!loaded_elf->filename) {
-        Sys_log("strdup failed for path\n");
-        pd_free(&app_page_dir);
-        free(loaded_elf);
-        f_close(&file);
-        return NULL;
-    }
+    loaded_elf->entry_point  = elf_header.e_entry;
+    loaded_elf->page_dir     = app_page_dir;
+    
+    loaded_elf->ph_stack_bottom = stack_pa;
+    loaded_elf->ph_stack_top    = stack_pa + (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
+    loaded_elf->v_esp          = DEFAULT_STACK_TOP_VADDR;
+    loaded_elf->filename     = (path);
 
     f_close(&file);
 #if ELF_DEBUG_MODE
     Sys_log("ELF file '%s' loaded successfully. Entry: 0x%x\n", path, loaded_elf->entry_point);
+    Sys_log("LoadedElf: phys_stack_bottom=0x%x phys_stack_top=0x%x virt_esp=0x%x\n",
+            loaded_elf->ph_stack_bottom, loaded_elf->ph_stack_top, loaded_elf->v_esp);
 #endif
     return loaded_elf;
 }
+
 
 
 
@@ -245,9 +261,9 @@ ProcessInfo exec_ELF(char* path){
         return (ProcessInfo){0}; // pid 0 = error
     }
 
-    _setup_user_stack_sched_frame((void*)elf->stack_top, &elf->esp, (uint32_t)elf->entry_point);
-
-    pid_t pid = new_pcb(&elf->page_dir, elf->filename, &elf->esp, &elf->stack_top);
+    _setup_user_stack_sched_frame((void*)elf->ph_stack_top, &elf->v_esp, (uint32_t)elf->entry_point);
+    uint32_t ebp = DEFAULT_STACK_TOP_VADDR;
+    pid_t pid = new_pcb(&elf->page_dir, elf->filename, &elf->v_esp, &ebp);
     if(pid <0){
 #if ELF_DEBUG_MODE
         Sys_log("Failed to create PCB for ELF: %s (%d)\n", elf->filename, pid);

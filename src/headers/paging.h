@@ -63,7 +63,8 @@ extern PD_t _k_pd;
 
 
 int setup_paging();
-void map_page(uint32_t virtual_addr, uint32_t physical_addr, uint8_t present, uint8_t rw, uint8_t user);
+void k_map_page(uint32_t virtual_addr, uint32_t physical_addr, uint8_t present, uint8_t rw, uint8_t user);
+void pd_map_page(PD_t* pd, uint32_t virtual_addr, uint32_t physical_addr, uint8_t present,uint8_t rw, uint8_t user);
 PTE* get_pte(uint32_t index);
 PTE* get_pte_for_pa(uint32_t pa);
 

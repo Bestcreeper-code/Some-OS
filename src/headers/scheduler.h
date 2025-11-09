@@ -17,12 +17,18 @@ typedef struct Linked_PCB_t {
 
     uint8_t state;
 
-    PD_t* page_dir;
+    uintptr_t cr3;
 
     struct Linked_PCB_t* next;
 } __attribute__((__packed__)) Linked_PCB_t; 
 
 typedef struct __attribute__((packed)) ProcessStackFrame {
+    // // seg regs push
+    // uint32_t gs;
+    // uint32_t fs;
+    // uint32_t es;
+    // uint32_t ds;
+
     // pushfd 
     uint32_t eflags;
 
