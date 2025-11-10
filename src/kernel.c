@@ -20,6 +20,7 @@
 #include "headers/elf.h"
 #include "headers/paging.h"
 #include "headers/scheduler.h"
+#include "headers/symbols.h"
 
 #include "data/globals.h"
 #include "data/textconsts.h"
@@ -40,21 +41,21 @@ extern int vgaX, vgaY;
 KernelData_t kernel_data;
 KernelData_t* kernel_data_ptr;
 
-
+extern const uint8_t _binary_syms_bin_start[];
+extern const uint8_t _binary_syms_bin_end[];
 
 void kmain(unsigned long magic, unsigned long mb_struct_addr) {
     
     kernel_data_ptr = &kernel_data;
-
+    
     Set_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON, false);
     Set_Kernel_Flag(KDATA_FLAG_PAGING_ON, false);
     task_switching_flag = 0;
 
-
+    Setup_Kernel_Syms();
 
     serial_init();
-    
-    
+
     
     Sys_log("interrupts disabled.\n");
     Sys_log("Kernel starting...\n");
@@ -68,7 +69,7 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
     memcpy(Get_multiboot_info(), (void*)mb_struct_addr, sizeof(multiboot_info_t));  
     
     
-    initGdt();
+    init_desc_tables();
 
     
     idt_init();
@@ -91,7 +92,7 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
     
     
     
-    Sys_log("Setting up paging...\n");
+
     
     if (setup_paging() != 0  ) {
         
@@ -201,7 +202,7 @@ end_mounting:
     Sys_log("Interrupts reenabled.\n");
     
     
-    scheduler_init();
+    // scheduler_init();
     
     Sys_log("Loading login manager...\n");
     exec_ELF("0:/loop.elf");//DEBUG sched just crashes when there is more than 1 process

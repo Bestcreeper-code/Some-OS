@@ -108,6 +108,7 @@ cpu_registers_t* _cpu_regs;
 
 
 void __kernel_crash_handler__(int argc, uint32_t* argv) {
+    Set_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON, false);
     Sys_log("In crash handler (%d | %d)\n",(int)argv[0],(int)argv[1]);
     
     
@@ -196,7 +197,7 @@ void __kernel_crash_handler__(int argc, uint32_t* argv) {
         draw_bitmap_string("Call Stack Trace:", 0, 220, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
         Sys_log(" Call Stack Trace:\n");
         for (int i = 0; i < 8; i++) {
-            sprintf(buf, "%s", Get_Symbol(call_stack[i]).str);
+            sprintf(buf, "%s (%x)", Get_Symbol(call_stack[i])->str, call_stack[i]);
             draw_bitmap_string(buf, 20, 240 + i * 20, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
             Sys_log(" %s\n", buf);
         }

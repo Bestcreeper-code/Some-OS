@@ -25,7 +25,7 @@ typedef enum {
 
 int Setup_Kernel_Syms();
 
-BacktraceSymbol Get_Symbol(uintptr_t addr);
+BacktraceSymbol* Get_Symbol(uintptr_t addr);
 
 #endif // SYMBOLS_H
 

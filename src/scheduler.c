@@ -111,11 +111,11 @@ int scheduler_init(){
     // Sys_log("Starting sched...\n");
     memset(pid_bitmap,0xFF,MAX_PID/8);
     pid_bitmap[0] &= ~(1 << 0);
-
+    
     new_pcb(&_k_pd,"Kernel\n",(uint32_t*)0X200000,(uint32_t*)0X200000);//placeholder esp since will be pushed anywabc is the curr proc
             
     _scheduler_current_process = _scheduler_first_process;
-
+    
     // task_switching_flag = 1;
 
     // for(;;){Sys_log("zf\n");

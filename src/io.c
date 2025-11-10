@@ -78,10 +78,12 @@ void put_char(int x, int y, uint8_t c, uint8_t color) {
 
 
 void Scroll_Down(void) {
-    size_t bytes_per_pixel = Multiboot_info->framebuffer_bpp / 8;
-    size_t line_bytes = Multiboot_info->framebuffer_pitch * bytes_per_pixel;
+    
+    size_t line_bytes = Multiboot_info->framebuffer_pitch ;
+
     size_t shift = default_kterm_font_h * line_bytes;
-    size_t fb_size = Multiboot_info->framebuffer_height * Multiboot_info->framebuffer_pitch * bytes_per_pixel;
+
+    size_t fb_size = Multiboot_info->framebuffer_height * Multiboot_info->framebuffer_pitch ;
 
     uint8_t *fb = (uint8_t *)(uintptr_t)Multiboot_info->framebuffer_addr;
     memmove(fb, fb + shift, fb_size - shift);

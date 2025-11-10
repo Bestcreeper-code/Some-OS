@@ -7,7 +7,7 @@ struct gdt_entry_struct gdt_entries[5];
 struct gdt_ptr_struct gdt_ptr;
 static struct tss_entry tss;
 
-void initGdt(){
+void init_desc_tables(){
     gdt_ptr.limit = (sizeof(struct gdt_entry_struct)*5) - 1;
     gdt_ptr.base = (uint32_t)&gdt_entries;
     

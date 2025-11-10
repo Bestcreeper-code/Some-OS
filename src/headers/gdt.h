@@ -43,7 +43,7 @@ struct tss_entry {
 void init_tss(uint32_t esp);
 
 
-void initGdt();
+void init_desc_tables();
 void setGdtGate(uint32_t gate, uint32_t base, uint32_t limit, uint8_t access, uint8_t granularity);
 
 
