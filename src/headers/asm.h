@@ -49,7 +49,9 @@ typedef struct {
     uint32_t cr0, cr2, cr3, cr4;
 } __attribute__((packed)) cpu_registers_t;
 
-
+typedef struct {
+    uintptr_t top,bottom;
+}  __attribute__((packed)) Stack_t;
 
 static inline void capture_cpu_registers(cpu_registers_t* regs) {
     asm volatile(

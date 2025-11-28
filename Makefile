@@ -5,11 +5,11 @@ CC = gcc
 NASM = nasm
 LD = ld
 OBJCOPY = objcopy
-CFLAGS = -m32 -g -ffreestanding -Isrc
-LDFLAGS = -m elf_i386 -T linker.ld -z noexecstack
+CFLAGS = -m32 -g -ffreestanding -Isrc -fno-stack-protector -mno-sse -mno-sse2 -fno-tree-vectorize
+LDFLAGS = -m elf_i386 -T linker.ld -z noexecstack 
 
 # === Directories ===
-SRC_DIRS = src FatFs
+SRC_DIRS = src FatFs distorm/src
 BUILD_DIR = build
 ISO_DIR = iso/boot
 GRUB_DIR = $(ISO_DIR)/grub
@@ -115,6 +115,19 @@ gdb: all
 		-serial stdio \
 		-s -S \
 		-display gtk 
+
+noreboot: all
+	qemu-system-i386 \
+		-m 512M \
+		-boot d \
+		-cdrom $(ISO_FILE) \
+		-drive file=$(DISK_IMG),format=raw,if=ide \
+		-serial stdio \
+		-s -S \
+		-display gtk \
+		-no-reboot \
+		-d int,cpu_reset,unimp,guest_errors \
+		-D qemu-emulogs.txt
 
 # === Clean ===
 clean:

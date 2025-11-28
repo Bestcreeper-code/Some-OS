@@ -5,6 +5,7 @@
 #include <stddef.h>
 
 #include "paging.h"
+#include "asm.h"
 
 #define EI_NIDENT 16
 #define SHN_UNDEF 0
@@ -21,7 +22,7 @@ typedef struct {
     uint16_t      e_type;
     uint16_t      e_machine;
     uint32_t      e_version;
-    int (*e_entry)(int, char**);
+    uintptr_t     e_entry;
     uint32_t      e_phoff;
     uint32_t      e_shoff;
     uint32_t      e_flags;
@@ -154,16 +155,16 @@ typedef enum {
 
 
 typedef struct {
-    char* filename;
-
+    uint32_t entry_point;
     PD_t page_dir;
 
-    int (*entry_point)(int, char**);
+    Stack_t k_stack;
+    Stack_t us_stack;
 
-    uintptr_t ph_stack_top;
-    uint32_t v_esp;
-    uintptr_t ph_stack_bottom;
+    uint32_t k_esp;
+    char* filename;
 } LoadedElf;
+
 
 typedef struct
 {

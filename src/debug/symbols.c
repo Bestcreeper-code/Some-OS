@@ -28,8 +28,8 @@ BacktraceSymbol* Get_Symbol(uintptr_t addr) {
 
         if (current + offsetof(BacktraceSymbol, str) + sym->str_len > end) break;
 
-        if (sym->addr > addr) {
-            break; // found the symbol that is just after addr
+        if ((uint32_t)sym->addr > addr) {
+            break; 
         }
 
         previous = sym;
@@ -38,9 +38,9 @@ BacktraceSymbol* Get_Symbol(uintptr_t addr) {
 
     if (!previous) return NULL;
 
-    // Allocate a new BacktraceSymbol and copy it
+    
     BacktraceSymbol* res = malloc(sizeof(BacktraceSymbol) + previous->str_len);
-    if (!res) return NULL; // malloc failed
+    if (!res) return NULL; 
 
     memcpy(res, previous, offsetof(BacktraceSymbol, str)); // copy struct fields except str
     res->str_len = previous->str_len;

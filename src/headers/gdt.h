@@ -40,8 +40,13 @@ struct tss_entry {
     uint16_t ldt;
     uint16_t trap, iomap_base;
 } __attribute__((packed));
-void init_tss(uint32_t esp);
 
+// extern struct tss_entry tss;
+
+void init_tss(uint32_t esp);
+void setTssGate(uint32_t index, uint32_t base, uint32_t limit);
+
+void setTssEsp(uint32_t esp);
 
 void init_desc_tables();
 void setGdtGate(uint32_t gate, uint32_t base, uint32_t limit, uint8_t access, uint8_t granularity);

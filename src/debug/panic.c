@@ -8,9 +8,10 @@
 #include "../headers/vga_modes.h"
 #include "../headers/power.h"
 #include "../headers/asm.h"
-#include "../headers/crashhndl.h"
+#include "../headers/panic.h"
 #include "../headers/symbols.h"
 #include "../data/textconsts.h"
+#include "../../distorm/include/distorm.h"
 
 // CPU Exceptions
 static const char* crash_messages[] = {
@@ -107,14 +108,17 @@ enum CrashType {
 cpu_registers_t* _cpu_regs;
 
 
-void __kernel_crash_handler__(int argc, uint32_t* argv) {
+void _panic_handler(int argc, uint32_t* argv) {
     Set_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON, false);
-    Sys_log("In crash handler (%d | %d)\n",(int)argv[0],(int)argv[1]);
+    int isr_index = (int)argv[0];
+    Sys_log("Kernel panic (%d | %d | CR2:0x%x)\n",(int)argv[0],(int)argv[1],((cpu_registers_t*)argv[2])->cr2);
     
-    
-    graph_mode_fb = (volatile uint32_t*)(uint32_t)Multiboot_info->framebuffer_addr;
-    int fb_size = Multiboot_info->framebuffer_height * Multiboot_info->framebuffer_width * 4;
-    memset((void*)graph_mode_fb, 0, fb_size/5);
+    if (Get_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON)) {
+        
+        graph_mode_fb = (volatile uint32_t*)(uint32_t)Multiboot_info->framebuffer_addr;
+        int fb_size = Multiboot_info->framebuffer_height * Multiboot_info->framebuffer_pitch ;
+        memset((void*)graph_mode_fb, 0, fb_size);
+    }
 
     uint32_t* call_stack = NULL;
     if (argc >= 4) call_stack = (uint32_t*)argv[3];
@@ -124,7 +128,6 @@ void __kernel_crash_handler__(int argc, uint32_t* argv) {
         return;
     }
 
-    int isr_index = (int)argv[0];
     uint32_t err_code = argv[1];
     _cpu_regs = (cpu_registers_t*)argv[2];
 
@@ -184,12 +187,33 @@ void __kernel_crash_handler__(int argc, uint32_t* argv) {
 
     // Instruction bytes at EIP
     uint8_t* instr_ptr = (uint8_t*)_cpu_regs->eip;
-    char instr_bytes[64];
+    
+    
+    _DecodedInst instructions[16]; // Enough space for all instructions
+    unsigned int count = 0;
+    
+    // Decode buffer (assume 32-bit mode)
+    // _DecodeResult res = distorm_decode(
+    //     0,               // codeOffset (virtual address, 0 if not needed)
+    //     instr_ptr,            // pointer to code
+    //     sizeof(16),    // length of buffer
+    //     Decode32Bits,    // decode mode: 32-bit (i386)
+    //     instructions,    // output array
+    //     16,              // max instructions
+    //     &count           // actual number of instructions decoded
+    // );
+
+                                       
+                                       
+                                       
+    char instr_bytes[64]; 
     for (int i = 0; i < 16; i++) {
-        sprintf(instr_bytes + i * 3, "%02x ", instr_ptr[i]);
+        sprintf(instr_bytes + i * 3, "%02x ", instructions[i].size );
     }
     sprintf(buf, "Code: %s", instr_bytes);
-    draw_bitmap_string(buf, 50, 200, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+
+
+    // draw_bitmap_string(buf, 50, 200, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
     Sys_log(" %s\n", buf);
 
     // Call Stack Trace
@@ -216,3 +240,49 @@ asm volatile("sti");
     pc_reboot();
 }
 
+
+void _manual_panic(const char* error, const char* info) {
+    
+
+    
+    graph_mode_fb = (volatile uint32_t*)(uint32_t)Multiboot_info->framebuffer_addr;
+    int fb_size = Multiboot_info->framebuffer_height * Multiboot_info->framebuffer_pitch;
+    memset((void*)graph_mode_fb, 0, fb_size);
+
+    Sys_log("kernel panic triggered!\n");
+    Sys_log("  Error: %s\n", error ? error : "(null)");
+    Sys_log("  Info : %s\n", info ? info : "(null)");
+
+    // Header
+    draw_bitmap_string("MANUAL PANIC", 20, 20, 8, 16,
+        0xFFFFFFFF, font8x16, false, true, 0);
+
+    
+    if (error) {
+        draw_bitmap_string(error, 20, 60, 8, 16,
+            0xFFFFFFFF, font8x16, false, true, 0);
+    }
+
+    
+    if (info) {
+        draw_bitmap_string(info, 20, 90, 8, 16,
+            0xFFFFFFFF, font8x16, false, true, 0);
+    }
+
+    
+    draw_bitmap_string("Rebooting in 5 sec...", 20, 140, 8, 16,
+        0xFFFFFFFF, font8x16, false, true, 0);
+    Sys_log(" Rebooting in 5 sec...\n");
+
+    draw_bitmap_string("#####", 20, 160, 8, 16,
+        0x00, font8x16, false, true, 0);
+
+    asm volatile("sti");
+    for (int i = 0; i < 5; i++) {
+        draw_bitmap_char('#', 20 + (8 * i), 160, 8, 16,
+            0xFF00FF00, font8x16, false, true, true);
+        sleep(1000);
+    }
+
+    pc_reboot();
+}

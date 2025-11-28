@@ -8,9 +8,12 @@
 #define MIN_OS_PAGES 8192
 #define _PAGE_SIZE 4096
 
+#define KERNEL_PDE_COUNT 128
+
 #define _PAGETABLE_MAPPED_SIZE 0x400000
 
-typedef uintptr_t page_addr_t;
+
+typedef uintptr_t page_index;
 
 // typedef enum {
 //     OS_PAGE_FLAGS_ALLOCATED     = 1 << 0,
@@ -54,7 +57,7 @@ typedef struct {
 
 typedef struct {
     uint32_t size;
-    page_addr_t addr;
+    page_index addr;
     PTE pte_bits;
 } __attribute__((packed)) Page_Group ;
 
@@ -69,14 +72,12 @@ PTE* get_pte(uint32_t index);
 PTE* get_pte_for_pa(uint32_t pa);
 
 // allocation
-page_addr_t page_alloc(size_t amount, int read_write, int user_supervisor);
-void page_free(page_addr_t pa, size_t amount);
+page_index page_alloc(size_t amount, int read_write, int user_supervisor);
+void page_free(page_index pa, size_t amount);
 
-page_addr_t pagealloc(size_t amount);
-void pagefree(page_addr_t pa, size_t amount);
 
-void page_force_alloc(page_addr_t pa, size_t amount);
-int is_page_allocated(page_addr_t pa);
+void page_force_alloc(page_index pa, size_t amount);
+int is_page_allocated(page_index pa);
 
 // PD
 uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, PD_t* out_pd_t );
@@ -84,6 +85,8 @@ void pd_free(PD_t* pd);
 
 int v_map(PD_t* page_dir, Page_Group* groups, uint32_t group_count);
 uintptr_t PD_append_pages(PD_t* page_dir, PTE* ptes, uint32_t pte_count);
+
+page_index k_append_pages(page_index phys_start_page,uint32_t amount,uint8_t rw,uint8_t us);
 
 int unmap_page(PD_t* target_pd,uint32_t virtual_addr);
 

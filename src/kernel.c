@@ -44,8 +44,10 @@ KernelData_t* kernel_data_ptr;
 extern const uint8_t _binary_syms_bin_start[];
 extern const uint8_t _binary_syms_bin_end[];
 
+static uintptr_t mb_struct_ptr;
+
 void kmain(unsigned long magic, unsigned long mb_struct_addr) {
-    
+    mb_struct_ptr = mb_struct_addr;
     kernel_data_ptr = &kernel_data;
     
     Set_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON, false);
@@ -56,6 +58,7 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
 
     serial_init();
 
+
     
     Sys_log("interrupts disabled.\n");
     Sys_log("Kernel starting...\n");
@@ -63,11 +66,15 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
     Sys_log("with GCC ver %d.%d.%d \n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
     
     Sys_log("Multiboot magic number: 0x%x\n", (void*)magic);
-    Sys_log("Multiboot info address: 0x%x\n", mb_struct_addr);
+    Sys_log("Multiboot info address: 0x%x\n", mb_struct_ptr);
 
     Sys_log("copying multiboot info struct...\n");
-    memcpy(Get_multiboot_info(), (void*)mb_struct_addr, sizeof(multiboot_info_t));  
+    memcpy(Get_multiboot_info(), (void*)mb_struct_ptr, sizeof(multiboot_info_t));  
     
+
+    const char* cmdline = (const char*)Get_multiboot_info()->cmdline;
+    Sys_log("kernel called with: %s\n", cmdline);
+
     
     init_desc_tables();
 
@@ -102,31 +109,43 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
     }
     Set_Kernel_Flag(KDATA_FLAG_PAGING_ON, true);
     Sys_log("Paging set up successfully.\n");
-
-    // page_addr_t allocated_stack_pages = page_alloc(KERNEL_STACK_PAGE_AMOUNT, 1, 0);
-    // uintptr_t allocated_stack_top = allocated_stack_pages + (KERNEL_STACK_PAGE_AMOUNT * _PAGE_SIZE);
-    // __asm__ volatile(
-    //     "movl %0, %%esp\n"
-    //     :
-    //     : "r"(allocated_stack_top)
-    // );
-    // init_tss(allocated_stack_top);
+    
+    Sys_log("Setting up Kernel Stack.\n");
+    page_index allocated_stack_pages = page_alloc(KERNEL_STACK_PAGE_AMOUNT, 1, 0);
+    uintptr_t allocated_stack_top = allocated_stack_pages + (KERNEL_STACK_PAGE_AMOUNT * _PAGE_SIZE);
+    __asm__ volatile(
+        "movl %0, %%esp\n"
+        :
+        : "r"(allocated_stack_top)
+    );
+    init_tss(allocated_stack_top);
     
     
     
     
-    
-    parse_memory_map((multiboot_info_t*)mb_struct_addr);
+    // Sys_log("test %x\n",((multiboot_info_t*)mb_struct_ptr)->flags);for(;;);
+    parse_memory_map((multiboot_info_t*)mb_struct_ptr);
     
     
     pit_init(); 
     
     
-    
+    Sys_log("fb at %x w:%u h:%u bpp:%u pitch:%u\n",
+            (unsigned)Multiboot_info->framebuffer_addr,
+            (unsigned)Multiboot_info->framebuffer_width,
+            (unsigned)Multiboot_info->framebuffer_height,
+            (unsigned)Multiboot_info->framebuffer_bpp,
+            (unsigned)Multiboot_info->framebuffer_pitch);
     init_graphics();
     
     Set_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON, true);
-    
+    sleep(0);
+    Sys_log("fb at %x w:%u h:%u bpp:%u pitch:%u\n",
+            (unsigned)Multiboot_info->framebuffer_addr,
+            (unsigned)Multiboot_info->framebuffer_width,
+            (unsigned)Multiboot_info->framebuffer_height,
+            (unsigned)Multiboot_info->framebuffer_bpp,
+            (unsigned)Multiboot_info->framebuffer_pitch);
     
     
     
@@ -143,8 +162,8 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
     force_alloc(0x0, 65535);//stop kernel from allocating low mem as it can crash
     
     //-new_install
-    const char* cmdline = (const char*)Get_multiboot_info()->cmdline;
-    Sys_log("kernel called with: %s\n", cmdline);
+    
+    
     // refer tocommented code #1 at the bottom of this file
 
     
@@ -215,6 +234,8 @@ end_mounting:
         __asm__ volatile ("hlt");
     }
 }
+
+
 
 // entry point
 __attribute__((naked)) void _start() {

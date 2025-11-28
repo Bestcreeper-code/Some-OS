@@ -32,7 +32,7 @@ global isr30
 global isr31
 
 
-extern __kernel_crash_handler__
+extern _panic_handler
 
 section .bss
 int_indx    resd 1
@@ -226,7 +226,7 @@ isr_handler:
     push argv
     push 4
     
-    call __kernel_crash_handler__
+    call _panic_handler
     add esp, 12
 
     sti

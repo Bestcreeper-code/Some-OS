@@ -10,6 +10,7 @@
 #include "headers/paging.h"
 #include "headers/Logger.h"
 #include "headers/math.h"
+#include "headers/panic.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -17,23 +18,27 @@
 volatile uint32_t* graph_mode_fb = (uint32_t*)0xA0000;
 // volatile uint8_t* color_pal_size = (volatile uint8_t*)MODE13H_COLOR_PALETTE_SIZE_ADDR;
 
-
-
 void init_graphics() {
     Sys_log("Initialising graphics.\n");
-    graph_mode_fb = (volatile uint32_t*)(uint32_t)Multiboot_info->framebuffer_addr;
-
-    uint32_t fb_addr = Multiboot_info->framebuffer_addr;
-    uint32_t fb_size = Multiboot_info->framebuffer_pitch * Multiboot_info->framebuffer_height;
     
-    Sys_log("Mapping framebuffer at 0x%x, size: %d bytes\n", fb_addr, fb_size);
-    Sys_log("Mapping framebuffer at 0x%x, size: %d bytes\n", fb_addr, fb_size);
 
-    for (uint32_t offset = 0; offset < fb_size; offset += 0x1000) {
-        k_map_page(fb_addr + offset, fb_addr + offset, 1, 1, 1);
+    page_index fb_base_page = Multiboot_info->framebuffer_addr >> 12;
+    page_index fb_page_amount = ((Multiboot_info->framebuffer_pitch * Multiboot_info->framebuffer_height) + 0xFFF) >> 12;
+
+    Sys_log("Mapping framebuffer at 0x%x, pages: %u\n",
+            (unsigned)Multiboot_info->framebuffer_addr, (unsigned)fb_page_amount);
+
+    
+    Multiboot_info->framebuffer_addr = k_append_pages(fb_base_page, fb_page_amount, 1, 0) * _PAGE_SIZE;
+    if (Multiboot_info->framebuffer_addr == 0) {
+        Sys_log("Failed to map framebuffer pages!\n");
+        _manual_panic("Graphics Initialization Failed", "Could not map framebuffer pages.");
     }
-    Sys_log("graphics init was sucessful\n");
-} 
+
+    graph_mode_fb = (volatile uint32_t*)(uintptr_t)Multiboot_info->framebuffer_addr;
+
+    Sys_log("graphics init was successful\n");
+}
 
 
 void put_pixel(int x, int y, uint32_t color) {

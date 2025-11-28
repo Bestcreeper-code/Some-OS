@@ -141,7 +141,7 @@ LoadedElf* LoadElf(const char* path) {
 
         size_t num_pages = (phdr->p_memsz + _PAGE_SIZE - 1) / _PAGE_SIZE;
         uintptr_t phdr_vaddr = phdr->p_vaddr;
-        page_addr_t segment_mem = page_alloc(num_pages, (phdr->p_flags & PF_W) ? 1 : 0, 1);
+        page_index segment_mem = page_alloc(num_pages, (phdr->p_flags & PF_W) ? 1 : 0, 1);
         if (!segment_mem) {
             Sys_log("Failed to allocate memory for segment %d\n", i);
             //free segs page
@@ -188,14 +188,17 @@ LoadedElf* LoadElf(const char* path) {
 
     //stack
 
-    page_addr_t stack_pa = page_alloc(DEFAULT_STACK_PAGE_AMOUNT, 1, 1);
-    if (!stack_pa) {
+    page_index us_stack_pa = page_alloc(DEFAULT_STACK_PAGE_AMOUNT, 1, 1);
+    page_index k_stack_pa = page_alloc(DEFAULT_STACK_PAGE_AMOUNT, 1, 1);
+    if (!us_stack_pa || !k_stack_pa) {
         Sys_log("Failed to allocate stack\n");
         
         for (int j = 0; j < seg_index; j++) {
             if (page_groups[j+1].size)
                 page_free(page_groups[j+1].pte_bits.addr << 12, page_groups[j+1].size);
         }
+        if(us_stack_pa)page_free(us_stack_pa,32);
+        if(k_stack_pa)page_free(k_stack_pa,32);
         free(page_groups);
         free(program_headers);
         f_close(&file);
@@ -203,7 +206,7 @@ LoadedElf* LoadElf(const char* path) {
     }
 
 #if ELF_DEBUG_MODE
-    Sys_log("Stack physical allocated at PA: 0x%x (pages: %u)\n", stack_pa, (unsigned)DEFAULT_STACK_PAGE_AMOUNT);
+    Sys_log("Stack physical allocated at PA: 0x%x (pages: %u)\n", us_stack_pa, (unsigned)DEFAULT_STACK_PAGE_AMOUNT);
 #endif
 
     // map stack
@@ -211,7 +214,7 @@ LoadedElf* LoadElf(const char* path) {
     page_groups[seg_index+1] = (Page_Group){
         .size = DEFAULT_STACK_PAGE_AMOUNT,
         .addr = stack_v_bottom,
-        .pte_bits = {.present = 1, .rw = 1, .user = 1, .addr = stack_pa >> 12}
+        .pte_bits = {.present = 1, .rw = 1, .user = 1, .addr = us_stack_pa >> 12}
     };
 
     //make pd
@@ -230,17 +233,24 @@ LoadedElf* LoadElf(const char* path) {
 
     loaded_elf->entry_point  = elf_header.e_entry;
     loaded_elf->page_dir     = app_page_dir;
+    loaded_elf->filename     = strdup(path);
     
-    loaded_elf->ph_stack_bottom = stack_pa;
-    loaded_elf->ph_stack_top    = stack_pa + (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
-    loaded_elf->v_esp          = DEFAULT_STACK_TOP_VADDR;
-    loaded_elf->filename     = (path);
+    loaded_elf->us_stack.bottom = us_stack_pa;
+    loaded_elf->us_stack.top    = us_stack_pa + (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
+
+    loaded_elf->k_stack.bottom          = k_stack_pa;
+    loaded_elf->k_stack.top          = k_stack_pa + (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
+
+    loaded_elf->k_esp          = k_stack_pa + (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
+    
 
     f_close(&file);
 #if ELF_DEBUG_MODE
     Sys_log("ELF file '%s' loaded successfully. Entry: 0x%x\n", path, loaded_elf->entry_point);
-    Sys_log("LoadedElf: phys_stack_bottom=0x%x phys_stack_top=0x%x virt_esp=0x%x\n",
-            loaded_elf->ph_stack_bottom, loaded_elf->ph_stack_top, loaded_elf->v_esp);
+    Sys_log("LoadedElf: u_stack_bott=0x%x u_stack_top=0x%x   k_stack_bott=0x%x k_stack_top=0x%x k_esp=0x%x\n",
+            loaded_elf->us_stack.bottom, loaded_elf->us_stack.top,
+            loaded_elf->k_stack.bottom, loaded_elf->k_stack.top,
+            loaded_elf->k_esp);
 #endif
     return loaded_elf;
 }
@@ -261,15 +271,15 @@ ProcessInfo exec_ELF(char* path){
         return (ProcessInfo){0}; // pid 0 = error
     }
 
-    _setup_user_stack_sched_frame((void*)elf->ph_stack_top, &elf->v_esp, (uint32_t)elf->entry_point);
+    _setup_user_stack_sched_frame((void*)elf->k_stack.top, &elf->k_esp, (uint32_t)elf->entry_point);
     uint32_t ebp = DEFAULT_STACK_TOP_VADDR;
-    pid_t pid = new_pcb(&elf->page_dir, elf->filename, &elf->v_esp, &ebp);
+    pid_t pid = new_pcb(&elf->page_dir, elf->filename, &elf->k_esp, elf->k_stack, elf->us_stack);
     if(pid <0){
 #if ELF_DEBUG_MODE
         Sys_log("Failed to create PCB for ELF: %s (%d)\n", elf->filename, pid);
 #endif
         pd_free(&elf->page_dir);
-        free(elf->filename);
+        free((void*)elf->filename);
         free(elf);
         return (ProcessInfo){0};
     }

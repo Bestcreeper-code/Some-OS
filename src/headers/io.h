@@ -58,7 +58,7 @@ int printlen(const char* buffer, unsigned int length);
 int print_hex32(uint32_t byte);
 int print_number(int num);
 int print_unsigned_number(uint32_t num);
-int printf(const char* format,...);
+int printf(const char* format,...) __attribute__ ((format (printf, 1, 2)));
 int printLine(const char* str, int line);
 
 // Text Color
@@ -80,8 +80,8 @@ void get_string_after_index(int start, char* buffer);
 //sprintf & others
 
 
-int sprintf(char* buffer, const char* format, ...);
-int snprintf(char* buffer, int size, const char* format, ...);
+int sprintf(char* buffer, const char* format, ...)    __attribute__ ((format (printf, 1, 3)));
+int snprintf(char* buffer, int size, const char* format, ...) __attribute__ ((format (printf, 1, 4)));
 int vsprintf(char* buffer, const char* format, va_list args);
 int vsnprintf(char* buffer, int size, const char* format, va_list args);
 

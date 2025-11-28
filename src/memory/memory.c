@@ -143,8 +143,8 @@ void parse_memory_map(multiboot_info_t* mb_info) {
     //cleanup the k_mmap
     k_mmap->free_region_count = 0;
     memset(k_mmap->free_regions, 0, sizeof(free_region_t) * MAX_FREE_REGIONS);
-
-    if (!checkFlag(*mb_info, 6)) {
+    
+    if (!checkFlag(mb_info->flags, 6)) {
         Sys_log("Multiboot mmap not present\n");
         return;
     }
@@ -198,8 +198,8 @@ void parse_memory_map(multiboot_info_t* mb_info) {
 
         if (region->length == 0) continue;
 
-        if (region->base_addr < &_kernel_end) {
-            uint32_t overlap = &_kernel_end - region->base_addr;
+        if (region->base_addr < (uint32_t)&_kernel_end) {
+            uint32_t overlap = (uint32_t)&_kernel_end - region->base_addr;
             if (overlap >= region->length) {
                 region->length = 0; // entire region is under kernel, remove it
             } else {

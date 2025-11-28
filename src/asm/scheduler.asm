@@ -1,150 +1,112 @@
 global _sched_next_process
-global testing
 
 extern serial_write_string
 extern serial_log_hex
-
-
-; typedef struct Linked_PCB_t {
-;     uint16_t pid;
-;     char* name;
-
-;     uint32_t esp, ebp;
-
-;     uint8_t state;
-
-;     PD_t* page_dir;
-
-;     struct Linked_PCB_t* next;
-; } __attribute__((__packed__)) Linked_PCB_t;
-
-%define Linked_PCB_pid_offset        0
-%define Linked_PCB_name_offset       2
-%define Linked_PCB_esp_offset        6
-%define Linked_PCB_ebp_offset       10
-%define Linked_PCB_state_offset     14
-%define Linked_PCB_page_dir_offset  15
-%define Linked_PCB_next_offset      19
-
 extern _scheduler_current_process ; Linked_PCB_t*
-
 extern _scheduler_first_process   ; Linked_PCB_t*
+extern setTssEsp                  ; function to set TSS.esp0
+
+; === PCB structure offsets ===
+%define Linked_PCB_pid             0
+%define Linked_PCB_state           2
+%define Linked_PCB_name            4
+
+; kernel stack
+%define Linked_PCB_kstack_top      8
+%define Linked_PCB_kstack_bottom  12
+
+; user stack
+%define Linked_PCB_ustack_top     16
+%define Linked_PCB_ustack_bottom  20
+
+; saved kernel ESP
+%define Linked_PCB_k_esp          24
+
+; CR3 (page directory)
+%define Linked_PCB_cr3            28
+
+; next PCB pointer
+%define Linked_PCB_next           32
 
 section .data
-msg_switching     db "Switching process...", 0
-msg_pid           db "PID", 0
-msg_cr3           db "CR3", 0
-msg_esp           db "V_ESP", 0
-msg_ebp           db "V_EBP", 0
-msg_next          db "NEXT PCB phys addr", 0
-msg_name          db "NAME", 0
-msg_iret db "IRET->EIP", 0
-
+msg_switching db "Switching process...",0
+msg_pid       db "PID",0
+msg_cr3       db "CR3",0
+msg_esp       db "V_ESP",0
+msg_next      db "NEXT PCB phys addr",0
+msg_name      db "NAME",0
 
 section .text
 _sched_next_process:
-    ;pushad |
-    ;pushfd | by irq0
-    
-    
-    ; push ds
-    ; push es
-    ; push fs
-    ; push gs
+    cli                 ; disable interrupts during switch
 
-    ;get current process PCB
+    ; --- Save current process state ---
     mov esi, [_scheduler_current_process]
 
-    
-    ; save process esp and ebp
-    mov [esi + Linked_PCB_esp_offset], esp
-    mov [esi + Linked_PCB_ebp_offset], ebp
-    ;save cr3(to be sure)
+    ; save ESP
+    mov [esi + Linked_PCB_k_esp], esp
+
+    ; save CR3
     mov eax, cr3
-    mov [esi + Linked_PCB_page_dir_offset],eax
+    mov [esi + Linked_PCB_cr3], eax
 
-    ; setup for next process
-    mov esi, [esi + Linked_PCB_next_offset]
-
-    
-
+    ; --- Select next process ---
+    mov esi, [esi + Linked_PCB_next]
     cmp esi, 0
     jne .found_next
-    ; go to first proc since no next
     mov esi, [_scheduler_first_process]
-    
-.found_next: ;<<<<<<<<<<<<<<< maybe add flags check if needed later >>>>>>>>>>>>>>>>>
 
-    ;LOGGING START
+.found_next:
+    ; Logging (optional)
     push msg_switching
     call serial_write_string
     add esp, 4
 
-    push dword [esi + Linked_PCB_name_offset]
+    push dword [esi + Linked_PCB_name]
     call serial_write_string
-    add esp, 4  
+    add esp, 4
 
-    mov ax, [esi + Linked_PCB_pid_offset]
+    mov ax, [esi + Linked_PCB_pid]
     push word 0
-    push word ax
+    push ax
     push msg_pid
     call serial_log_hex
     add esp, 8
 
-    mov eax, [esi + Linked_PCB_page_dir_offset]
+    mov eax, [esi + Linked_PCB_cr3]
     push eax
     push msg_cr3
     call serial_log_hex
     add esp, 8
 
-    mov eax, [esi + Linked_PCB_esp_offset]
+    mov eax, [esi + Linked_PCB_k_esp]
     push eax
     push msg_esp
     call serial_log_hex
     add esp, 8
 
-    mov eax, [esi + Linked_PCB_ebp_offset]
-    push eax
-    push msg_ebp
-    call serial_log_hex
-    add esp, 8
-
-    mov eax, [esi + Linked_PCB_next_offset]
+    mov eax, [esi + Linked_PCB_next]
     push eax
     push msg_next
     call serial_log_hex
     add esp, 8
-    ; LOGGING END
-    
 
-
-    ;update "_scheduler_current_process"
+    ; --- Update current process pointer ---
     mov [_scheduler_current_process], esi
 
-    ;load page dir(since this handler is identity mapped in it)
-    mov eax, [esi + Linked_PCB_page_dir_offset]
+    ; --- Load new process page directory ---
+    mov eax, [esi + Linked_PCB_cr3]
     mov cr3, eax
-    
 
-    ;load esp and ebp
-    mov ebp, [esi + Linked_PCB_ebp_offset]
-    mov esp, [esi + Linked_PCB_esp_offset]
+    ; --- Update TSS.esp0 for the kernel stack of the new process ---
+    mov eax, [esi + Linked_PCB_kstack_top]
+    push eax
+    call setTssEsp
+    add esp, 4
 
-    ; pop gs
-    ; pop fs
-    ; pop es
-    ; pop ds
-    ; mov eax, [esp + 36]               ; get EIP from iret frame
-    ; push eax
-    ; push msg_switching                ; reuse "Switching process..." label or make new msg_iret
-    ; call serial_log_hex
-    ; add esp, 8
+    ; --- Restore kernel stack ---
+    mov esp, [esi + Linked_PCB_k_esp]
 
+    sti         ; enable interrupts
 
-    popfd; pushed by
-    popad; the timer irq
-    sti
-    iretd
-
-
-
+    iretd       ; return from interrupt

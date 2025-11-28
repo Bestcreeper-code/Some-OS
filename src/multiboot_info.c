@@ -5,8 +5,8 @@
 
 multiboot_info_t multiboot_info_copy;
 
-bool checkFlag(multiboot_info_t mb_info, uint8_t index){
-    return mb_info.flags & (1 << index);
+bool checkFlag(uint32_t flags, uint8_t index){
+    return flags & (1 << index);
 }
 
 multiboot_info_t* Get_multiboot_info(){

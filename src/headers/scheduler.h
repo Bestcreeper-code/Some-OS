@@ -11,14 +11,16 @@ typedef short pid_t;
 
 typedef struct Linked_PCB_t {
     uint16_t pid;
+    uint16_t state;
     char* name;
 
-    uint32_t esp, ebp;
+    Stack_t kernel_stack, user_stack;
 
-    uint8_t state;
+    uint32_t k_esp;
 
+    
     uintptr_t cr3;
-
+    
     struct Linked_PCB_t* next;
 } __attribute__((__packed__)) Linked_PCB_t; 
 
@@ -59,7 +61,7 @@ extern uint8_t task_switching_flag;
 
 int scheduler_init();
 
-pid_t new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, uint32_t* ebp);
+pid_t new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, Stack_t k_stack, Stack_t us_stack);
 
 void _setup_user_stack_sched_frame(void* stack_frame_upper, uint32_t* esp, uint32_t entry);
 

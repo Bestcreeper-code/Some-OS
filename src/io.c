@@ -51,8 +51,8 @@ unsigned int vga_to_32bit_color(unsigned char fg_vga_color) {
     return vga_palette[fg_index];
 }
 
-const default_kterm_font_w = 8;
-const default_kterm_font_h = 16;
+const uint8_t default_kterm_font_w = 8;
+const uint8_t default_kterm_font_h = 16;
 
 void put_char(int x, int y, uint8_t c, uint8_t color) {
     if (x < 0 || x >= K_TERMINAL_WIDTH || y < 0 || y >= K_TERMINAL_HEIGHT)
@@ -98,7 +98,7 @@ void ClearScreen() {
     move_cursor(0,0);
 
     size_t fb_size = Multiboot_info->framebuffer_width * Multiboot_info->framebuffer_height * (Multiboot_info->framebuffer_bpp / 8);
-    memset(graph_mode_fb, 0, fb_size);
+    memset((void*)graph_mode_fb, 0, fb_size);
 }
 
 // short old_cmdline_cursor_pos

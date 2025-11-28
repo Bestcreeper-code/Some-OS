@@ -30,13 +30,13 @@ void parse_memory_map(multiboot_info_t* mb_info);
 
 void force_alloc(uint32_t address, uint32_t size);
 void force_free(uint32_t address, uint32_t size);
-uint32_t get_pter_size(void* pter);
+uint32_t get_pter_size(void* pter) __attribute__((nonnull (1)));
 
-void* aligned_malloc(size_t size, size_t alignment);
-void aligned_free(void* ptr);
+void aligned_free(void* ptr)  __attribute__((nonnull (1)));;
+void* aligned_malloc(size_t size, size_t alignment) __attribute__ ((malloc, malloc (aligned_free, 1)));
 
-void* malloc_impl(size_t size);
-void free_impl(void* ptr);
+void free_impl(void* ptr) __attribute__((nonnull (1)));
+void* malloc_impl(size_t size) __attribute__ ((malloc, malloc (free_impl, 1)));
 void* realloc_impl(void* ptr, size_t size);
 
 
