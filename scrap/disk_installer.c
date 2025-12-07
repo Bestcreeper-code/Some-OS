@@ -6,7 +6,7 @@
 // #include "headers/ATA_IO.h"
 // #include "headers/FileSystem.h"
 // #include "headers/string.h"
-// #include "data/globals.h"
+// #include "config/config.h"
 
 // int Install_OS_to_disk(multiboot_module_t* bl_file) {
 //     FIL file;

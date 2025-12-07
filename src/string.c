@@ -11,21 +11,33 @@ int strcmp(const char* s1, const char* s2) {
     return (unsigned char)(*s1) - (unsigned char)(*s2);
 }
 
-void* memset(void *dest, int value, size_t count) {
-    unsigned char *ptr = (unsigned char*)dest;
-    while (count--) {
-        *ptr++ = (unsigned char)value;
-    }
+void* memset(void *dest, int value, size_t count)
+{
+    unsigned char val = (unsigned char)value;
+
+    __asm__ __volatile__ (
+        "rep stosb"
+        : "+D"(dest), "+c"(count)
+        : "a"(val)
+        : "memory"
+    );
+
     return dest;
 }
 
-void* dw_memset(void *dest, uint32_t value, size_t count) {
-    uint32_t *ptr = (uint32_t*)dest;
-    while (count--) {
-        *ptr++ = value;
-    }
+
+void* dw_memset(void *dest, uint32_t value, size_t count)
+{
+    __asm__ __volatile__ (
+        "rep stosl"
+        : "+D"(dest), "+c"(count)
+        : "a"(value)
+        : "memory"
+    );
+
     return dest;
 }
+
 
 void* memcpy(void* dest, const void* src, size_t n) {
     if (n <= 0) return dest;

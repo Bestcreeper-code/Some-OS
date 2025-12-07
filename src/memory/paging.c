@@ -10,8 +10,8 @@ PD_t _k_pd;
 extern char _kernel_start;
 extern char _kernel_end;
 
-uint8_t _free_pages_bitmap[131072];
-uint32_t _page_amount = 0;
+uint32_t _free_pages_bitmap[(1024 * 1024) 
+uint32_t _pages_amount = 0;
 
 PTE kernel_page_table[KERNEL_PDE_COUNT][1024] __attribute__((aligned(4096)));
 
@@ -24,30 +24,38 @@ int setup_paging() {
     page_index kend =  (page_index)(&_kernel_end) >> 12;
     
 
-    uint32_t pages_amount = (Get_multiboot_info()->mem_upper + 1024) / 4;
-    if (pages_amount < MIN_OS_PAGES * 1.5) return -1;
-    if (pages_amount > 1024 * 1024) pages_amount = 1024 * 1024;
+    _pages_amount = (Get_multiboot_info()->mem_upper + 1024) / 4;
+    if (_pages_amount < MIN_OS_PAGES * 1.5) return -1;
+    if (_pages_amount > 1024 * 1024) _pages_amount = 1024 * 1024;
 
-    _page_amount = pages_amount;
+    _pages_amount = _pages_amount;
 
-    _free_pages_bitmap[0] &= ~(1 << 0);
+    dw_memset(_free_pages_bitmap, 0xFF, sizeof(_free_pages_bitmap));
+
+    for (uint32_t i = 1; i < _pages_amount; i++) {
+        if (i > kend) {
+            _free_pages_bitmap[i / 8] |= (1 << (i % 8));
+            
+        }
+    }
+
     page_index kstart = ((page_index)&_kernel_start) >> 12;
 
 
-    for (uint32_t i = kstart; i < kend && i < _page_amount; i++)    _free_pages_bitmap[i / 8] &= ~(1 << (i % 8));
+    for (uint32_t i = kstart; i < kend && i < _pages_amount; i++)    _free_pages_bitmap[i / 8] &= ~(1 << (i % 8));
 
     _k_pd.pde_arr = (PDE*)page_alloc(1, 1, 0);
-    memset(_k_pd.pde_arr, 0, _PAGE_SIZE);
-
+    dw_memset(_k_pd.pde_arr, 0, _PAGE_SIZE/4);
+    PTE* k_pte_array = page_alloc(KERNEL_PDE_COUNT, 1, 0); 
     for (uint32_t i = 0; i < KERNEL_PDE_COUNT; i++) {
-        if (i * 1024 >= pages_amount) break;
+        if (i * 1024 >= _pages_amount) break;
 
         PTE* pt_base = kernel_page_table[i];
         
 
         for (uint32_t j = 0; j < 1024; j++) {
             uint32_t page_idx = i * 1024 + j;
-            if (page_idx >= pages_amount) break;
+            if (page_idx >= _pages_amount) break;
             
             pt_base[j].present = page_idx < kend? 1 : 0;
             pt_base[j].rw = 1;
@@ -62,6 +70,7 @@ int setup_paging() {
         _k_pd.pde_arr[i].page_size = 0;
         _k_pd.pde_arr[i].addr = ((uintptr_t)pt_base) >> 12;
     }
+    
     
     Sys_log("pd is at %x\n", _k_pd.pde_arr);
 
@@ -169,7 +178,7 @@ page_index page_alloc(size_t amount, int read_write, int user_supervisor) {
     size_t found = 0;
     page_index start = 0;
 
-    for (uint32_t i = 0; i < _page_amount; i++) {
+    for (uint32_t i = 0; i < _pages_amount; i++) {
         if (_free_pages_bitmap[i/8] & (1 << (i%8))) {
             if (found == 0) start = i;
             found++;
@@ -225,7 +234,7 @@ void page_free(page_index pa, size_t amount) {
 
     for (uint32_t i = 0; i < amount; i++) {
         uint32_t idx = start_index + i;
-        if (idx >= _page_amount) break;
+        if (idx >= _pages_amount) break;
 
         _free_pages_bitmap[idx / 8] |= (1 << (idx % 8));
 
@@ -244,7 +253,7 @@ void reserve_kernel_pages() {
     uint32_t start_page = kstart >> 12;
     uint32_t end_page   = (kend + _PAGE_SIZE - 1) >> 12;
 
-    for (uint32_t i = start_page; i < end_page && i < _page_amount; i++) {
+    for (uint32_t i = start_page; i < end_page && i < _pages_amount; i++) {
         _free_pages_bitmap[i / 8] &= ~(1 << (i % 8));
     }
 }
@@ -439,7 +448,7 @@ uintptr_t PD_append_pages(PD_t* page_dir, PTE* ptes, uint32_t pte_count) {
 
 int is_page_allocated(page_index pa) {
     uint32_t idx = (uint32_t)(pa >> 12);
-    if (idx >= _page_amount) return -1;
+    if (idx >= _pages_amount) return -1;
     return !((_free_pages_bitmap[idx / 8] >> (idx % 8)) & 1);
 }
 
@@ -447,7 +456,7 @@ void page_force_alloc(page_index pa, size_t amount) {
     uint32_t start = pa >> 12;
     for (size_t i = 0; i < amount; i++) {
         uint32_t idx = start + i;
-        if (idx >= _page_amount) break;
+        if (idx >= _pages_amount) break;
 
         _free_pages_bitmap[idx / 8] &= ~(1 << (idx % 8));
         PTE* p = get_pte(idx);
@@ -468,7 +477,7 @@ page_index k_append_pages(page_index phys_start_page,uint32_t amount,uint8_t rw,
 
     
 
-    for (page_index i = 0; i < KERNEL_PDE_COUNT * 1024; i++) {
+    for (page_index i = 1; i < KERNEL_PDE_COUNT * 1024; i++) {
         PTE* curr_pte = kernel_page_table[i / 1024] + (i % 1024);
         
         if (!curr_pte->present) {
@@ -482,7 +491,7 @@ page_index k_append_pages(page_index phys_start_page,uint32_t amount,uint8_t rw,
         }
         // Sys_log("found= %u pte= present:%u rw:%u us:%u addr:%x \n",found,curr_pte->present,curr_pte->rw,curr_pte->user,curr_pte->addr);
     }
-    Sys_Breakpoint();
+    
     found:
     if (found < amount) {
         Sys_log("k_append_pages failed: not enough contiguous free pages\n");
@@ -498,6 +507,6 @@ page_index k_append_pages(page_index phys_start_page,uint32_t amount,uint8_t rw,
         pte->addr = phys_start_page + j;
         asm volatile("invlpg (%0)" : : "r"(idx ) : "memory");
     }
-    // Sys_log("k_append_pages mapped %u pages at VA %x\n", amount, start_page_idx * _PAGE_SIZE);
+    Sys_log("k_append_pages mapped %u pages at VA %x\n", amount, start_page_idx * _PAGE_SIZE);
     return start_page_idx;
 }

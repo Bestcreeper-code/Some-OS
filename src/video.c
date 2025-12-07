@@ -5,7 +5,7 @@
 #include "headers/mouse.h"
 #include "headers/math.h"
 #include "data/textconsts.h"
-#include "data/globals.h"
+#include "config/config.h"
 #include "headers/multiboot_info.h"
 #include "headers/paging.h"
 #include "headers/Logger.h"

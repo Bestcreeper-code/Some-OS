@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include "multiboot_info.h"
 #include "Logger.h"
-#include "../data/globals.h"
+#include "../config/config.h"
 #include "kernel_data.h"
 
 #define MULTIBOOT_MMAP_FREE_MEMORY  1

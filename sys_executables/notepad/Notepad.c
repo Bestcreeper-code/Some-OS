@@ -7,7 +7,7 @@
 #include "../../src/headers/vga_modes.h"
 #include "Graphics/graphics.h"
 #include "res.h"
-#include "../../src/data/globals.h"
+#include "../../src/config/config.h"
 #include "../../src/data/textconsts.h"
 
 #define CHARS_PER_LINE 60

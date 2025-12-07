@@ -1,9 +1,9 @@
-#include "headers/console.h"  // for print()
+// #include "headers/console.h"  // for print()
 #include "headers/ATA_IO.h"
 #include "headers/asm.h"
 
 #include <stdint.h>
-#include "../FatFs/diskio.h"
+// #include "../FatFs/diskio.h"
 
 static void ata_wait_busy() {
     while (inb(ATA_STATUS) & ATA_SR_BSY) { /* spin */ }

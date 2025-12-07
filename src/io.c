@@ -7,7 +7,7 @@
 #include "headers/Logger.h"
 #include "headers/kernel_data.h"
 #include "headers/video.h"
-#include "data/globals.h"
+#include "config/config.h"
 #include "data/textconsts.h"
 #include "data/KB_Layouts.h"
 #include "headers/multiboot_info.h"
@@ -21,34 +21,16 @@ char current_Language = KB_LAY_AZERTY;
 static char print_color = 0x0F; //white on black
 
 
-// VGA TEXT BASED FUNCS
-
-unsigned int vga_to_32bit_color(unsigned char fg_vga_color) {
+//  TEXT BASED FUNCS
+unsigned int vga_to_32bit_color(unsigned char vga_color) {
     
-    const unsigned int vga_palette[16] = {
-        0xFFFFFF,  // Black
-        0x0000AA,  // Blue
-        0x00AA00,  // Green
-        0x00AAAA,  // Cyan
-        0xAA0000,  // Red
-        0xAA00AA,  // Magenta
-        0xAA5500,  // Brown
-        0xAAAAAA,  // Light Gray
-        0x555555,  // Dark Gray
-        0x5555FF,  // Light Blue
-        0x55FF55,  // Light Green
-        0x55FFFF,  // Light Cyan
-        0xFF5555,  // Light Red
-        0xFF55FF,  // Light Magenta
-        0xFFFF55,  // Yellow
-        0xFFFFFF   // White
-    };
+    
 
     
-    unsigned char fg_index = (fg_vga_color >> 4) & 0x0F;
+    unsigned char index = vga_color & 0x0F;
 
     
-    return vga_palette[fg_index];
+    return k_console_palette[index];
 }
 
 const uint8_t default_kterm_font_w = 8;
@@ -64,13 +46,12 @@ void put_char(int x, int y, uint8_t c, uint8_t color) {
     Rect r = {.x = px, .y = py, .w = default_kterm_font_w, .h = default_kterm_font_h };
 
     if (c <= 32 || c > 126) {
-        draw_rect(r, 0x000000);  
+        draw_rect(r, vga_to_32bit_color(0)); //console bg 
         return;
     }
 
     draw_bitmap_char(c, px, py, default_kterm_font_w, default_kterm_font_h,
-                    vga_to_32bit_color(color), font8x16, false, true, true
-                    );
+                     vga_to_32bit_color(color), font8x16, false, true, true );
 }
 
 
@@ -97,8 +78,8 @@ void Scroll_Down(void) {
 void ClearScreen() {
     move_cursor(0,0);
 
-    size_t fb_size = Multiboot_info->framebuffer_width * Multiboot_info->framebuffer_height * (Multiboot_info->framebuffer_bpp / 8);
-    memset((void*)graph_mode_fb, 0, fb_size);
+    size_t fb_size = Multiboot_info->framebuffer_width * Multiboot_info->framebuffer_height ;
+    dw_memset((void*)graph_mode_fb, vga_to_32bit_color(0), fb_size);
 }
 
 // short old_cmdline_cursor_pos

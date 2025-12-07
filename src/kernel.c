@@ -22,7 +22,7 @@
 #include "headers/scheduler.h"
 #include "headers/symbols.h"
 
-#include "data/globals.h"
+#include "config/config.h"
 #include "data/textconsts.h"
 
 
@@ -130,22 +130,13 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
     pit_init(); 
     
     
-    Sys_log("fb at %x w:%u h:%u bpp:%u pitch:%u\n",
-            (unsigned)Multiboot_info->framebuffer_addr,
-            (unsigned)Multiboot_info->framebuffer_width,
-            (unsigned)Multiboot_info->framebuffer_height,
-            (unsigned)Multiboot_info->framebuffer_bpp,
-            (unsigned)Multiboot_info->framebuffer_pitch);
+    
     init_graphics();
     
     Set_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON, true);
-    sleep(0);
-    Sys_log("fb at %x w:%u h:%u bpp:%u pitch:%u\n",
-            (unsigned)Multiboot_info->framebuffer_addr,
-            (unsigned)Multiboot_info->framebuffer_width,
-            (unsigned)Multiboot_info->framebuffer_height,
-            (unsigned)Multiboot_info->framebuffer_bpp,
-            (unsigned)Multiboot_info->framebuffer_pitch);
+    
+    
+    
     
     
     
@@ -218,6 +209,7 @@ end_mounting:
     
     
     __asm__ volatile ("sti"); // Enable interrupts
+    
     Sys_log("Interrupts reenabled.\n");
     
     
@@ -226,6 +218,7 @@ end_mounting:
     Sys_log("Loading login manager...\n");
     exec_ELF("0:/loop.elf");//DEBUG sched just crashes when there is more than 1 process
     // task_switching_flag = 1;
+    
     sleep(1000);
     
     Start_Console();

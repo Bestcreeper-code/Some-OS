@@ -312,10 +312,10 @@ void Start_Console() {
     ClearScreen();
     move_cursor(0, 0);
 
-    set_print_color(0x82);
+    set_print_color(0x8);
     printf(TitleAsciiString);
     printf("\n");
-    set_print_color(0x0F);
+    set_print_color(0xF);
 
     while (true) {
         char* command;

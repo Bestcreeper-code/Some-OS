@@ -12,16 +12,17 @@
 #define DEV_BUILD       1
 #define SYSCALL_DEBUG   0
 
+#define FREE_NO_MERGE   1 
 
 
-#define FREE_NO_MERGE 1 
 
+//Filesystem
 #define OS_PARTITION_LABEL "CREEPER_OS"
 
 static char graphics_mode = 0x03;
 static FATFS* FatFsSys = (FATFS*)FATFS_SYS;
 
-
-
+// Kernel Console
+extern const uint32_t k_console_palette[16];
 
 #endif

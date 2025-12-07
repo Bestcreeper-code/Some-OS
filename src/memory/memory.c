@@ -3,7 +3,7 @@
 #include "headers/multiboot_info.h"
 #include "headers/io.h"
 #include <stdint.h>
-#include "data/globals.h"
+#include "config/config.h"
 #include "headers/Logger.h"
 #include "headers/paging.h"
 
@@ -292,9 +292,14 @@ void* malloc_impl(size_t size) {
 
     if (!region) {
         uint32_t pages_needed = (full_size + _PAGE_SIZE - 1) / _PAGE_SIZE;
-        uintptr_t base = page_alloc(pages_needed,1,0);
+        page_index base = page_alloc(pages_needed,1,0);
         if (!base) {
             Sys_log("malloc failed(not enough pages): %u bytes\n", (unsigned)size);
+            return NULL;
+        }
+        base = k_append_pages(base, pages_needed,1,0);
+        if (!base) {
+            Sys_log("malloc failed(k_append_pages failed): %u bytes\n", (unsigned)size);
             return NULL;
         }
 

@@ -77,6 +77,7 @@ void reset_input_buffer();
 void get_string(char* buffer);
 void get_string_after_index(int start, char* buffer);
 
+
 //sprintf & others
 
 
@@ -93,5 +94,6 @@ int write_hex32(char* buffer, int pos, uint32_t num, int size);
 int write_number_fixed_width(char* buffer, int pos, int num, int width, int size);
 
 
-void vga_txt_to_gfx(Rect area);
+
+unsigned int vga_to_32bit_color(unsigned char fg_vga_color);
 #endif

@@ -4,7 +4,7 @@
 #include "../../../src/headers/string.h"
 #include "../../../src/headers/math.h"
 #include "../../../src/headers/multiboot_info.h"
-#include "../../../src/data/globals.h"
+#include "../../../src/config/config.h"
 
 
 

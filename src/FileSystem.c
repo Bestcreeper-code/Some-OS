@@ -367,8 +367,8 @@ int FS_Mount_Main_Partition(FATFS* fat_filesys){
     
 
 #if (DEV_BUILD == 1)
-    f_mount(fat_filesys, "0:", 1);// try to mount 0: if not found(aka a .img formatted with fat)
-    return 0;
+    return f_mount(fat_filesys, "0:", 1);// try to mount 0: if not found(aka a .img formatted with fat)
+    
 #endif
     
     Sys_log("wtf\n");

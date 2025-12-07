@@ -8,7 +8,7 @@
 #include "../../src/headers/mouse.h"
 #include "Graphics/graphics.h"
 #include "res.h"
-#include "../../src/data/globals.h"
+#include "../../src/config/config.h"
 #include "../../src/data/textconsts.h"
 
 #define MAX_WIDTH 320
