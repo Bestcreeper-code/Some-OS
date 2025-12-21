@@ -68,7 +68,7 @@ LoadedElf* LoadElf(const char* path) {
     FIL file;
     FRESULT res = f_open(&file, path, FA_READ);
     if (res != FR_OK) {
-        Sys_log("Failed to open file '%s', error code: %d\n", path, res);
+        Sys_Error("Failed to open file '%s', error code: %d\n", path, res);
         return NULL;
     }
 
@@ -76,13 +76,13 @@ LoadedElf* LoadElf(const char* path) {
     UINT bytesRead;
     res = f_read(&file, &elf_header, sizeof(Elf32_Ehdr), &bytesRead);
     if (res != FR_OK || bytesRead != sizeof(Elf32_Ehdr)) {
-        Sys_log("Failed to read ELF header from '%s'\n", path);
+        Sys_Error("Failed to read ELF header from '%s'\n", path);
         f_close(&file);
         return NULL;
     }
 
     if (!elf_check_support(&elf_header, path)) {
-        Sys_log("ELF file '%s' is not supported\n", path);
+        Sys_Error("ELF file '%s' is not supported\n", path);
         f_close(&file);
         return NULL;
     }
@@ -266,7 +266,7 @@ ProcessInfo exec_ELF(char* path){
     LoadedElf* elf = LoadElf(path);
     if(!elf) {
 #if ELF_DEBUG_MODE
-        Sys_log("Failed to load ELF: %s\n", path);
+        Sys_Error("Failed to load ELF: %s\n", path);
 #endif
         return (ProcessInfo){0}; // pid 0 = error
     }
@@ -276,7 +276,7 @@ ProcessInfo exec_ELF(char* path){
     pid_t pid = new_pcb(&elf->page_dir, elf->filename, &elf->k_esp, elf->k_stack, elf->us_stack);
     if(pid <0){
 #if ELF_DEBUG_MODE
-        Sys_log("Failed to create PCB for ELF: %s (%d)\n", elf->filename, pid);
+        Sys_Error("Failed to create PCB for ELF: %s (%d)\n", elf->filename, pid);
 #endif
         pd_free(&elf->page_dir);
         free((void*)elf->filename);

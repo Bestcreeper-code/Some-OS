@@ -4,19 +4,43 @@
 #include "headers/string.h"
 #include "headers/io.h"
 #include "headers/time.h"
+#include "headers/Logger.h"
+#include <stdint.h>
+#include <stdnoreturn.h>
 
 PD_t _k_pd;
 
 extern char _kernel_start;
 extern char _kernel_end;
 
-uint32_t _free_pages_bitmap[(1024 * 1024) 
+uint32_t _free_pages_bitmap[(1024 * 1024) ];
 uint32_t _pages_amount = 0;
 
 PTE kernel_page_table[KERNEL_PDE_COUNT][1024] __attribute__((aligned(4096)));
 
 
 int setup_paging() {
+    Sys_log("Setting up paging...\n");
+    dw_memset(_free_pages_bitmap, 0xFF, sizeof(_free_pages_bitmap)%sizeof(uint32_t));
+    
+    reserve_kernel_pages();
+
+    page_index kend =  (page_index)(&_kernel_end) >> 12;
+    page_index kstart = (page_index)&_kernel_start >> 12;
+
+    _pages_amount = (Get_multiboot_info()->mem_upper + 1024) / 4;
+    if (_pages_amount < MIN_OS_PAGES * 1.5) return -1;
+    if (_pages_amount > 1024 * 1024) _pages_amount = 1024 * 1024;
+    
+    //reserve pde array
+    _k_pd.pde_arr = (PDE*)page_alloc(1, 1, 0);
+
+
+
+    return 0;
+}
+
+int dep_setup_paging() {
     Sys_log("Setting up paging...\n");
     memset(_free_pages_bitmap, 0xFF, sizeof(_free_pages_bitmap));
     reserve_kernel_pages();
@@ -41,12 +65,12 @@ int setup_paging() {
 
     page_index kstart = ((page_index)&_kernel_start) >> 12;
 
-
+        
     for (uint32_t i = kstart; i < kend && i < _pages_amount; i++)    _free_pages_bitmap[i / 8] &= ~(1 << (i % 8));
 
     _k_pd.pde_arr = (PDE*)page_alloc(1, 1, 0);
     dw_memset(_k_pd.pde_arr, 0, _PAGE_SIZE/4);
-    PTE* k_pte_array = page_alloc(KERNEL_PDE_COUNT, 1, 0); 
+    PTE* k_pte_array = (PTE*)(page_alloc(KERNEL_PDE_COUNT, 1, 0) << 12); 
     for (uint32_t i = 0; i < KERNEL_PDE_COUNT; i++) {
         if (i * 1024 >= _pages_amount) break;
 
@@ -95,9 +119,10 @@ int setup_paging() {
 void k_map_page(uint32_t virtual_addr, uint32_t physical_addr, uint8_t present,
               uint8_t rw, uint8_t user) {
     pd_map_page(&_k_pd,virtual_addr,physical_addr,present,rw,user);
+    
 }
 
-void pd_map_page(PD_t* pd, uint32_t virtual_addr, uint32_t physical_addr, uint8_t present,
+void pd_map_page(PD_t*  pd, uint32_t virtual_addr, uint32_t physical_addr, uint8_t present,
               uint8_t rw, uint8_t user) {
     uint32_t pd_index = (virtual_addr >> 22) & 0x3FF;
     uint32_t pt_index = (virtual_addr >> 12) & 0x3FF;
@@ -203,7 +228,7 @@ page_index page_alloc(size_t amount, int read_write, int user_supervisor) {
         }
     }
 
-    Sys_log("page_alloc failed: not enough contiguous free pages\n");
+    Sys_Error("page_alloc for %d page(s) failed: not enough contiguous free pages\n", amount);
     return 0;
 }
 

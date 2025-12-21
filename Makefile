@@ -5,7 +5,7 @@ CC = gcc
 NASM = nasm
 LD = ld
 OBJCOPY = objcopy
-CFLAGS = -m32 -g -ffreestanding -Isrc -fno-stack-protector -mno-sse -mno-sse2 -fno-tree-vectorize
+CFLAGS = -m32 -g -ffreestanding -Isrc -Isrc/headers -fno-stack-protector -mno-sse -mno-sse2 -fno-tree-vectorize
 LDFLAGS = -m elf_i386 -T linker.ld -z noexecstack 
 
 # === Directories ===
@@ -100,10 +100,12 @@ run: all
 		-cdrom $(ISO_FILE) \
 		-drive file=$(DISK_IMG),format=raw,if=ide \
 		-usb \
-		-device usb-storage,drive=usbdisk \
-		-drive file=usb.img,if=none,id=usbdisk,format=raw \
 		-device VGA,vgamem_mb=32 \
+		-display sdl \
 		-serial stdio
+
+# 		-device usb-storage,drive=usbdisk \
+# 		-drive file=usb.img,if=none,id=usbdisk,format=raw \
 
 # === Run with GDB ===
 gdb: all

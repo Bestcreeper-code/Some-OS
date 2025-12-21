@@ -12,7 +12,7 @@
 #include "../headers/symbols.h"
 #include "../headers/scheduler.h"
 #include "../data/textconsts.h"
-#include "../../distorm/include/distorm.h"
+// #include "../../distorm/include/distorm.h"
 
 // CPU Exceptions
 static const char* crash_messages[] = {
@@ -188,8 +188,8 @@ void _panic_handler(int argc, uint32_t* argv) {
     uint8_t* instr_ptr = (uint8_t*)_cpu_regs->eip;
     
     
-    _DecodedInst instructions[16]; // Enough space for all instructions
-    unsigned int count = 0;
+    // _DecodedInst instructions[16]; // Enough space for all instructions
+    // unsigned int count = 0;
     
     // Decode buffer (assume 32-bit mode)
     // _DecodeResult res = distorm_decode(
@@ -205,11 +205,11 @@ void _panic_handler(int argc, uint32_t* argv) {
                                        
                                        
                                        
-    char instr_bytes[64]; 
-    for (int i = 0; i < 16; i++) {
-        sprintf(instr_bytes + i * 3, "%02x ", instructions[i].size );
-    }
-    sprintf(buf, "Code: %s", instr_bytes);
+    // char instr_bytes[64]; 
+    // for (int i = 0; i < 16; i++) {
+    //     sprintf(instr_bytes + i * 3, "%02x ", instructions[i].size );
+    // }
+    // sprintf(buf, "Code: %s", instr_bytes);
 
 
     // // draw_bitmap_string(buf, 50, 200, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);

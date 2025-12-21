@@ -4,7 +4,6 @@
 #include "headers/video.h"
 #include "headers/time.h"
 #include "headers/FileSystem.h"
-#include "headers/Logger.h"
 #include "headers/kernel_data.h"
 #include "headers/video.h"
 #include "config/config.h"

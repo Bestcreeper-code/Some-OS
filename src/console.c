@@ -1,8 +1,10 @@
+#include "headers/console.h"
+
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include "headers/console.h"
 #include "headers/asm.h"
 #include "headers/string.h"
 #include "headers/ATA_IO.h"

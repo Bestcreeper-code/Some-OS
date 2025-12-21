@@ -7,7 +7,7 @@
 #include <stdarg.h>
 
 
-#include "string.h"
+
 #include "kernel_data.h"
 #include "multiboot_info.h"
 //1024x768

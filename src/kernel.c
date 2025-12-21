@@ -30,6 +30,7 @@
 
 
 #include "../output.h"
+#include "kernel_data.h"
 
 
 
@@ -46,7 +47,7 @@ extern const uint8_t _binary_syms_bin_end[];
 
 static uintptr_t mb_struct_ptr;
 
-void kmain(unsigned long magic, unsigned long mb_struct_addr) {
+void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     mb_struct_ptr = mb_struct_addr;
     kernel_data_ptr = &kernel_data;
     
@@ -65,7 +66,7 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
     Sys_log("Kernel compiled on %s at %s\n", __DATE__, __TIME__);
     Sys_log("with GCC ver %d.%d.%d \n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
     
-    Sys_log("Multiboot magic number: 0x%x\n", (void*)magic);
+    Sys_log("Multiboot magic number: 0x%x\n", magic);
     Sys_log("Multiboot info address: 0x%x\n", mb_struct_ptr);
 
     Sys_log("copying multiboot info struct...\n");
@@ -103,12 +104,12 @@ void kmain(unsigned long magic, unsigned long mb_struct_addr) {
     
     if (setup_paging() != 0  ) {
         
-        Sys_log("Paging setup failed, halting.");
+        Sys_Error("Paging setup failed, halting.");
         
         while (1) __asm__ volatile ("hlt");
     }
     Set_Kernel_Flag(KDATA_FLAG_PAGING_ON, true);
-    Sys_log("Paging set up successfully.\n");
+    Sys_Success("Paging set up successfully.\n");
     
     Sys_log("Setting up Kernel Stack.\n");
     page_index allocated_stack_pages = page_alloc(KERNEL_STACK_PAGE_AMOUNT, 1, 0);
@@ -164,7 +165,7 @@ mounting:
     int res = FS_Mount_Main_Partition(FatFsSys);
 
     if (res != 0) {
-        Sys_log("Failed to mount filesystem. Error code: %d\n Trying to mount again", res);
+        Sys_Error("Failed to mount filesystem. Error code: %d\n Trying to mount again", res);
         mount_counter++;
         if(mount_counter < 3)goto mounting;
 
@@ -173,7 +174,7 @@ mounting:
         sleep(10000);
         goto end_mounting;
     } else {
-        Sys_log("Filesystem mounted successfully.\n");
+        Sys_Success("Filesystem mounted successfully.\n"); 
         // get_string();
     }
 end_mounting:

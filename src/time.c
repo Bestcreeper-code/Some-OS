@@ -1,4 +1,5 @@
 #include "headers/time.h"
+#include "Logger.h"
 #include "headers/asm.h"
 #include "headers/io.h"
 #include "headers/memory.h"
@@ -37,7 +38,7 @@ void pic_remap() {
     outb(0x21, 0x0);  // Clear master PIC mask (enable all IRQs)
     outb(0xA1, 0x0);  // Clear slave PIC mask (enable all IRQs)
 
-    Sys_log("PIC remapped successfully.\n");
+    Sys_Success("PIC remapped successfully.\n");
 }
 
 // ----------------- PIT -----------------
@@ -52,7 +53,7 @@ void pit_init() {
     outb(PIT_COMMAND, 0x36);                 // Channel 0, lobyte/hibyte, mode 3
     outb(PIT_CHANNEL0, divisor & 0xFF);      // Low byte
     outb(PIT_CHANNEL0, (divisor >> 8) & 0xFF); // High byte
-    Sys_log("PIT initialized.\n");
+    Sys_Success("PIT initialized.\n");
 }
 
 

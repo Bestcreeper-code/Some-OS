@@ -37,7 +37,7 @@ void init_graphics() {
 
     graph_mode_fb = (volatile uint32_t*)(uintptr_t)Multiboot_info->framebuffer_addr;
 
-    Sys_log("graphics init was successful\n");
+    Sys_Success("graphics init was successful\n");
 }
 
 

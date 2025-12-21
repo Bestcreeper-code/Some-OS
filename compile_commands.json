@@ -1,0 +1,23 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-m32",
+      "-g",
+      "-ffreestanding",
+      "-Isrc",
+      "-Isrc/headers",
+      "-fno-stack-protector",
+      "-mno-sse",
+      "-mno-sse2",
+      "-fno-tree-vectorize",
+      "-c",
+      "-o",
+      "build/src/memory/paging.o",
+      "src/memory/paging.c"
+    ],
+    "directory": "/home/bestcreeper/Code/Some-OS",
+    "file": "/home/bestcreeper/Code/Some-OS/src/memory/paging.c",
+    "output": "/home/bestcreeper/Code/Some-OS/build/src/memory/paging.o"
+  }
+]
