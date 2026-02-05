@@ -7,6 +7,9 @@
 
 #define MIN_OS_PAGES 8192
 #define _PAGE_SIZE 4096
+#define _PT_SIZE _PAGE_SIZE/sizeof(PTE)
+
+#define _MAX_PT_AMOUNT 1024
 
 #define KERNEL_PDE_COUNT 128
 

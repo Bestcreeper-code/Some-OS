@@ -58,7 +58,7 @@ extern void irq_dummy_handler();
 
 void idt_set_gate(uint8_t num, uint32_t base, uint16_t sel, uint8_t flags) {
     
-    Sys_log("Setting IDT gate %d\n", num);
+    Sys_log("Setting IDT gate %x\n", num);
     idt[num].offset_low = base & 0xFFFF;
     idt[num].selector = sel;
     idt[num].zero = 0;
