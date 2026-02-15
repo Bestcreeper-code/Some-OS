@@ -15,7 +15,7 @@
 #define Sys_Warning(frmt , ...) sys_color_serial_logf(frmt,ANSI_WHITE, ANSI_BG_BRIGHT_YELLOW, __FILE_NAME__, __func__, __LINE__ ,##__VA_ARGS__)
 #define Sys_Info(frmt , ...) Sys_log(frmt, ##__VA_ARGS__)
 
-#define Sys_color_log(frmt, color , ...) sys_color_serial_logf(frmt, color, __FILE_NAME__, __func__, __LINE__ ,##__VA_ARGS__)
+#define Sys_color_log(frmt, fg_color, bg_color, ...) sys_color_serial_logf(frmt, fg_color, bg_color, __FILE_NAME__, __func__, __LINE__ ,##__VA_ARGS__)
 #define Sys_Breakpoint() Sys_log("Breakpoint hit at %s:%d\n", __FILE_NAME__, __LINE__); for(;;);
 
 void serial_init();

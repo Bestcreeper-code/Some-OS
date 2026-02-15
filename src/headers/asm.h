@@ -34,6 +34,13 @@ static inline uint32_t inl(uint16_t port) {
     return ret;
 }
 
+
+static uintptr_t inline get_esp(void) {
+    uintptr_t esp;
+    asm volatile("mov %%esp, %0" : "=r"(esp));
+    return esp;
+}
+
 typedef union {
     uint32_t val;
     char bytes[4];

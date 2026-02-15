@@ -42,28 +42,29 @@ void serial_write_string(const char* str) {
 }
 
 void sys_serial_vlogf(const char* format, const char* file, const char* func, int line, va_list args) {
-	char frmt[512];
+    char frmt[512];
     int size = strlen(format) < 512 ? strlen(format) : 511;
     strncpy(frmt, format, size);
     frmt[size] = '\0';
-	
-    
+
     char prefix[128];
-    snprintf(prefix, sizeof(prefix), "< %s:%d(%s)> ", file, line, func);
-	
+    
+    if (func != NULL && line != 0) {
+        snprintf(prefix, sizeof(prefix), "< %s:%d(%s)> ", file, line, func);
+    } else {
+        snprintf(prefix, sizeof(prefix), "<%s> ", file);
+    }
+
     char msg[512];
     vsnprintf(msg, sizeof(msg), frmt, args);
-	
+
     char output[640];
     snprintf(output, sizeof(output), "%s%s", prefix, msg);
-	
+
     serial_write_string(output);
 
-    
-    
-	
     if (Get_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON) && Get_Kernel_Flag(KDATA_FLAG_PAGING_ON)) {
-		printstr(output);
+        printstr(output);
     }
 }
 
@@ -125,6 +126,27 @@ void serial_set_bg(uint8_t bg) {
     serial_set_color(current_fg, bg);
 }
 
+static const uint8_t ansi_to_vga[16] = {
+    
+    0,  
+    4,  
+    2,  
+    6,  
+    1,  
+    5,  
+    3,  
+    7,  
+
+    
+    8,   
+    12,  
+    10,  
+    14,  
+    9,   
+    13,  
+    11,  
+    15   
+};
 
 void sys_color_serial_logf(const char* format, uint8_t fg, uint8_t bg, const char* file, const char* func, int line, ...) {
     va_list args;
@@ -133,12 +155,15 @@ void sys_color_serial_logf(const char* format, uint8_t fg, uint8_t bg, const cha
     uint8_t old_fg = current_fg;
     uint8_t old_bg = current_bg;
 
+    int vga_color = ansi_to_vga[(fg >= 90) ? (fg - 90 + 8) : (fg - 30)];
     serial_set_color(fg, bg);
+    set_print_color(vga_color);
 
     sys_serial_vlogf(format, file, func, line, args);
 
     // previous colors
     serial_set_color(old_fg, old_bg);
+    set_print_color(0xF);
 
     va_end(args);
 }

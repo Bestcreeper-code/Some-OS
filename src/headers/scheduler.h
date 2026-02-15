@@ -1,16 +1,18 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 
+#include <limits.h>
 #include <stdint.h>
+
 #include "asm.h"
 #include "paging.h"
 
-#define MAX_PID 32768
+#define MAX_PID SHRT_MAX
 
 typedef short pid_t;
 
 typedef struct Linked_PCB_t {
-    uint16_t pid;
+    short pid;
     uint16_t state;
     char* name;
 

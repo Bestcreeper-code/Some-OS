@@ -5,6 +5,7 @@
 // #include "headers/io.h"
 #include "headers/time.h"
 #include "headers/Logger.h"
+#include "memory.h"
 #include <stdint.h>
 #include <stdnoreturn.h>
 
@@ -14,9 +15,6 @@ extern char _kernel_start;
 extern char _kernel_end;
 
 uint32_t _free_pages_bitmap[(1024 * 1024 / sizeof(uint32_t)) ];
-
-PTE _pte_array[(1024 * 1024 )];
-PDE _pde_array[1024];
 
 uint32_t _pages_amount = 0;
 uint32_t _pages_tables_amount = 0;
@@ -30,19 +28,24 @@ int setup_paging() {
     _pages_amount = ((Get_multiboot_info()->mem_upper * 1024) + 1024*1024) / _PAGE_SIZE;
     if (_pages_amount < MIN_OS_PAGES * 1.5) return -1;
     if (_pages_amount > 1024 * 1024) _pages_amount = 1024 * 1024;
+
+    
     
     _pages_tables_amount = _pages_amount / _PAGE_SIZE;
 
     dw_memset(_free_pages_bitmap, 0xFFFFFFFF, sizeof(_free_pages_bitmap)/sizeof(uint32_t));
     reserve_kernel_pages();
-    
+    Sys_log("reserving Page Tables\n");
+
     page_index kend =  (page_index)(&_kernel_end) >> 12;
     page_index kstart = (page_index)&_kernel_start >> 12;
 
-    _k_pd.pde_arr = (PDE*)(page_alloc(1, 1, 0)<<12);
+    _k_pd.pde_arr = (PDE*)(page_alloc_nomap(1)<<12);
+    
     dw_memset(_k_pd.pde_arr, 0, _PAGE_SIZE/4);
 
-    PTE* k_pte_array = (PTE*)(page_alloc(_MAX_PT_AMOUNT, 1, 0) << 12); 
+    PTE* k_pte_array = (PTE*)(page_alloc_nomap(_MAX_PT_AMOUNT) << 12); 
+    dw_memset(k_pte_array, 0, _MAX_PT_AMOUNT * _PAGE_SIZE);
     kernel_page_table_ptr = k_pte_array;  
 
     for (uint32_t i = 0; i < _MAX_PT_AMOUNT ; i++) {
@@ -52,15 +55,20 @@ int setup_paging() {
         
         for (uint32_t j = 0; j < 1024; j++) {
             uint32_t page_idx = i * 1024 + j;
-            if (page_idx >= _pages_amount) break;
             
-            pt_base[j].present = page_idx < kend? 1 : 0;
+            if (page_idx >= _pages_amount) break;
+
+            bool used = !(_free_pages_bitmap[page_idx / 32] & (1u << (page_idx % 32)));
+
+            pt_base[j].present = used;
             pt_base[j].rw = 1;
             pt_base[j].user = 0;
             pt_base[j].addr = page_idx;
             if (page_idx == 0) pt_base[j].rw = 0;
         }
-
+#ifdef PAGE_DEBUG_MODE
+        Sys_log("setup pTable %d\n",i);
+#endif
         _k_pd.pde_arr[i].present = 1;
         _k_pd.pde_arr[i].rw = 1;
         _k_pd.pde_arr[i].user = 0;
@@ -68,7 +76,9 @@ int setup_paging() {
         _k_pd.pde_arr[i].addr = ((uintptr_t)pt_base) >> 12;
     }
     
-
+    
+    
+    Sys_log("starting Paging %x\n",_k_pd.pde_arr);
     asm volatile (
         "mov %0, %%cr3 \n\t"
         "mov %%cr0, %%eax \n\t"
@@ -185,46 +195,61 @@ PTE* get_pte_for_pa(uint32_t pa) {
     return get_pte(index);
 }
 
-
-
-page_index page_alloc(size_t amount, int read_write, int user_supervisor) {
-    
+page_index page_alloc_nomap(size_t amount) {
     size_t found = 0;
     page_index start = 0;
 
     for (uint32_t i = 0; i < _pages_amount; i++) {
-        if (_free_pages_bitmap[i/8] & (1 << (i%8))) {
+        if (_free_pages_bitmap[i / 32] & (1 << (i % 32))) {
             if (found == 0) start = i;
             found++;
             if (found == amount) {
+                // Mark pages as used
                 for (uint32_t j = 0; j < amount; j++) {
                     uint32_t idx = start + j;
-                    _free_pages_bitmap[idx/8] &= ~(1 << (idx%8));
-
-                    PTE* p = get_pte(idx);
-                    if (p) {
-                        p->present = 1;
-                        p->rw = read_write ? 1 : 0;
-                        p->user = user_supervisor ? 1 : 0;
-                        p->addr = idx;
-                    }
+                    _free_pages_bitmap[idx / 32] &= ~(1 << (idx % 32));
                 }
-                Sys_log("page_alloc called for %u pages (%x)\n", (unsigned)amount, start * _PAGE_SIZE);
-                return start /* *_PAGE_SIZE */;
+#ifdef PAGE_DEBUG_MODE
+                Sys_log("page_alloc_nomap called for %u pages (%x)\n", (unsigned)amount, start * _PAGE_SIZE);
+#endif
+                return start;
             }
         } else {
             found = 0;
         }
     }
-
-    Sys_Error("page_alloc for %d page(s) failed: not enough contiguous free pages\n", amount);
+#ifdef PAGE_DEBUG_MODE
+    Sys_Error("page_alloc_nomap for %d page(s) failed: not enough contiguous free pages\n", amount);
+#endif
     return 0;
+}
+
+page_index page_alloc(size_t amount, int read_write, int user_supervisor) {
+    page_index start = page_alloc_nomap(amount);
+    if (start == 0) return 0;
+
+    for (uint32_t j = 0; j < amount; j++) {
+        uint32_t idx = start + j;
+        PTE* p = get_pte(idx);
+        if (p) {
+            p->present = 1;
+            p->rw = read_write ? 1 : 0;
+            p->user = user_supervisor ? 1 : 0;
+            p->addr = idx;
+        }
+    }
+#ifdef PAGE_DEBUG_MODE
+    Sys_log("page_alloc called for %u pages (%x) with mapping\n", (unsigned)amount, start * _PAGE_SIZE);
+#endif    
+    return start;
 }
 
 void dump_pd() {
     uint32_t* pdes = (uint32_t*)_k_pd.pde_arr;
+#ifdef PAGE_DEBUG_MODE
     Sys_log("Dumping Page Directory from %x\n", _k_pd.pde_arr);
     Sys_log("first pde: %x\n", ((PTE*)pdes)[0].addr * _PAGE_SIZE);
+#endif
     for (int i = 0; i < 1; i++) {
         if (!(pdes[i] & 1)) continue;
         uint32_t base = pdes[i] & 0xFFFFF000;
@@ -232,7 +257,9 @@ void dump_pd() {
         for (int j = 0; j < 300; j++) {
             if (1||pt[j] & 1) {
                 uint32_t pa = pt[j] & 0xFFFFF000;
+#ifdef PAGE_DEBUG_MODE
                 Sys_log("PD[%03d] PT[%03d] VA=%x -> data=%x\n", i, j, (i<<22)|(j<<12), pt[j]);
+#endif
             }
         }
     }
@@ -250,7 +277,7 @@ void page_free(page_index pa, size_t amount) {
         uint32_t idx = start_index + i;
         if (idx >= _pages_amount) break;
 
-        _free_pages_bitmap[idx / 8] |= (1 << (idx % 8));
+        _free_pages_bitmap[idx / 32] |= (1 << (idx % 32));
 
         PTE* pte = get_pte(idx);
         if (pte) pte->present = 0;
@@ -264,7 +291,7 @@ uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, PD_t* out_pd_t 
     if (!groups || group_count == 0) return 0;
 
 
-    void* pd_addr = (void*)page_alloc(1, 1, 0);
+    void* pd_addr = (void*)Page_idx_to_Addr(page_alloc(1, 1, 0));
     if (!pd_addr) return 0;
     out_pd_t->pde_arr = (PDE*)pd_addr;
 
@@ -274,7 +301,7 @@ uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, PD_t* out_pd_t 
         Page_Group* group = &groups[j];
         if (group->size == 0) continue;
 
-        page_index virt_addr = group->addr;
+        page_index virt_addr = group->paddr;
         page_index phys_addr = group->pte_bits.addr;
 
         uint32_t start_page_idx = virt_addr >> 12;
@@ -287,7 +314,7 @@ uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, PD_t* out_pd_t 
             uint32_t pt_i = page_idx & 0x3FF;     
 
             if (!out_pd_t->pde_arr[pd_i].present) {
-                PTE* pt_base = (PTE*)page_alloc(1, 1, 0);
+                PTE* pt_base = (PTE*)Page_idx_to_Addr(page_alloc(1, 1, 0));
                 if (!pt_base) return 0;
                 memset(pt_base, 0, _PAGE_SIZE);
 
@@ -310,7 +337,7 @@ uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, PD_t* out_pd_t 
     if (!v_map(out_pd_t, groups, group_count)) {
         return 0;
     }
-
+    Sys_Warning("new created cr3 is at physical 0x%x ",out_pd_t->pde_arr);
     return (uintptr_t)out_pd_t->pde_arr;
 }
 
@@ -346,7 +373,7 @@ int v_map(PD_t* page_dir, Page_Group* groups, uint32_t group_count) {
         Page_Group* group = &groups[g];
         if (group->size == 0) continue;
 
-        uintptr_t virt_addr = group->addr;
+        uintptr_t virt_addr = group->paddr;
         uint32_t page_idx_start = virt_addr >> 12;
 
         for (uint32_t i = 0; i < group->size; i++) {
@@ -414,7 +441,9 @@ uintptr_t PD_append_pages(PD_t* page_dir, PTE* ptes, uint32_t pte_count) {
     }
 
     if (run_length < pte_count) {
+#ifdef PAGE_DEBUG_MODE
         Sys_log("failed for %u pages\n", pte_count);
+#endif
         return 0;
     }
 
@@ -450,7 +479,7 @@ uintptr_t PD_append_pages(PD_t* page_dir, PTE* ptes, uint32_t pte_count) {
 int is_page_allocated(page_index pa) {
     uint32_t idx = (uint32_t)(pa >> 12);
     if (idx >= _pages_amount) return -1;
-    return !((_free_pages_bitmap[idx / 8] >> (idx % 8)) & 1);
+    return !((_free_pages_bitmap[idx / 32] >> (idx % 32)) & 1);
 }
 
 void page_force_alloc(page_index pa, size_t amount) {
@@ -459,7 +488,7 @@ void page_force_alloc(page_index pa, size_t amount) {
         uint32_t idx = start + i;
         if (idx >= _pages_amount) break;
 
-        _free_pages_bitmap[idx / 8] &= ~(1 << (idx % 8));
+        _free_pages_bitmap[idx / 32] &= ~(1 << (idx % 32));
         PTE* p = get_pte(idx);
         if (p) {
             p->present = 1;
@@ -479,7 +508,7 @@ page_index k_append_pages(page_index phys_start_page,uint32_t amount,uint8_t rw,
     
 
     for (page_index i = 1; i < KERNEL_PDE_COUNT * 1024; i++) {
-        PTE* curr_pte = &kernel_page_table_ptr[i / 1024] + (i % 1024);
+        PTE* curr_pte = &kernel_page_table_ptr[(i / 1024) * 1024 + (i % 1024)];
         
         if (!curr_pte->present) {
             if (found == 0) start_page_idx = i;
@@ -495,19 +524,43 @@ page_index k_append_pages(page_index phys_start_page,uint32_t amount,uint8_t rw,
     
     found:
     if (found < amount) {
+#ifdef PAGE_DEBUG_MODE
         Sys_log("k_append_pages failed: not enough contiguous free pages\n");
+#endif
         return 0;
     }
     for (uint32_t j = 0; j < amount; j++) {
         uint32_t idx = start_page_idx + j;
-        PTE* pte = &kernel_page_table_ptr[idx / 1024] + (idx % 1024);
+        PTE* pte = &kernel_page_table_ptr[idx];
+
 
         pte->present = 1;
         pte->rw = rw ? 1 : 0;
         pte->user = us ? 1 : 0;
         pte->addr = phys_start_page + j;
+#ifdef PAGE_DEBUG_MODE
         asm volatile("invlpg (%0)" : : "r"(idx ) : "memory");
+#endif
     }
+#ifdef PAGE_DEBUG_MODE
     Sys_log("k_append_pages mapped %u pages at VA %x\n", amount, start_page_idx * _PAGE_SIZE);
+#endif
     return start_page_idx;
+}
+
+
+uint32_t get_used_ram() {
+    uint32_t used_pages = 0;
+
+    
+    for (uint32_t i = 0; i < (_pages_amount + 31) / 32; i++) {
+        uint32_t word = _free_pages_bitmap[i];
+        uint32_t used_in_word = 0;
+        for (int b = 0; b < 32; b++) {
+            if (!(word & (1u << b))) used_in_word++;
+        }
+        used_pages += used_in_word;
+    }
+
+    return used_pages * _PAGE_SIZE; 
 }

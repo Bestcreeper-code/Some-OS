@@ -1,4 +1,5 @@
 #include "headers/elf.h"
+#include "asm.h"
 #include "headers/Logger.h"
 #include "headers/string.h"
 #include "headers/FileSystem.h"
@@ -12,9 +13,7 @@ extern char _kernel_start;
 extern char _kernel_end;
 
 bool elf_check_support(Elf32_Ehdr* elf_header, const char* path){
-#if ELF_DEBUG_MODE
     Sys_log("Checking ELF support for: %s\n", path);
-#endif
 
     if (elf_header->e_ident[0] != ELFMAG0 ||
         elf_header->e_ident[1] != ELFMAG1 ||
@@ -25,38 +24,38 @@ bool elf_check_support(Elf32_Ehdr* elf_header, const char* path){
     }
 
     if(elf_header->e_ident[EI_CLASS] != ELFCLASS32) {
-        Sys_log("Unsupported ELF File Class.\n");
+        Sys_Error("Unsupported ELF File Class.\n");
         return false;
     }
     if(elf_header->e_ident[EI_DATA] != ELFDATA2LSB) {
-        Sys_log("Unsupported ELF File byte order.\n");
+        Sys_Error("Unsupported ELF File byte order.\n");
         return false;
     }
     if(elf_header->e_machine != EM_386) {
-        Sys_log("Unsupported ELF File target.\n");
+        Sys_Error("Unsupported ELF File target.\n");
         return false;
     }
     if(elf_header->e_ident[EI_VERSION] != EV_CURRENT) {
-        Sys_log("Unsupported ELF File version.\n");
+        Sys_Error("Unsupported ELF File version.\n");
         return false;
     }
     if(elf_header->e_type != ET_EXEC){
-        Sys_log("unsupported elf type %d in %s\n", elf_header->e_type, path);
+        Sys_Error("unsupported elf type %d in %s\n", elf_header->e_type, path);
         return false;
     }
     
     if (elf_header->e_phentsize != sizeof(Elf32_Phdr)) {
-        Sys_log("unexpected program header size in %s\n", path);
+        Sys_Error("unexpected program header size in %s\n", path);
         return false;
     }
     if (elf_header->e_phnum == 0) {
-        Sys_log("program headers in %s\n", path);
+        Sys_Error("program headers in %s\n", path);
         return false;
     }
 
-#if ELF_DEBUG_MODE
-    Sys_log("ELF header is valid\n");
-#endif
+
+    Sys_Success("ELF header is valid\n");
+
     return true;
 }
 
@@ -129,7 +128,7 @@ LoadedElf* LoadElf(const char* path) {
 
     page_groups[0] = (Page_Group){
         .size = kernel_pages,
-        .addr = id_map_start,
+        .paddr = id_map_start,
         .pte_bits = {.present = 1, .rw = 1, .user = 0, .addr = id_map_start >> 12}
     };
 
@@ -141,7 +140,7 @@ LoadedElf* LoadElf(const char* path) {
 
         size_t num_pages = (phdr->p_memsz + _PAGE_SIZE - 1) / _PAGE_SIZE;
         uintptr_t phdr_vaddr = phdr->p_vaddr;
-        page_index segment_mem = page_alloc(num_pages, (phdr->p_flags & PF_W) ? 1 : 0, 1);
+        uintptr_t segment_mem = page_alloc(num_pages, (phdr->p_flags & PF_W) ? 1 : 0, 1)<<12;
         if (!segment_mem) {
             Sys_log("Failed to allocate memory for segment %d\n", i);
             //free segs page
@@ -161,11 +160,15 @@ LoadedElf* LoadElf(const char* path) {
 
         page_groups[seg_index+1] = (Page_Group){
             .size = num_pages,
-            .addr = phdr_vaddr,
+            .paddr = phdr_vaddr,
             .pte_bits = {.present = 1, .rw = (phdr->p_flags & PF_W) ? 1 : 0, .user = 1, .addr = segment_mem >> 12}
         };
         seg_index++;
-
+        
+        // Sys_Warning("esp= %u\n",get_esp());
+        // Sys_Error("file = %d\n",&phdr->p_offset);
+        // Sys_Breakpoint();
+        
         f_lseek(&file, phdr->p_offset);
         res = f_read(&file, (void*)segment_mem, phdr->p_filesz, &bytesRead);
         if (res != FR_OK || bytesRead != phdr->p_filesz) {
@@ -185,7 +188,7 @@ LoadedElf* LoadElf(const char* path) {
             memset((void*)(segment_mem + phdr->p_filesz), 0, phdr->p_memsz - phdr->p_filesz);
         }
     }
-
+    
     //stack
 
     page_index us_stack_pa = page_alloc(DEFAULT_STACK_PAGE_AMOUNT, 1, 1);
@@ -213,12 +216,21 @@ LoadedElf* LoadElf(const char* path) {
     uintptr_t stack_v_bottom = DEFAULT_STACK_TOP_VADDR - (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
     page_groups[seg_index+1] = (Page_Group){
         .size = DEFAULT_STACK_PAGE_AMOUNT,
-        .addr = stack_v_bottom,
-        .pte_bits = {.present = 1, .rw = 1, .user = 1, .addr = us_stack_pa >> 12}
+        .paddr = stack_v_bottom,
+        .pte_bits = {.present = 1, .rw = 1, .user = 1, .addr = us_stack_pa}
     };
 
+    // map kstack
+    uintptr_t k_stack_v_addr = (uintptr_t)Page_idx_to_Addr(k_stack_pa); 
+    page_groups[seg_index+2] = (Page_Group){
+        .size = DEFAULT_STACK_PAGE_AMOUNT,
+        .paddr = k_stack_v_addr,
+        .pte_bits = {.present = 1, .rw = 1, .user = 0, .addr = k_stack_pa}
+    };
+
+    
     //make pd
-    new_page_dir(page_groups, seg_index + 2, &app_page_dir);
+    new_page_dir(page_groups, seg_index + 3, &app_page_dir);
 
     free(program_headers);
     free(page_groups);
@@ -235,13 +247,13 @@ LoadedElf* LoadElf(const char* path) {
     loaded_elf->page_dir     = app_page_dir;
     loaded_elf->filename     = strdup(path);
     
-    loaded_elf->us_stack.bottom = us_stack_pa;
-    loaded_elf->us_stack.top    = us_stack_pa + (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
+    loaded_elf->us_stack.bottom = Page_idx_to_Addr(us_stack_pa);
+    loaded_elf->us_stack.top    = Page_idx_to_Addr(us_stack_pa) + (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
 
-    loaded_elf->k_stack.bottom          = k_stack_pa;
-    loaded_elf->k_stack.top          = k_stack_pa + (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
+    loaded_elf->k_stack.bottom          = Page_idx_to_Addr(k_stack_pa);
+    loaded_elf->k_stack.top          = Page_idx_to_Addr(k_stack_pa) + (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
 
-    loaded_elf->k_esp          = k_stack_pa + (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
+    loaded_elf->k_esp          = Page_idx_to_Addr(k_stack_pa) + (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
     
 
     f_close(&file);
@@ -251,6 +263,8 @@ LoadedElf* LoadElf(const char* path) {
             loaded_elf->us_stack.bottom, loaded_elf->us_stack.top,
             loaded_elf->k_stack.bottom, loaded_elf->k_stack.top,
             loaded_elf->k_esp);
+
+    Sys_log("cr3: 0x%x",loaded_elf->page_dir);
 #endif
     return loaded_elf;
 }

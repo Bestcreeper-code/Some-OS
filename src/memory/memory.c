@@ -7,7 +7,7 @@
 #include "headers/Logger.h"
 #include "headers/paging.h"
 
-uint32_t max_mem;
+uint32_t ram_amount;
 
 static free_region_map_t region_map;
 free_region_map_t* k_mmap = &region_map;
@@ -138,7 +138,11 @@ void force_free(uint32_t address, uint32_t size) {
 }
 
 void parse_memory_map(multiboot_info_t* mb_info) {
+
     Sys_log("Parsing memory map...\n");
+
+    ram_amount = ((Get_multiboot_info()->mem_upper) + 1024)*1024;
+
     free_region_map_t* k_mmap = get_free_region_map();
     //cleanup the k_mmap
     k_mmap->free_region_count = 0;
@@ -212,6 +216,7 @@ void parse_memory_map(multiboot_info_t* mb_info) {
 
 
     force_alloc((uint32_t)k_mmap, sizeof(free_region_map_t));
+    force_alloc(0x0, 65535);
     Sys_log("Memory map parsed.\n");
 }
 
@@ -451,3 +456,4 @@ void aligned_free(void* ptr) {
 
     free_impl(raw);
 }
+

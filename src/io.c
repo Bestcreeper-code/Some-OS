@@ -44,10 +44,10 @@ void put_char(int x, int y, uint8_t c, uint8_t color) {
 
     Rect r = {.x = px, .y = py, .w = default_kterm_font_w, .h = default_kterm_font_h };
 
-    if (c <= 32 || c > 126) {
-        draw_rect(r, vga_to_32bit_color(0)); //console bg 
-        return;
-    }
+    // if (c <= 32 || c > 126) {
+    //     draw_rect(r, vga_to_32bit_color(0)); //console bg 
+    //     return;
+    // }
 
     draw_bitmap_char(c, px, py, default_kterm_font_w, default_kterm_font_h,
                      vga_to_32bit_color(color), font8x16, false, true, true );

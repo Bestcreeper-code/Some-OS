@@ -12,7 +12,11 @@
 #include "../headers/symbols.h"
 #include "../headers/scheduler.h"
 #include "../data/textconsts.h"
+#include "kernel_data.h"
 // #include "../../distorm/include/distorm.h"
+
+
+#define MAX_KPANIK_COUNT 1
 
 // CPU Exceptions
 static const char* crash_messages[] = {
@@ -108,14 +112,25 @@ enum CrashType {
 
 cpu_registers_t* _cpu_regs;
 
+volatile char panic_count = 0;
 
 void _panic_handler(int argc, uint32_t* argv) {
+
+    if(panic_count >= MAX_KPANIK_COUNT)for(;;);
+
+    panic_count++;
+
+
     task_switching_flag = false;
     int isr_index = (int)argv[0];
     Sys_log("Kernel panic (%d | %d | CR2:0x%x)\n",(int)argv[0],(int)argv[1],((cpu_registers_t*)argv[2])->cr2);
     
     
-    ClearScreen();
+    if(Get_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON)){
+        ClearScreen();
+        size_t fb_size = Multiboot_info->framebuffer_width * Multiboot_info->framebuffer_height;
+        dw_memset((void*)graph_mode_fb, 0x000000FF, fb_size);
+    }
     
 
     uint32_t* call_stack = NULL;
@@ -123,7 +138,7 @@ void _panic_handler(int argc, uint32_t* argv) {
 
     if (argc < 3) {
         Sys_log("Crash Handler: Not enough panic info provided\n");
-        // draw_bitmap_string("critical error: insufficient panic info", 20, 20, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+       
         return;
     }
 
@@ -134,55 +149,59 @@ void _panic_handler(int argc, uint32_t* argv) {
                              ? crash_messages[isr_index]
                              : "Unknown Crash";
 
-    Sys_log("\n\n\n\n\n");
+    
     Sys_log("=======================================================================\n");
     Sys_log("KERNEL PANIK -> ISR Index: %d (%s), Error Code: %u\n", isr_index, error_name, err_code);
 
-    // draw_bitmap_string("A critical error has occurred:", 20, 20, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+   
     Sys_log(" A critical error has occurred:\n");
 
     char full_str[128];
     sprintf(full_str, "Error Code: %s (%03d: %u)", error_name, isr_index, err_code);
-    // draw_bitmap_string(full_str, 20, 40, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+    
     Sys_log(" %s\n", full_str);
 
-    // draw_bitmap_string("Regs Dump:", 0, 60, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+   
     Sys_log(" Regs Dump:\n");
 
     char buf[128];
     sprintf(buf, "EAX: 0x%x  EBX: 0x%x  ECX: 0x%x  EDX: 0x%x", 
             _cpu_regs->eax, _cpu_regs->ebx, _cpu_regs->ecx, _cpu_regs->edx);
-    // draw_bitmap_string(buf, 100, 60, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+    
     Sys_log(" %s\n", buf);
 
     sprintf(buf, "ESI: 0x%x  EDI: 0x%x  EBP: 0x%x  ESP: 0x%x", 
             _cpu_regs->esi, _cpu_regs->edi, _cpu_regs->ebp, _cpu_regs->esp);
-    // draw_bitmap_string(buf, 100, 80, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+   
     Sys_log(" %s\n", buf);
 
     sprintf(buf, "EIP: 0x%x  EFLAGS: 0x%x", _cpu_regs->eip, _cpu_regs->eflags);
-    draw_bitmap_string(buf, 100, 100, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+    
     Sys_log(" %s\n", buf);
 
     // Segment Registers
     sprintf(buf, "CS:  0x%x  DS:  0x%x  ES:  0x%x", 
             _cpu_regs->cs, _cpu_regs->ds, _cpu_regs->es);
-    draw_bitmap_string(buf, 100, 120, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+    
     Sys_log(" %s\n", buf);
 
     sprintf(buf, "FS:  0x%x  GS:  0x%x  SS:  0x%x", 
             _cpu_regs->fs, _cpu_regs->gs, _cpu_regs->ss);
-    // draw_bitmap_string(buf, 100, 140, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+    
     Sys_log(" %s\n", buf);
 
     // Control Registers
     sprintf(buf, "CR0: 0x%x  CR2: 0x%x", _cpu_regs->cr0, _cpu_regs->cr2);
-    // draw_bitmap_string(buf, 100, 160, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+    
     Sys_log(" %s\n", buf);
 
     sprintf(buf, "CR3: 0x%x ", _cpu_regs->cr3);
-    // draw_bitmap_string(buf, 100, 180, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+    
     Sys_log(" %s\n", buf);
+
+
+    
+
 
     // Instruction bytes at EIP
     uint8_t* instr_ptr = (uint8_t*)_cpu_regs->eip;
@@ -227,9 +246,9 @@ void _panic_handler(int argc, uint32_t* argv) {
     }
 
     // Reboot Countdown
-    // draw_bitmap_string("Rebooting in 10 sec...", 20, 420, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+    
     Sys_log(" Rebooting in 10 sec...\n");
-    // draw_bitmap_string("##########", 60, 440, 8, 16, 0x0, font8x16, false, true, 0);
+    
 asm volatile("sti");
     for (int i = 0; i < 10; i++) {
         draw_bitmap_char('#', 60 + (8 * i), 440, 8, 16, 0xFF00FF00, font8x16, false, true, true);
@@ -257,19 +276,19 @@ void _manual_panic(const char* error, const char* info) {
 
     
     if (error) {
-        // draw_bitmap_string(error, 20, 60, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+        Sys_Error(error, 20, 60, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
     }
 
     
     if (info) {
-        // draw_bitmap_string(info, 20, 90, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+        Sys_Warning(info, 20, 90, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
     }
 
     
-    // draw_bitmap_string("Rebooting in 5 sec...", 20, 140, 8, 16,0xFFFFFFFF, font8x16, false, true, 0);
+    
     Sys_log(" Rebooting in 5 sec...\n");
 
-    // draw_bitmap_string("#####", 20, 160, 8, 16, 0x00, font8x16, false, true, 0);
+    
 
     asm volatile("sti");
     for (int i = 0; i < 5; i++) {

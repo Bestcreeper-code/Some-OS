@@ -12,3 +12,9 @@ usb.img
 iso/BL/grub_boot.img    
 l.h
 ztest/
+*.deprec
+diskmount/
+*.txt
+*.raw
+*.bin
+outpu.h

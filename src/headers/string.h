@@ -1,6 +1,7 @@
 #ifndef STRING_H
 #define STRING_H
 
+
 #define STRING_MAX_LEN 2048
 
 #include <stdbool.h>
@@ -46,4 +47,7 @@ void itoa(int value, char* str, int base);
 
 //allocates a lowercase copy of <str>
 char* strlow(const char* str);
+
+
+const char* byte_nb_simplify(uint32_t size_bytes, char* buf);
 #endif // STRING_H

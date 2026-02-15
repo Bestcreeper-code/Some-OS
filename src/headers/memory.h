@@ -23,7 +23,7 @@ typedef struct {
     free_region_t free_regions[MAX_FREE_REGIONS];
 } __attribute__((packed)) free_region_map_t;
 
-extern uint32_t max_mem;
+extern uint32_t ram_amount;
 extern free_region_map_t* k_mmap;
 
 void parse_memory_map(multiboot_info_t* mb_info);
@@ -38,6 +38,7 @@ void* aligned_malloc(size_t size, size_t alignment) __attribute__ ((malloc, mall
 void free_impl(void* ptr) __attribute__((nonnull (1)));
 void* malloc_impl(size_t size) __attribute__ ((malloc, malloc (free_impl, 1)));
 void* realloc_impl(void* ptr, size_t size);
+
 
 
 #define malloc(size)              malloc_impl(size)//;Sys_log("\n");

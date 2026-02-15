@@ -23,7 +23,7 @@
 #include "headers/symbols.h"
 
 #include "config/config.h"
-#include "data/textconsts.h"
+#include "cpu.h"
 
 
 
@@ -31,6 +31,7 @@
 
 #include "../output.h"
 #include "kernel_data.h"
+#include "string.h"
 
 
 
@@ -63,8 +64,6 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     
     Sys_log("interrupts disabled.\n");
     Sys_log("Kernel starting...\n");
-    Sys_log("Kernel compiled on %s at %s\n", __DATE__, __TIME__);
-    Sys_log("with GCC ver %d.%d.%d \n", __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
     
     Sys_log("Multiboot magic number: 0x%x\n", magic);
     Sys_log("Multiboot info address: 0x%x\n", mb_struct_ptr);
@@ -135,29 +134,11 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     init_graphics();
     
     Set_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON, true);
-    
-    
-    
-    
-    
-    
     int pitch = Multiboot_info->framebuffer_bpp;
     
-    
-    
-    
-    // ClearScreen();
+    ClearScreen();
 
-    
-    
-    
-    force_alloc(0x0, 65535);//stop kernel from allocating low mem as it can crash
-    
-    //-new_install
-    
-    
-    // refer tocommented code #1 at the bottom of this file
-
+    __asm__ volatile ("sti"); // Enable interrupts
     
     int mount_counter = 0;
 mounting:
@@ -180,7 +161,35 @@ mounting:
 end_mounting:
     
     
+
+
+//log kernel/cpu info
+    sys_color_serial_logf("Kernel compiled on %s at %s\n",ANSI_BRIGHT_YELLOW,0,"kernel","",0, __DATE__, __TIME__);
+    sys_color_serial_logf("with GCC ver %d.%d.%d \n",ANSI_BRIGHT_YELLOW,0,"kernel","",0, __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
     
+    cpu_log_specs();
+    char simplified_nb_1[16]; 
+    char simplified_nb_2[16];
+
+    byte_nb_simplify(get_used_ram(), simplified_nb_1);
+    byte_nb_simplify(ram_amount, simplified_nb_2);
+
+    sys_color_serial_logf("Ram Used = %s / %s \n",ANSI_BRIGHT_GREEN,0,"","",0, 
+        simplified_nb_1, simplified_nb_2);
+    
+    sys_color_serial_logf("Press Any key to continue\n", ANSI_BRIGHT_MAGENTA, ANSI_BG_BLACK, "", "", 0);
+    
+    
+    
+    getc();
+
+    
+
+
+
+
+
+
     
     // move_cursor(0, 0);
 
@@ -209,18 +218,16 @@ end_mounting:
     // draw_bitmap_string("CREEPER OS",0,0,8,16,0x0000FF7F,font8x16,false,true,3);
     
     
-    __asm__ volatile ("sti"); // Enable interrupts
-    
-    Sys_log("Interrupts reenabled.\n");
     
     
-    // scheduler_init();
+    
+    scheduler_init();
     
     Sys_log("Loading login manager...\n");
     exec_ELF("0:/loop.elf");//DEBUG sched just crashes when there is more than 1 process
-    // task_switching_flag = 1;
     
-    sleep(1000);
+    task_switching_flag = 1;
+    
     
     Start_Console();
 

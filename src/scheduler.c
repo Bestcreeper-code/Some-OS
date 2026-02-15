@@ -1,4 +1,5 @@
 #include "headers/scheduler.h"
+#include "Logger.h"
 #include "headers/paging.h"
 #include "headers/memory.h"
 #include "headers/string.h"
@@ -35,7 +36,8 @@ pid_t _get_unused_pid() {
             }
         }
     }
-    return (pid_t)-2; 
+    
+    return (pid_t)-1; 
 }
 
 void _free_pid(pid_t pid) {
@@ -66,7 +68,7 @@ pid_t new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, Stack_t k_stack, 
     new_pcb->user_stack = us_stack;
     new_pcb->kernel_stack = k_stack;
     
-    new_pcb->k_esp = (uint32_t)esp;  
+    new_pcb->k_esp = (uint32_t)*esp;  
 
     new_pcb->cr3 = (uintptr_t)page_dir->pde_arr; 
     new_pcb->next = NULL;
@@ -112,7 +114,7 @@ int kill_process(short proc_pid){
 void testing();
 
 int scheduler_init(){   
-    memset(pid_bitmap, 0xFF, sizeof(pid_bitmap));
+    memset(pid_bitmap, 0xFFFF, sizeof(pid_bitmap));
     pid_bitmap[0] &= ~(1 << 0);
     
     new_pcb(&_k_pd,"Kernel\n",(uint32_t*)0x200000,(Stack_t){0x200000,0x1FF000},(Stack_t){1,1}); // FIXED: give valid kernel stack

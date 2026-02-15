@@ -5,6 +5,8 @@
 #include <stddef.h>
 #include <stdbool.h>
 
+typedef uintptr_t page_index;
+
 #define MIN_OS_PAGES 8192
 #define _PAGE_SIZE 4096
 #define _PT_SIZE _PAGE_SIZE/sizeof(PTE)
@@ -16,7 +18,7 @@
 #define _PAGETABLE_MAPPED_SIZE 0x400000
 
 
-typedef uintptr_t page_index;
+#define Page_idx_to_Addr(idx) (idx*_PAGE_SIZE)
 
 // typedef enum {
 //     OS_PAGE_FLAGS_ALLOCATED     = 1 << 0,
@@ -60,7 +62,7 @@ typedef struct {
 
 typedef struct {
     uint32_t size;
-    page_index addr;
+    page_index paddr;
     PTE pte_bits;
 } __attribute__((packed)) Page_Group ;
 
@@ -75,6 +77,8 @@ PTE* get_pte(uint32_t index);
 PTE* get_pte_for_pa(uint32_t pa);
 
 // allocation
+page_index page_alloc_nomap(size_t amount);
+
 page_index page_alloc(size_t amount, int read_write, int user_supervisor);
 void page_free(page_index pa, size_t amount);
 
@@ -99,5 +103,7 @@ void reserve_kernel_pages();
 
 //debug
 void dump_pd();
+
+uint32_t get_used_ram();
 
 #endif
