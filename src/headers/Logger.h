@@ -17,6 +17,7 @@
 
 #define Sys_color_log(frmt, fg_color, bg_color, ...) sys_color_serial_logf(frmt, fg_color, bg_color, __FILE_NAME__, __func__, __LINE__ ,##__VA_ARGS__)
 #define Sys_Breakpoint() Sys_log("Breakpoint hit at %s:%d\n", __FILE_NAME__, __LINE__); for(;;);
+#define Sys_Step_Point() Sys_log("Step Point hit at %s:%d\n", __FILE_NAME__, __LINE__); getc();
 
 void serial_init();
 

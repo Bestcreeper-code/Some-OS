@@ -16,6 +16,7 @@
 #include "headers/FileSystem.h"
 
 #include "data/textconsts.h"
+#include "paging.h"
 
 #define MAX_HISTORY 32
 #define MAX_COMMAND_LENGTH 256  
@@ -276,16 +277,14 @@ bool Console_Process_Command(char* command) {
             }
         }
     }
-    else if (!strcmp(tokens[0], "run")) {
-        if(token_count < 2) {
-            result = false;
-        } else {
-            int args_count;
-            char** args = Split(tokens[1], ' ', 0, &args_count);
-            char* list[2] = {currpath, args[0]};
-            Load_bin_exe(Concat(list, 2, '/'), args_count, args);//argv[0] is path used to call the bin
-            EndSplit(args, args_count);
-        }
+    else if (!strcmp(tokens[0], "mem")) {
+        char buffer[16];
+        byte_nb_simplify(get_used_ram(),buffer);
+        printf("mem=  %s",buffer);
+        
+        byte_nb_simplify(ram_amount,buffer);
+        printf(" / %s\n",buffer);
+
     }
     else {
         if (echoing) printf("Unknown command %s. Type 'help' for a list of commands.\n", command);

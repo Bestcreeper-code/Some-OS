@@ -3,14 +3,14 @@
 #include "headers/string.h"
 
 
-multiboot_info_t multiboot_info_copy;
+extern multiboot_info_t* mb_struct_ptr;
 
 bool checkFlag(uint32_t flags, uint8_t index){
     return flags & (1 << index);
 }
 
 multiboot_info_t* Get_multiboot_info(){
-    return &multiboot_info_copy;
+    return mb_struct_ptr;
 }
 
 multiboot_module_t* Multiboot_Get_loaded_module(multiboot_info_t* mbinfo, const char* name) {

@@ -16,7 +16,7 @@ int Setup_Kernel_Syms() {
 }
 
 
-BacktraceSymbol* Get_Symbol(uintptr_t addr) {
+BacktraceSymbol* Get_Symbol(uintptr_t addr, void* buffer) {
     if (!k_syms_buffer || sym_list_size == 0) return NULL;
 
     const uint8_t* current = k_syms_buffer;
@@ -39,7 +39,7 @@ BacktraceSymbol* Get_Symbol(uintptr_t addr) {
     if (!previous) return NULL;
 
     
-    BacktraceSymbol* res = malloc(sizeof(BacktraceSymbol) + previous->str_len);
+    BacktraceSymbol* res = buffer;
     if (!res) return NULL; 
 
     memcpy(res, previous, offsetof(BacktraceSymbol, str)); // copy struct fields except str

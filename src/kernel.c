@@ -46,10 +46,10 @@ KernelData_t* kernel_data_ptr;
 extern const uint8_t _binary_syms_bin_start[];
 extern const uint8_t _binary_syms_bin_end[];
 
-static uintptr_t mb_struct_ptr;
+multiboot_info_t* mb_struct_ptr;
 
 void kmain(unsigned int magic, unsigned long mb_struct_addr) {
-    mb_struct_ptr = mb_struct_addr;
+    mb_struct_ptr = (multiboot_info_t*)mb_struct_addr;
     kernel_data_ptr = &kernel_data;
     
     Set_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON, false);
@@ -69,7 +69,7 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     Sys_log("Multiboot info address: 0x%x\n", mb_struct_ptr);
 
     Sys_log("copying multiboot info struct...\n");
-    memcpy(Get_multiboot_info(), (void*)mb_struct_ptr, sizeof(multiboot_info_t));  
+    memcpy(Get_multiboot_info(), mb_struct_ptr, sizeof(multiboot_info_t));  
     
 
     const char* cmdline = (const char*)Get_multiboot_info()->cmdline;
@@ -121,10 +121,14 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     init_tss(allocated_stack_top);
     
     
+    multiboot_info_t* temp_ptr = (multiboot_info_t*)Page_idx_to_Addr(page_alloc(1, 1, 0));
+    memcpy(temp_ptr, mb_struct_ptr, sizeof(multiboot_info_t));
+    get_pte((uintptr_t)temp_ptr/1024)->rw=0;
+    invlpg((uintptr_t)temp_ptr/1024);
     
+    mb_struct_addr = (uintptr_t)temp_ptr;
     
-    // Sys_log("test %x\n",((multiboot_info_t*)mb_struct_ptr)->flags);for(;;);
-    parse_memory_map((multiboot_info_t*)mb_struct_ptr);
+    parse_memory_map(mb_struct_ptr);
     
     
     pit_init(); 
@@ -221,14 +225,16 @@ end_mounting:
     
     
     
-    scheduler_init();
+    // scheduler_init();
     
     Sys_log("Loading login manager...\n");
     exec_ELF("0:/loop.elf");//DEBUG sched just crashes when there is more than 1 process
     
-    task_switching_flag = 1;
+    // task_switching_flag = 1;
     
-    
+    enable_mouse_display();
+    enable_mouse_display();
+    enable_mouse_display();
     Start_Console();
 
     while (1) {

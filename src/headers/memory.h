@@ -23,7 +23,7 @@ typedef struct {
     free_region_t free_regions[MAX_FREE_REGIONS];
 } __attribute__((packed)) free_region_map_t;
 
-extern uint32_t ram_amount;
+extern volatile uint32_t ram_amount;
 extern free_region_map_t* k_mmap;
 
 void parse_memory_map(multiboot_info_t* mb_info);
@@ -42,7 +42,7 @@ void* realloc_impl(void* ptr, size_t size);
 
 
 #define malloc(size)              malloc_impl(size)//;Sys_log("\n");
-#define free(ptr)                free_impl(ptr)//;Sys_log("\n");
+#define free(ptr)                 free_impl(ptr)//;Sys_log("\n");
 #define realloc             realloc_impl
 
 #endif // MEMORY_H

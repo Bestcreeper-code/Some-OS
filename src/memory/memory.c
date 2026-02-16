@@ -7,7 +7,9 @@
 #include "headers/Logger.h"
 #include "headers/paging.h"
 
-uint32_t ram_amount;
+#define  KERNEL_RESERVED_PAGES 4
+
+volatile uint32_t ram_amount;
 
 static free_region_map_t region_map;
 free_region_map_t* k_mmap = &region_map;
@@ -92,8 +94,13 @@ void force_alloc(uint32_t address, uint32_t size) {
 
 void force_free(uint32_t address, uint32_t size) {
     free_region_map_t* k_mmap = get_free_region_map();
+
     uint32_t new_start = address & ~0xFFFU; // align down to 4KB page
     uint32_t new_end   = (address + size + 0xFFFU) & ~0xFFFU; // align up
+
+    // never free memory below 0x10000
+    if (new_end <= 0x10000) return;
+    if (new_start < 0x10000) new_start = 0x10000;
 
     for (int i = 0; i < k_mmap->free_region_count; i++) {
         free_region_t* region = &k_mmap->free_regions[i];
@@ -121,6 +128,8 @@ void force_free(uint32_t address, uint32_t size) {
                     for (int k = j; k < k_mmap->free_region_count - 1; k++) {
                         k_mmap->free_regions[k] = k_mmap->free_regions[k + 1];
                     }
+                    k_mmap->free_regions[k_mmap->free_region_count - 1].base_addr = 0;
+                    k_mmap->free_regions[k_mmap->free_region_count - 1].length = 0;
                     k_mmap->free_region_count--;
                     if (j < i) i--;
                     j--;
@@ -178,9 +187,9 @@ void parse_memory_map(multiboot_info_t* mb_info) {
     
     // allocate 3 kernel pages
     
-    const int KERNEL_RESERVED_PAGES = 3;
+    
     for (int i = 0; i < KERNEL_RESERVED_PAGES; i++) {
-        uintptr_t page_addr = page_alloc(1,1,0);
+        uintptr_t page_addr = Page_idx_to_Addr(page_alloc(1,1,0));
 
         k_mmap->free_regions[k_mmap->free_region_count].base_addr = page_addr;
         k_mmap->free_regions[k_mmap->free_region_count].length = _PAGE_SIZE;
@@ -295,22 +304,25 @@ void* malloc_impl(size_t size) {
 
     free_region_t* region = FirstRegionOfSizeOrMore(full_size);
 
-    if (!region) {
+    if (!region || region->base_addr <= 0xFFFF) {
         uint32_t pages_needed = (full_size + _PAGE_SIZE - 1) / _PAGE_SIZE;
         page_index base = page_alloc(pages_needed,1,0);
         if (!base) {
-            Sys_Error("malloc failed(not enough pages): %u bytes\n", (unsigned)size);
             return NULL;
         }
-        base = k_append_pages(base, pages_needed,1,0);
-        if (!base) {
-            Sys_Error("malloc failed(k_append_pages failed): %u bytes\n", (unsigned)size);
-            return NULL;
-        }
+        Sys_Error("malloc failed(not enough pages): %u bytes\n", (unsigned)size);
 
-        force_free((uint32_t)base, pages_needed * _PAGE_SIZE);
+        // force free only above 0x10000
+        uintptr_t page_addr = Page_idx_to_Addr(base);
+        if (page_addr < 0x10000) page_addr = 0x10000;
+        force_free((uint32_t)page_addr, pages_needed * _PAGE_SIZE);
+
         region = FirstRegionOfSizeOrMore(full_size);
-        if (!region) return NULL;
+    }
+
+    if(region->base_addr <= 0xFFFF){
+        Sys_Error("BRUH : %u",region->base_addr);
+        Sys_Step_Point();
     }
 
     uint32_t* header = (uint32_t*)(uintptr_t)region->base_addr;

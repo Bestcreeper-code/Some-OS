@@ -66,7 +66,7 @@ int setup_paging() {
             pt_base[j].addr = page_idx;
             if (page_idx == 0) pt_base[j].rw = 0;
         }
-#ifdef PAGE_DEBUG_MODE
+#if PAGE_DEBUG_MODE
         Sys_log("setup pTable %d\n",i);
 #endif
         _k_pd.pde_arr[i].present = 1;
@@ -88,7 +88,7 @@ int setup_paging() {
         : "r"(_k_pd.pde_arr)
         : "eax"
     );
-
+    
     unmap_page(&_k_pd,0);
     
     Sys_log("Paging set up successfully.\n");
@@ -182,6 +182,7 @@ PTE* get_pte(uint32_t index) {
     uint32_t pt_index = index & 0x3FF;
 
     PDE* pde = &_k_pd.pde_arr[pd_index];
+    if (!pde) return NULL;
     if (!pde->present) return NULL;
 
     PTE* pt_base = (PTE*)((uintptr_t)pde->addr << 12);
@@ -209,7 +210,7 @@ page_index page_alloc_nomap(size_t amount) {
                     uint32_t idx = start + j;
                     _free_pages_bitmap[idx / 32] &= ~(1 << (idx % 32));
                 }
-#ifdef PAGE_DEBUG_MODE
+#if PAGE_DEBUG_MODE
                 Sys_log("page_alloc_nomap called for %u pages (%x)\n", (unsigned)amount, start * _PAGE_SIZE);
 #endif
                 return start;
@@ -218,7 +219,7 @@ page_index page_alloc_nomap(size_t amount) {
             found = 0;
         }
     }
-#ifdef PAGE_DEBUG_MODE
+#if PAGE_DEBUG_MODE
     Sys_Error("page_alloc_nomap for %d page(s) failed: not enough contiguous free pages\n", amount);
 #endif
     return 0;
@@ -238,7 +239,7 @@ page_index page_alloc(size_t amount, int read_write, int user_supervisor) {
             p->addr = idx;
         }
     }
-#ifdef PAGE_DEBUG_MODE
+#if PAGE_DEBUG_MODE
     Sys_log("page_alloc called for %u pages (%x) with mapping\n", (unsigned)amount, start * _PAGE_SIZE);
 #endif    
     return start;
@@ -246,7 +247,7 @@ page_index page_alloc(size_t amount, int read_write, int user_supervisor) {
 
 void dump_pd() {
     uint32_t* pdes = (uint32_t*)_k_pd.pde_arr;
-#ifdef PAGE_DEBUG_MODE
+#if PAGE_DEBUG_MODE
     Sys_log("Dumping Page Directory from %x\n", _k_pd.pde_arr);
     Sys_log("first pde: %x\n", ((PTE*)pdes)[0].addr * _PAGE_SIZE);
 #endif
@@ -257,7 +258,7 @@ void dump_pd() {
         for (int j = 0; j < 300; j++) {
             if (1||pt[j] & 1) {
                 uint32_t pa = pt[j] & 0xFFFFF000;
-#ifdef PAGE_DEBUG_MODE
+#if PAGE_DEBUG_MODE
                 Sys_log("PD[%03d] PT[%03d] VA=%x -> data=%x\n", i, j, (i<<22)|(j<<12), pt[j]);
 #endif
             }
@@ -441,7 +442,7 @@ uintptr_t PD_append_pages(PD_t* page_dir, PTE* ptes, uint32_t pte_count) {
     }
 
     if (run_length < pte_count) {
-#ifdef PAGE_DEBUG_MODE
+#if PAGE_DEBUG_MODE
         Sys_log("failed for %u pages\n", pte_count);
 #endif
         return 0;
@@ -524,7 +525,7 @@ page_index k_append_pages(page_index phys_start_page,uint32_t amount,uint8_t rw,
     
     found:
     if (found < amount) {
-#ifdef PAGE_DEBUG_MODE
+#if PAGE_DEBUG_MODE
         Sys_log("k_append_pages failed: not enough contiguous free pages\n");
 #endif
         return 0;
@@ -538,11 +539,11 @@ page_index k_append_pages(page_index phys_start_page,uint32_t amount,uint8_t rw,
         pte->rw = rw ? 1 : 0;
         pte->user = us ? 1 : 0;
         pte->addr = phys_start_page + j;
-#ifdef PAGE_DEBUG_MODE
+#if PAGE_DEBUG_MODE
         asm volatile("invlpg (%0)" : : "r"(idx ) : "memory");
 #endif
     }
-#ifdef PAGE_DEBUG_MODE
+#if PAGE_DEBUG_MODE
     Sys_log("k_append_pages mapped %u pages at VA %x\n", amount, start_page_idx * _PAGE_SIZE);
 #endif
     return start_page_idx;

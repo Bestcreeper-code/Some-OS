@@ -90,8 +90,9 @@ LoadedElf* LoadElf(const char* path) {
     Sys_log("ELF entry point: 0x%x\n", elf_header.e_entry);
 #endif
 
-    f_lseek(&file, elf_header.e_phoff);
+    f_lseek(&file, elf_header.e_phoff);Sys_Step_Point();
     Elf32_Phdr* program_headers = malloc(sizeof(Elf32_Phdr) * elf_header.e_phnum);
+    Sys_Step_Point();
     if (!program_headers) {
         Sys_log("Failed to allocate memory for program headers\n");
         f_close(&file);
@@ -105,8 +106,9 @@ LoadedElf* LoadElf(const char* path) {
         f_close(&file);
         return NULL;
     }
-
+Sys_Step_Point();
     PD_t app_page_dir;
+    
     Page_Group* page_groups = malloc(sizeof(Page_Group) * (elf_header.e_phnum + 2));
     if (!page_groups) {
         Sys_log("Failed to allocate page_groups\n");

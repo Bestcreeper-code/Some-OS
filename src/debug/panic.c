@@ -16,6 +16,7 @@
 // #include "../../distorm/include/distorm.h"
 
 
+
 #define MAX_KPANIK_COUNT 1
 
 // CPU Exceptions
@@ -116,7 +117,10 @@ volatile char panic_count = 0;
 
 void _panic_handler(int argc, uint32_t* argv) {
 
-    if(panic_count >= MAX_KPANIK_COUNT)for(;;);
+    if(panic_count >= MAX_KPANIK_COUNT){
+        Sys_Error("Double Fault");
+        for(;;);
+    }
 
     panic_count++;
 
@@ -136,7 +140,7 @@ void _panic_handler(int argc, uint32_t* argv) {
     uint32_t* call_stack = NULL;
     if (argc >= 4) call_stack = (uint32_t*)argv[3];
 
-    if (argc < 3) {
+    if (argc < 4) {
         Sys_log("Crash Handler: Not enough panic info provided\n");
        
         return;
@@ -232,16 +236,17 @@ void _panic_handler(int argc, uint32_t* argv) {
 
 
     // // draw_bitmap_string(buf, 50, 200, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
-    Sys_log(" %s\n", buf);
+    // Sys_log(" %s\n", buf);
 
     // Call Stack Trace
     if (call_stack) {
         // draw_bitmap_string("Call Stack Trace:", 0, 220, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
         Sys_log(" Call Stack Trace:\n");
-        for (int i = 0; i < 8; i++) {
-            sprintf(buf, "%s (%x)", Get_Symbol(call_stack[i])->str, call_stack[i]);
-            // draw_bitmap_string(buf, 20, 240 + i * 20, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
-            Sys_log(" %s\n", buf);
+        for (int i = 0; i < MAX_STACK_TRACE_SIZE; i++) {
+            char tmp_buffer[64];
+            sprintf(buf, "%s (%x)", Get_Symbol(call_stack[i],tmp_buffer)->str, call_stack[i]);
+            
+            Sys_color_log(" %s\n",ANSI_BRIGHT_YELLOW, ANSI_BG_BLACK, buf);
         }
     }
 

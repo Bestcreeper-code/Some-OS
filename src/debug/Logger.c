@@ -127,25 +127,23 @@ void serial_set_bg(uint8_t bg) {
 }
 
 static const uint8_t ansi_to_vga[16] = {
-    
-    0,  
-    4,  
-    2,  
-    6,  
-    1,  
-    5,  
-    3,  
-    7,  
+    0,  // black
+    4,  // red
+    2,  // green
+    6,  // brown 
+    1,  // blue
+    5,  // magenta
+    3,  // cyan
+    7,  // white
 
-    
-    8,   
-    12,  
-    10,  
-    14,  
-    9,   
-    13,  
-    11,  
-    15   
+    8,  // bright black
+    12, // bright red
+    10, // bright green
+    14, // bright yellow
+    9,  // bright blue
+    13, // bright magenta
+    11, // bright cyan
+    15  // bright white
 };
 
 void sys_color_serial_logf(const char* format, uint8_t fg, uint8_t bg, const char* file, const char* func, int line, ...) {

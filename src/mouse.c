@@ -1,7 +1,10 @@
 #include "headers/mouse.h"
+#include "Logger.h"
 #include "headers/kernel_data.h"
 #include "headers/video.h"
 #include "headers/asm.h"
+#include "headers/Logger.h"
+#include "headers/io.h"
 #include <stdint.h>
 
 
@@ -161,7 +164,7 @@ void Redraw_Mouse_Cursor() {
         }
     }
 
-    draw_bitmap_char(32+mouse_state, *mouse_x, *mouse_y, mouse_w, mouse_h, 0x1A, (char*)def_mouse_icons6x8, false, true, false);
+    draw_bitmap_char(32+mouse_state, *mouse_x, *mouse_y, mouse_w, mouse_h, 0xFFFFFFFF, (char*)def_mouse_icons6x8, false, true, false);
 
     MOUSE_X_POS_PREV = *mouse_x;
     MOUSE_Y_POS_PREV = *mouse_y;

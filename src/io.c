@@ -262,6 +262,7 @@ unsigned char getc(){
         }
         sleep(1);//since it fixes it smh
     }
+    
     return chr;
 }
 

@@ -1,3 +1,7 @@
+%define Max_Stack_Trace_Size 16
+
+
+
 global isr0
 global isr1
 global isr2
@@ -33,6 +37,11 @@ global isr31
 
 
 extern _panic_handler
+
+
+
+
+
 
 section .bss
 int_indx    resd 1
@@ -208,7 +217,7 @@ isr_handler:
     jz .trace_done
     mov [esi + ecx*4], eax
     inc ecx
-    cmp ecx, 8
+    cmp ecx, Max_Stack_Trace_Size
     je .trace_done
     mov ebp, [ebp]             ; previous EBP
     jmp .trace_loop
