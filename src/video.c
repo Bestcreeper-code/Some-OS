@@ -59,7 +59,8 @@ void Force_put_pixel(int x, int y, uint32_t color) {//no mouse check
 }
 
 uint32_t get_pixel(int x, int y){
-    return graph_mode_fb[y * Multiboot_info->framebuffer_pitch + x];
+    
+    return graph_mode_fb[y * Multiboot_info->framebuffer_width + x];
 }
 
 // Draw a char from 32 to 127

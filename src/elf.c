@@ -128,11 +128,11 @@ Sys_Step_Point();
     Sys_log("Mapping kernel: 0x%x - 0x%x (%u pages)\n", id_map_start, id_map_end, kernel_pages);
 #endif
 
-    page_groups[0] = (Page_Group){
-        .size = kernel_pages,
-        .paddr = id_map_start,
-        .pte_bits = {.present = 1, .rw = 1, .user = 0, .addr = id_map_start >> 12}
-    };
+    // page_groups[0] = (Page_Group){
+    //     .size = kernel_pages,
+    //     .paddr = id_map_start,
+    //     .pte_bits = {.present = 1, .rw = 1, .user = 0, .addr = id_map_start >> 12}
+    // };
 
     //pt_load segs 
     int seg_index = 0;
@@ -266,7 +266,7 @@ Sys_Step_Point();
             loaded_elf->k_stack.bottom, loaded_elf->k_stack.top,
             loaded_elf->k_esp);
 
-    Sys_log("cr3: 0x%x",loaded_elf->page_dir);
+    Sys_log("cr3: 0x%x\n",loaded_elf->page_dir);
 #endif
     return loaded_elf;
 }

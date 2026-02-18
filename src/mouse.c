@@ -8,6 +8,10 @@
 #include <stdint.h>
 
 
+#define MAX_MOUSE_X Multiboot_info->framebuffer_width
+#define MAX_MOUSE_Y Multiboot_info->framebuffer_height
+
+
 volatile uint8_t mouse_cycle = 0;//3 (1by1 bytes) per action
 volatile uint8_t mouse_bytes[3];
 volatile short* mouse_x = (volatile short*)&MOUSE_X_POS;
@@ -84,16 +88,17 @@ void mouse_irq_handler() {
         
 
 
-        *mouse_x += x_move/2;
-        *mouse_y -= y_move/2; // Y usually inverted 
+        *mouse_x += x_move;
+        *mouse_y -= y_move; // Y inverted 
         
         if(*mouse_x < 0)*mouse_x = 0; 
         if(*mouse_y < 0)*mouse_y = 0;
-        if(*mouse_x > 319)*mouse_x = 319; 
-        if(*mouse_y > 199)*mouse_y = 199; 
+        if(*mouse_x > MAX_MOUSE_X-1)*mouse_x = MAX_MOUSE_X-1; 
+        if(*mouse_y > MAX_MOUSE_Y-1)*mouse_y = MAX_MOUSE_Y-1; 
 
         
     }
+
 }
 
 
@@ -134,7 +139,7 @@ const uint8_t def_mouse_icons6x8[] = {
 //     0xFF, 0b111111, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 // };
     
-uint8_t *mouse_bg = (uint8_t*)MOUSE_PREV_BG; 
+uint32_t mouse_bg [256];
     
 
 static uint8_t mouse_state = 0;
@@ -148,7 +153,7 @@ void Redraw_Mouse_Cursor() {
             int py = MOUSE_Y_POS_PREV + dy;
 
     
-            if (px >= 0 && px < 320 && py >= 0 && py < 200)
+            if (px >= 0 && px < MAX_MOUSE_X && py >= 0 && py < MAX_MOUSE_Y)
                 Force_put_pixel(px, py, mouse_bg[dy * 16 + dx]);
         }
     }
@@ -159,8 +164,10 @@ void Redraw_Mouse_Cursor() {
             int py = *mouse_y + dy;
 
     
-            if (px >= 0 && px < 320 && py >= 0 && py < 200)
+            if (px >= 0 && px < MAX_MOUSE_X && py >= 0 && py < MAX_MOUSE_Y){
+                
                 mouse_bg[dy * 16 + dx] = get_pixel(px, py);
+            }
         }
     }
 

@@ -6,6 +6,12 @@ extern _scheduler_current_process ; Linked_PCB_t*
 extern _scheduler_first_process   ; Linked_PCB_t*
 extern setTssEsp                  ; function to set TSS.esp0
 
+
+; on/off logging
+%define DEBUG_SCHED_LOG 1
+
+
+
 ; === PCB structure offsets ===
 %define Linked_PCB_pid             0
 %define Linked_PCB_state           2
@@ -27,6 +33,49 @@ extern setTssEsp                  ; function to set TSS.esp0
 
 ; next PCB pointer
 %define Linked_PCB_next           32
+
+
+
+%macro LOG_PCB 1
+    %if DEBUG_SCHED_LOG
+        push msg_switching
+        call serial_write_string
+        add esp, 4
+
+        push dword [%1 + Linked_PCB_name]
+        call serial_write_string
+        add esp, 4
+
+        mov ax, [%1 + Linked_PCB_pid]
+        push word 0
+        push ax
+        push msg_pid
+        call serial_log_hex
+        add esp, 8
+
+        mov eax, [%1 + Linked_PCB_cr3]
+        push eax
+        push msg_cr3
+        call serial_log_hex
+        add esp, 8
+
+        mov eax, [%1 + Linked_PCB_k_esp]
+        push eax
+        push msg_esp
+        call serial_log_hex
+        add esp, 8
+
+        mov eax, [%1 + Linked_PCB_next]
+        push eax
+        push msg_next
+        call serial_log_hex
+        add esp, 8
+    %endif
+%endmacro
+
+
+
+
 
 section .data
 msg_switching db "Switching process...",0
@@ -57,39 +106,8 @@ _sched_next_process:
     mov esi, [_scheduler_first_process]
 
 .found_next:
-    ; Logging (optional)
-    push msg_switching
-    call serial_write_string
-    add esp, 4
-
-    push dword [esi + Linked_PCB_name]
-    call serial_write_string
-    add esp, 4
-
-    mov ax, [esi + Linked_PCB_pid]
-    push word 0
-    push ax
-    push msg_pid
-    call serial_log_hex
-    add esp, 8
-
-    mov eax, [esi + Linked_PCB_cr3]
-    push eax
-    push msg_cr3
-    call serial_log_hex
-    add esp, 8
-
-    mov eax, [esi + Linked_PCB_k_esp]
-    push eax
-    push msg_esp
-    call serial_log_hex
-    add esp, 8
-
-    mov eax, [esi + Linked_PCB_next]
-    push eax
-    push msg_next
-    call serial_log_hex
-    add esp, 8
+    
+    LOG_PCB esi
 
     ; --- Update current process pointer ---
     mov [_scheduler_current_process], esi
@@ -103,10 +121,11 @@ _sched_next_process:
     push eax
     call setTssEsp
     add esp, 4
-
     ; --- Restore kernel stack ---
     mov esp, [esi + Linked_PCB_k_esp]
 
-    sti         ; enable interrupts
 
+
+    popfd       ; restore eflags 
+    popad
     iretd       ; return from interrupt

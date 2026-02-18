@@ -225,15 +225,14 @@ end_mounting:
     
     
     
-    // scheduler_init();
+    scheduler_init();
     
     Sys_log("Loading login manager...\n");
     exec_ELF("0:/loop.elf");//DEBUG sched just crashes when there is more than 1 process
     
-    // task_switching_flag = 1;
+    task_switching_flag = 1;
     
-    enable_mouse_display();
-    enable_mouse_display();
+    ClearScreen();
     enable_mouse_display();
     Start_Console();
 
@@ -259,39 +258,3 @@ __attribute__((naked)) void _start() {
 }
 
 
-// readelf --relocs build_execs/gametest.o > relocations.txt
-
-
-
-/*
-    removed code #1:(may be used later)
-
-    __asm__ volatile ("sti");//start ints just for using the keyboard
-    printf("[Creeper OS Kernel]\n");
-    printf("overwrite disk and install OS? (yes/no):\n");
-    if(cmdline && !strcmp(cmdline, "-new_install") && !strcmp(Console_Get_Command(),"yes")){
-        __asm__ volatile ("cli");
-
-        Sys_log("New install flag detected, starting disk installer...\n");
-        multiboot_module_t* os_image_file;
-
-        os_image_file = Multiboot_Get_loaded_module(Get_multiboot_info(), "os.iso");
-        
-
-        if(!os_image_file){
-            Sys_log("Bootloader or kernel module not found, halting.");
-            return;
-        }
-        
-        // int res = Install_OS_to_disk(os_image_file);
-        if(res != 0){
-            printf("Disk installer failed with code %d, halting.", res);
-            Sys_log("Disk installer failed with code %d, halting.", res);
-            while(1)__asm__ volatile ("hlt");
-        }else{
-            Sys_log("Disk installer finished successfully.\n");
-            printf("OS installed successfully!\nYou may now remove the installer media and reboot.\n");
-            while(1)__asm__ volatile ("hlt");
-        }
-    }
-*/

@@ -19,13 +19,14 @@ Linked_PCB_t* _scheduler_current_process = 0;
 uint8_t task_switching_flag = 0;
 
 
-uint32_t pid_bitmap[_PID_BITMAP_SIZE];//0= used and 1 = FREE 
+uint32_t pid_bitmap[_PID_BITMAP_SIZE] =  {[0 ... _PID_BITMAP_SIZE-1] = 0xFFFFFFFF};//0= used and 1 = FREE 
 
 pid_t _get_unused_pid() { 
     uint32_t* current;
 
     for (int i = 0; i < _PID_BITMAP_SIZE; i++) {
         current = &pid_bitmap[i];
+        
         if (!*current){
             continue;
         }
@@ -34,6 +35,7 @@ pid_t _get_unused_pid() {
                 *current &= ~(1 << j);
                 return (pid_t)(i * 32 + j);
             }
+            
         }
     }
     
@@ -114,7 +116,7 @@ int kill_process(short proc_pid){
 void testing();
 
 int scheduler_init(){   
-    memset(pid_bitmap, 0xFFFF, sizeof(pid_bitmap));
+    
     pid_bitmap[0] &= ~(1 << 0);
     
     new_pcb(&_k_pd,"Kernel\n",(uint32_t*)0x200000,(Stack_t){0x200000,0x1FF000},(Stack_t){1,1}); // FIXED: give valid kernel stack

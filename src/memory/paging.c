@@ -285,12 +285,25 @@ void page_free(page_index pa, size_t amount) {
     }
 }
 
+void debug_dump_kernel_mapping(PD_t* pd, uint32_t va) {
+    uint32_t pd_i = (va >> 22) & 0x3FF;
+    uint32_t pt_i = (va >> 12) & 0x3FF;
 
+    PDE* pde = &pd->pde_arr[pd_i];
+    Sys_Warning("K-VA 0x%x: PDE[%u] present=%u rw=%u user=%u addr=0x%x\n",
+            va, pd_i, pde->present, pde->rw, pde->user, pde->addr << 12);
 
+    if (!pde->present) return;
 
-uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, PD_t* out_pd_t ) {
+    PTE* pt_base = (PTE*)((uintptr_t)pde->addr << 12);
+    PTE* pte = &pt_base[pt_i];
+
+    Sys_Warning("           PTE[%u] present=%u rw=%u user=%u addr=0x%x\n",
+            pt_i, pte->present, pte->rw, pte->user, pte->addr << 12);
+}
+
+uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, PD_t* out_pd_t) {
     if (!groups || group_count == 0) return 0;
-
 
     void* pd_addr = (void*)Page_idx_to_Addr(page_alloc(1, 1, 0));
     if (!pd_addr) return 0;
@@ -298,47 +311,66 @@ uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, PD_t* out_pd_t 
 
     memset(out_pd_t->pde_arr, 0, 1024 * sizeof(PDE));
 
-    for (uint32_t j = 0; j < group_count; j++) {
-        Page_Group* group = &groups[j];
-        if (group->size == 0) continue;
+    
+    Sys_log("new_page_dir: _k_pd.pde_arr = %x\n", _k_pd.pde_arr);
+    for (uint32_t i = 0; i < 1024; i++) {
+        out_pd_t->pde_arr[i] = _k_pd.pde_arr[i];
+    }
+    Sys_log("new_page_dir: PDE[0] after copy = %x\n", *(uint32_t*)&out_pd_t->pde_arr[0]);
+    
 
-        page_index virt_addr = group->paddr;
-        page_index phys_addr = group->pte_bits.addr;
+    // for (uint32_t g = 0; g < group_count; g++) {
+    //     Page_Group* group = &groups[g];
+    //     if (group->size == 0) continue;
 
-        uint32_t start_page_idx = virt_addr >> 12;
-        uint32_t end_page_idx = start_page_idx + group->size - 1;
+    //     uint32_t start_page_idx = group->paddr >> 12;
 
-        for (uint32_t i = 0; i < group->size; i++) {
-            uint32_t page_idx = start_page_idx + i;
+    //     Sys_log("group[%u]: vaddr=%x paddr=%x size=%u\n",
+    //         g, group->paddr, group->pte_bits.addr << 12, group->size);
 
-            uint32_t pd_i = page_idx >> 10;      
-            uint32_t pt_i = page_idx & 0x3FF;     
+    //     for (uint32_t i = 0; i < group->size; i++) {
+    //         uint32_t page_idx = start_page_idx + i;
+    //         uint32_t pd_i = page_idx >> 10;
+    //         uint32_t pt_i = page_idx & 0x3FF;
 
-            if (!out_pd_t->pde_arr[pd_i].present) {
-                PTE* pt_base = (PTE*)Page_idx_to_Addr(page_alloc(1, 1, 0));
-                if (!pt_base) return 0;
-                memset(pt_base, 0, _PAGE_SIZE);
+    //         if (!out_pd_t->pde_arr[pd_i].present) {
+    //             PTE* pt_base = (PTE*)Page_idx_to_Addr(page_alloc(1, 1, 0));
+    //             if (!pt_base) return 0;
+    //             memset(pt_base, 0, _PAGE_SIZE);
 
-                out_pd_t->pde_arr[pd_i].present = 1;
-                out_pd_t->pde_arr[pd_i].rw = 1;
-                out_pd_t->pde_arr[pd_i].user = 0;
-                out_pd_t->pde_arr[pd_i].page_size = 0;
-                out_pd_t->pde_arr[pd_i].addr = ((page_index)pt_base) >> 12;
-            }
+    //             out_pd_t->pde_arr[pd_i].present   = 1;
+    //             out_pd_t->pde_arr[pd_i].rw        = 1;
+    //             out_pd_t->pde_arr[pd_i].user       = 1;
+    //             out_pd_t->pde_arr[pd_i].page_size  = 0;
+    //             out_pd_t->pde_arr[pd_i].addr       = ((uintptr_t)pt_base) >> 12;
+    //             Sys_log("  new PT for PDE[%u] at phys %x\n", pd_i, pt_base);
+    //         }
 
-            PTE* pt_base = (PTE*)((uintptr_t)(out_pd_t->pde_arr[pd_i].addr) << 12);
+    //         PTE* pt_base = (PTE*)((uintptr_t)(out_pd_t->pde_arr[pd_i].addr) << 12);
+    //         PTE entry = group->pte_bits;
+    //         entry.addr = group->pte_bits.addr + i;
+    //         pt_base[pt_i] = entry;
+    //     }
+    // }
 
-            PTE entry = group->pte_bits;
-            entry.addr = phys_addr + i;
+    Sys_log("=== PD dump @ %x ===\n", out_pd_t->pde_arr);
+    for (uint32_t i = 0; i < 1024; i++) {
+        PDE* pde = &out_pd_t->pde_arr[i];
+        if (!pde->present) continue;
+        Sys_log("PDE[%u] VA=%x PT_phys=%x rw=%u us=%u\n",
+            i, i << 22, pde->addr << 12, pde->rw, pde->user);
 
-            pt_base[pt_i] = entry;
+        PTE* pt = (PTE*)((uintptr_t)pde->addr << 12);
+        for (uint32_t j = 0; j < 1024; j++) {
+            if (!pt[j].present) continue;
+            Sys_log("  PTE[%u] VA=%x -> PA=%x rw=%u us=%u\n",
+                j, (i << 22) | (j << 12), pt[j].addr << 12, pt[j].rw, pt[j].user);
         }
     }
+    Sys_log("=== end PD dump ===\n");
+    
 
-    if (!v_map(out_pd_t, groups, group_count)) {
-        return 0;
-    }
-    Sys_Warning("new created cr3 is at physical 0x%x ",out_pd_t->pde_arr);
+    Sys_Warning("new created cr3 is at physical 0x%x\n", out_pd_t->pde_arr);
     return (uintptr_t)out_pd_t->pde_arr;
 }
 

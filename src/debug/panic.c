@@ -118,7 +118,8 @@ volatile char panic_count = 0;
 void _panic_handler(int argc, uint32_t* argv) {
 
     if(panic_count >= MAX_KPANIK_COUNT){
-        Sys_Error("Double Fault");
+        Sys_color_log("Double Fault\n",ANSI_RED,ANSI_BG_BLACK);
+        Sys_color_log("Fix your shit\n",ANSI_RED,ANSI_BG_BLACK);
         for(;;);
     }
 
