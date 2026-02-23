@@ -141,6 +141,9 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     int pitch = Multiboot_info->framebuffer_bpp;
     
     ClearScreen();
+    
+    
+    
 
     __asm__ volatile ("sti"); // Enable interrupts
     

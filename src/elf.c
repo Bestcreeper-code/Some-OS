@@ -90,9 +90,9 @@ LoadedElf* LoadElf(const char* path) {
     Sys_log("ELF entry point: 0x%x\n", elf_header.e_entry);
 #endif
 
-    f_lseek(&file, elf_header.e_phoff);Sys_Step_Point();
+    f_lseek(&file, elf_header.e_phoff);
     Elf32_Phdr* program_headers = malloc(sizeof(Elf32_Phdr) * elf_header.e_phnum);
-    Sys_Step_Point();
+    
     if (!program_headers) {
         Sys_log("Failed to allocate memory for program headers\n");
         f_close(&file);
@@ -106,17 +106,17 @@ LoadedElf* LoadElf(const char* path) {
         f_close(&file);
         return NULL;
     }
-Sys_Step_Point();
+
     PD_t app_page_dir;
     
-    Page_Group* page_groups = malloc(sizeof(Page_Group) * (elf_header.e_phnum + 2));
+    Page_Group* page_groups = malloc(sizeof(Page_Group) * (elf_header.e_phnum + 3));
     if (!page_groups) {
         Sys_log("Failed to allocate page_groups\n");
         free(program_headers);
         f_close(&file);
         return NULL;
     }
-    memset(page_groups, 0, sizeof(Page_Group) * (elf_header.e_phnum + 2));
+    memset(page_groups, 0, sizeof(Page_Group) * (elf_header.e_phnum + 3));
 
     uintptr_t kernel_start = (uintptr_t)&_kernel_start;
     uintptr_t kernel_end   = (uintptr_t)&_kernel_end;
@@ -134,8 +134,9 @@ Sys_Step_Point();
     //     .pte_bits = {.present = 1, .rw = 1, .user = 0, .addr = id_map_start >> 12}
     // };
 
-    //pt_load segs 
+    // pt_load segs 
     int seg_index = 0;
+
     for (int i = 0; i < elf_header.e_phnum; i++) {
         Elf32_Phdr* phdr = &program_headers[i];
         if (phdr->p_type != PT_LOAD) continue;
@@ -147,8 +148,8 @@ Sys_Step_Point();
             Sys_log("Failed to allocate memory for segment %d\n", i);
             //free segs page
             for (int j = 0; j < seg_index; j++) {
-                if (page_groups[j+1].size)
-                    page_free(page_groups[j+1].pte_bits.addr << 12, page_groups[j+1].size);
+                if (page_groups[j].size)
+                    page_free(page_groups[j].pte_bits.addr << 12, page_groups[j].size);
             }
             free(page_groups);
             free(program_headers);
@@ -157,12 +158,12 @@ Sys_Step_Point();
         }
 
 #if ELF_DEBUG_MODE
-        Sys_log("Segment %d -> VA: 0x%x, PA: 0x%x, Size: %u bytes\n", seg_index, phdr_vaddr, segment_mem, phdr->p_memsz);
+        Sys_log("Segment %d -> VA: 0x%x, PA: 0x%x, Size: %u bytes \n", seg_index, phdr_vaddr, segment_mem, phdr->p_memsz,i);
 #endif
 
         page_groups[seg_index+1] = (Page_Group){
             .size = num_pages,
-            .paddr = phdr_vaddr,
+            .vaddr = phdr_vaddr>>12,
             .pte_bits = {.present = 1, .rw = (phdr->p_flags & PF_W) ? 1 : 0, .user = 1, .addr = segment_mem >> 12}
         };
         seg_index++;
@@ -202,8 +203,8 @@ Sys_Step_Point();
             if (page_groups[j+1].size)
                 page_free(page_groups[j+1].pte_bits.addr << 12, page_groups[j+1].size);
         }
-        if(us_stack_pa)page_free(us_stack_pa,32);
-        if(k_stack_pa)page_free(k_stack_pa,32);
+        if (us_stack_pa) page_free(us_stack_pa << 12, DEFAULT_STACK_PAGE_AMOUNT);
+        if (k_stack_pa)  page_free(k_stack_pa << 12, DEFAULT_STACK_PAGE_AMOUNT);
         free(page_groups);
         free(program_headers);
         f_close(&file);
@@ -214,26 +215,30 @@ Sys_Step_Point();
     Sys_log("Stack physical allocated at PA: 0x%x (pages: %u)\n", us_stack_pa, (unsigned)DEFAULT_STACK_PAGE_AMOUNT);
 #endif
 
-    // map stack
-    uintptr_t stack_v_bottom = DEFAULT_STACK_TOP_VADDR - (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
+    // map stacks
+    page_index stack_v_bottom = DEFAULT_USTACK_BOTTOM_VADDR >> 12;
+
     page_groups[seg_index+1] = (Page_Group){
         .size = DEFAULT_STACK_PAGE_AMOUNT,
-        .paddr = stack_v_bottom,
+        .vaddr = stack_v_bottom,
         .pte_bits = {.present = 1, .rw = 1, .user = 1, .addr = us_stack_pa}
     };
 
     // map kstack
-    uintptr_t k_stack_v_addr = (uintptr_t)Page_idx_to_Addr(k_stack_pa); 
+    page_index k_stack_v_addr = DEFAULT_KSTACK_BOTTOM_VADDR >> 12; 
+
     page_groups[seg_index+2] = (Page_Group){
         .size = DEFAULT_STACK_PAGE_AMOUNT,
-        .paddr = k_stack_v_addr,
+        .vaddr = k_stack_v_addr,
         .pte_bits = {.present = 1, .rw = 1, .user = 0, .addr = k_stack_pa}
     };
 
     
     //make pd
     new_page_dir(page_groups, seg_index + 3, &app_page_dir);
-
+    for(int i=0;i<1024;i++){
+        Sys_color_log("pde %u = %u\n",ANSI_WHITE,ANSI_BG_BLACK,i,app_page_dir.pde_arr[i]);
+    }
     free(program_headers);
     free(page_groups);
 
@@ -288,7 +293,7 @@ ProcessInfo exec_ELF(char* path){
     }
 
     _setup_user_stack_sched_frame((void*)elf->k_stack.top, &elf->k_esp, (uint32_t)elf->entry_point);
-    uint32_t ebp = DEFAULT_STACK_TOP_VADDR;
+    uint32_t ebp = DEFAULT_USTACK_TOP_VADDR;
     pid_t pid = new_pcb(&elf->page_dir, elf->filename, &elf->k_esp, elf->k_stack, elf->us_stack);
     if(pid <0){
 #if ELF_DEBUG_MODE

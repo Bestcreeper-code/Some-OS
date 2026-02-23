@@ -107,11 +107,12 @@ _sched_next_process:
 
 .found_next:
     
-    LOG_PCB esi
+    
+LOG_PCB esi
 
     ; --- Update current process pointer ---
     mov [_scheduler_current_process], esi
-
+    
     ; --- Load new process page directory ---
     mov eax, [esi + Linked_PCB_cr3]
     mov cr3, eax

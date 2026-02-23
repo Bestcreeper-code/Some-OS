@@ -13,6 +13,7 @@
 #include "../headers/scheduler.h"
 #include "../data/textconsts.h"
 #include "kernel_data.h"
+#include <stdint.h>
 // #include "../../distorm/include/distorm.h"
 
 
@@ -110,154 +111,169 @@ enum CrashType {
     CRASH_CODES_AMOUNT                  // total count
 };
 
+char* isr_error_bits[CRASH_CODES_AMOUNT][32] = {
+
+    // 13 - General Protection Fault
+    [CRASH_GENERAL_PROTECTION] = {
+        "External event (EXT)",            // 0
+        "Descriptor location (IDT=1)",     // 1
+        "Table indicator (LDT=1)",         // 2
+        "Selector index bit 0",            // 3
+        "Selector index bit 1",            // 4
+        "Selector index bit 2",            // 5
+        "Selector index bit 3",            // 6
+        "Selector index bit 4",            // 7
+        "Selector index bit 5",            // 8
+        "Selector index bit 6",            // 9
+        "Selector index bit 7",            // 10
+        "Selector index bit 8",            // 11
+        "Selector index bit 9",            // 12
+        "Selector index bit 10",           // 13
+        "Selector index bit 11",           // 14
+        "Selector index bit 12",           // 15
+        0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0
+    },
+
+    // 14 - Page Fault
+    [CRASH_PAGE_FAULT] = {
+        "Present",  // 0
+        "Write access",                          // 1
+        "User mode access",                      // 2
+        "Reserved bit violation",                // 3
+        "Instruction fetch",                     // 4
+        "Protection key violation",              // 5
+        "Shadow stack access",                   // 6
+        "HLAT violation",                        // 7
+        0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0,
+        0,0,0,0,0,0,0,0
+    }
+};
+
+void _Log_Isr_Error_Code(char isr_idx, uint32_t code){
+    char** errcodes_array = isr_error_bits[isr_idx];
+
+    for(int i=0;i < 31;i++){
+        if(errcodes_array[i] ){
+            bool set = (code & 1 << i);
+            Sys_color_log_NoPos("%s: %s\n",set? ANSI_GREEN:ANSI_RED, ANSI_BG_BLACK, errcodes_array[i], set? "Yes":"No");
+        }
+    }
+}
+
+
+
 
 cpu_registers_t* _cpu_regs;
 
 volatile char panic_count = 0;
-
 void _panic_handler(int argc, uint32_t* argv) {
 
-    if(panic_count >= MAX_KPANIK_COUNT){
-        Sys_color_log("Double Fault\n",ANSI_RED,ANSI_BG_BLACK);
-        Sys_color_log("Fix your shit\n",ANSI_RED,ANSI_BG_BLACK);
-        for(;;);
+    if (panic_count >= MAX_KPANIK_COUNT) {
+        Sys_color_log_NoPos("Double Fault\n", ANSI_RED, ANSI_BG_BLACK);
+        Sys_color_log_NoPos("Fix your shit\n", ANSI_RED, ANSI_BG_BLACK);
+        for (;;);
     }
 
     panic_count++;
 
-
     task_switching_flag = false;
     int isr_index = (int)argv[0];
-    Sys_log("Kernel panic (%d | %d | CR2:0x%x)\n",(int)argv[0],(int)argv[1],((cpu_registers_t*)argv[2])->cr2);
-    
-    
-    if(Get_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON)){
+
+    Sys_log("Kernel panic (%d | %d | CR2:0x%x)\n",
+        (int)argv[0],
+        (int)argv[1],
+        ((cpu_registers_t*)argv[2])->cr2);
+
+    if (Get_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON)) {
         ClearScreen();
-        size_t fb_size = Multiboot_info->framebuffer_width * Multiboot_info->framebuffer_height;
-        dw_memset((void*)graph_mode_fb, 0x000000FF, fb_size);
+        // size_t fb_size = Multiboot_info->framebuffer_width *
+        //                  Multiboot_info->framebuffer_height;
+        // dw_memset((void*)graph_mode_fb, 0x000000FF, fb_size);
     }
-    
 
     uint32_t* call_stack = NULL;
     if (argc >= 4) call_stack = (uint32_t*)argv[3];
 
     if (argc < 4) {
-        Sys_log("Crash Handler: Not enough panic info provided\n");
-       
+        Sys_log_NoPos("Crash Handler: Not enough panic info provided\n");
         return;
     }
 
     uint32_t err_code = argv[1];
     _cpu_regs = (cpu_registers_t*)argv[2];
 
-    const char* error_name = (isr_index >= 0 && isr_index < (int)(sizeof(crash_messages) / sizeof(crash_messages[0])))
-                             ? crash_messages[isr_index]
-                             : "Unknown Crash";
+    const char* error_name =
+        (isr_index >= 0 &&
+         isr_index < (int)(sizeof(crash_messages) / sizeof(crash_messages[0])))
+            ? crash_messages[isr_index]
+            : "Unknown Crash";
 
+    Sys_log_NoPos("=======================================================================\n");
+    Sys_log_NoPos("KERNEL PANIK -> ISR Index: %d (%s), Error Code: %u\n",
+        isr_index, error_name, err_code);
+
+    Sys_log_NoPos(" A critical error has occurred:\n");
+
+    Sys_log_NoPos(" Error Code: %s (%03d: %u)\n",
+        error_name, isr_index, err_code);
+
+        
+    Sys_color_log_NoPos("Error Bits:\n", ANSI_CYAN, ANSI_BG_BLACK);
     
-    Sys_log("=======================================================================\n");
-    Sys_log("KERNEL PANIK -> ISR Index: %d (%s), Error Code: %u\n", isr_index, error_name, err_code);
+    _Log_Isr_Error_Code(isr_index, err_code);
 
-   
-    Sys_log(" A critical error has occurred:\n");
+    Sys_log_NoPos(" Regs Dump:\n");
 
-    char full_str[128];
-    sprintf(full_str, "Error Code: %s (%03d: %u)", error_name, isr_index, err_code);
-    
-    Sys_log(" %s\n", full_str);
+    Sys_log_NoPos(" EAX: 0x%x  EBX: 0x%x  ECX: 0x%x  EDX: 0x%x\n",
+        _cpu_regs->eax, _cpu_regs->ebx,
+        _cpu_regs->ecx, _cpu_regs->edx);
 
-   
-    Sys_log(" Regs Dump:\n");
+    Sys_log_NoPos(" ESI: 0x%x  EDI: 0x%x  EBP: 0x%x  ESP: 0x%x\n",
+        _cpu_regs->esi, _cpu_regs->edi,
+        _cpu_regs->ebp, _cpu_regs->esp);
 
-    char buf[128];
-    sprintf(buf, "EAX: 0x%x  EBX: 0x%x  ECX: 0x%x  EDX: 0x%x", 
-            _cpu_regs->eax, _cpu_regs->ebx, _cpu_regs->ecx, _cpu_regs->edx);
-    
-    Sys_log(" %s\n", buf);
+    Sys_log_NoPos(" EIP: 0x%x  EFLAGS: 0x%x\n",
+        _cpu_regs->eip, _cpu_regs->eflags);
 
-    sprintf(buf, "ESI: 0x%x  EDI: 0x%x  EBP: 0x%x  ESP: 0x%x", 
-            _cpu_regs->esi, _cpu_regs->edi, _cpu_regs->ebp, _cpu_regs->esp);
-   
-    Sys_log(" %s\n", buf);
+    Sys_log_NoPos(" CS:  0x%x  DS:  0x%x  ES:  0x%x\n",
+        _cpu_regs->cs, _cpu_regs->ds, _cpu_regs->es);
 
-    sprintf(buf, "EIP: 0x%x  EFLAGS: 0x%x", _cpu_regs->eip, _cpu_regs->eflags);
-    
-    Sys_log(" %s\n", buf);
+    Sys_log_NoPos(" FS:  0x%x  GS:  0x%x  SS:  0x%x\n",
+        _cpu_regs->fs, _cpu_regs->gs, _cpu_regs->ss);
 
-    // Segment Registers
-    sprintf(buf, "CS:  0x%x  DS:  0x%x  ES:  0x%x", 
-            _cpu_regs->cs, _cpu_regs->ds, _cpu_regs->es);
-    
-    Sys_log(" %s\n", buf);
+    Sys_log_NoPos(" CR0: 0x%x  CR2: 0x%x\n",
+        _cpu_regs->cr0, _cpu_regs->cr2);
 
-    sprintf(buf, "FS:  0x%x  GS:  0x%x  SS:  0x%x", 
-            _cpu_regs->fs, _cpu_regs->gs, _cpu_regs->ss);
-    
-    Sys_log(" %s\n", buf);
-
-    // Control Registers
-    sprintf(buf, "CR0: 0x%x  CR2: 0x%x", _cpu_regs->cr0, _cpu_regs->cr2);
-    
-    Sys_log(" %s\n", buf);
-
-    sprintf(buf, "CR3: 0x%x ", _cpu_regs->cr3);
-    
-    Sys_log(" %s\n", buf);
-
-
-    
-
-
-    // Instruction bytes at EIP
-    uint8_t* instr_ptr = (uint8_t*)_cpu_regs->eip;
-    
-    
-    // _DecodedInst instructions[16]; // Enough space for all instructions
-    // unsigned int count = 0;
-    
-    // Decode buffer (assume 32-bit mode)
-    // _DecodeResult res = distorm_decode(
-    //     0,               // codeOffset (virtual address, 0 if not needed)
-    //     instr_ptr,            // pointer to code
-    //     sizeof(16),    // length of buffer
-    //     Decode32Bits,    // decode mode: 32-bit (i386)
-    //     instructions,    // output array
-    //     16,              // max instructions
-    //     &count           // actual number of instructions decoded
-    // );
-
-                                       
-                                       
-                                       
-    // char instr_bytes[64]; 
-    // for (int i = 0; i < 16; i++) {
-    //     sprintf(instr_bytes + i * 3, "%02x ", instructions[i].size );
-    // }
-    // sprintf(buf, "Code: %s", instr_bytes);
-
-
-    // // draw_bitmap_string(buf, 50, 200, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
-    // Sys_log(" %s\n", buf);
+    Sys_log_NoPos(" CR3: 0x%x\n", _cpu_regs->cr3);
 
     // Call Stack Trace
     if (call_stack) {
-        // draw_bitmap_string("Call Stack Trace:", 0, 220, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
-        Sys_log(" Call Stack Trace:\n");
+        Sys_log_NoPos(" Call Stack Trace:\n");
+
         for (int i = 0; i < MAX_STACK_TRACE_SIZE; i++) {
             char tmp_buffer[64];
-            sprintf(buf, "%s (%x)", Get_Symbol(call_stack[i],tmp_buffer)->str, call_stack[i]);
-            
-            Sys_color_log(" %s\n",ANSI_BRIGHT_YELLOW, ANSI_BG_BLACK, buf);
+            const char* sym = Get_Symbol(call_stack[i], tmp_buffer)->str;
+
+            Sys_color_log_NoPos(" %s (%x)\n",
+                ANSI_BRIGHT_YELLOW,
+                ANSI_BG_BLACK,
+                sym, call_stack[i]);
         }
     }
 
-    // Reboot Countdown
-    
-    Sys_log(" Rebooting in 10 sec...\n");
-    
-asm volatile("sti");
+    Sys_log_NoPos(" Rebooting in 10 sec...\n");
+
+    asm volatile("sti");
+
     for (int i = 0; i < 10; i++) {
-        draw_bitmap_char('#', 60 + (8 * i), 440, 8, 16, 0xFF00FF00, font8x16, false, true, true);
+        draw_bitmap_char('#',
+            60 + (8 * i), 440,
+            8, 16,
+            0xFF00FF00,
+            font8x16,
+            false, true, true);
         sleep(1000);
     }
 
@@ -266,40 +282,42 @@ asm volatile("sti");
 
 
 void _manual_panic(const char* error, const char* info) {
-    
 
-    
-    graph_mode_fb = (volatile uint32_t*)(uint32_t)Multiboot_info->framebuffer_addr;
-    int fb_size = Multiboot_info->framebuffer_height * Multiboot_info->framebuffer_pitch;
+    graph_mode_fb = (volatile uint32_t*)
+        (uint32_t)Multiboot_info->framebuffer_addr;
+
+    int fb_size = Multiboot_info->framebuffer_height *
+                  Multiboot_info->framebuffer_pitch;
+
     memset((void*)graph_mode_fb, 0, fb_size);
 
-    Sys_log("kernel panic triggered!\n");
-    Sys_log("  Error: %s\n", error ? error : "(null)");
-    Sys_log("  Info : %s\n", info ? info : "(null)");
+    Sys_log_NoPos("kernel panic triggered!\n");
+    Sys_log_NoPos("  Error: %s\n", error ? error : "(null)");
+    Sys_log_NoPos("  Info : %s\n", info ? info : "(null)");
 
-    // Header
-    // draw_bitmap_string("MANUAL PANIC", 20, 20, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
-
-    
     if (error) {
-        Sys_Error(error, 20, 60, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+        Sys_Error(error, 20, 60, 8, 16,
+                  0xFFFFFFFF, font8x16,
+                  false, true, 0);
     }
 
-    
     if (info) {
-        Sys_Warning(info, 20, 90, 8, 16, 0xFFFFFFFF, font8x16, false, true, 0);
+        Sys_Warning(info, 20, 90, 8, 16,
+                    0xFFFFFFFF, font8x16,
+                    false, true, 0);
     }
 
-    
-    
-    Sys_log(" Rebooting in 5 sec...\n");
-
-    
+    Sys_log_NoPos(" Rebooting in 5 sec...\n");
 
     asm volatile("sti");
+
     for (int i = 0; i < 5; i++) {
-        draw_bitmap_char('#', 20 + (8 * i), 160, 8, 16,
-            0xFF00FF00, font8x16, false, true, true);
+        draw_bitmap_char('#',
+            20 + (8 * i), 160,
+            8, 16,
+            0xFF00FF00,
+            font8x16,
+            false, true, true);
         sleep(1000);
     }
 

@@ -78,7 +78,16 @@ $(ISO_DIR):
 	mkdir -p $(GRUB_DIR)
 
 # === ISO ===
-iso: $(KERNEL_BIN) $(KERNEL_ELF) $(GRUB_DIR)
+iso: $(KERNEL_ELF) $(KERNEL_BIN) $(GRUB_DIR)
+	
+	sh ./syms_file_maker.sh $(KERNEL_ELF) $(SYMS_BIN)
+	
+	objcopy -I binary -O elf32-i386 -B i386 $(SYMS_BIN) $(SYMS_OBJ)
+	
+	$(LD) $(LDFLAGS) -o $(KERNEL_ELF) $(SYMS_OBJ) $(MULTIBOOT_OBJ) $(OBJECTS)
+	
+	cp $(KERNEL_ELF) ./
+
 	@echo "Creating GRUB bootable ISO..."
 	grub-mkrescue -o $(ISO_FILE) iso/
 

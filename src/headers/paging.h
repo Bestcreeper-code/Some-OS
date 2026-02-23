@@ -62,7 +62,7 @@ typedef struct {
 
 typedef struct {
     uint32_t size;
-    page_index paddr;
+    page_index vaddr;
     PTE pte_bits;
 } __attribute__((packed)) Page_Group ;
 
