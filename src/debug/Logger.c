@@ -1,7 +1,7 @@
 #include "../headers/Logger.h"
 
 #include "../headers/string.h"
-#include "../headers/asm.h"
+#include "asm.h"
 #include "../headers/io.h"
 #include <stdbool.h>
 #include <stdarg.h>

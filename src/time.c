@@ -1,8 +1,8 @@
-#include "headers/time.h"
+#include "time.h"
 #include "Logger.h"
-#include "headers/asm.h"
-#include "headers/io.h"
-#include "headers/memory.h"
+#include "asm.h"
+#include "io.h"
+#include "memory.h"
 #include <stdint.h>
 
 #define CMOS_ADDRESS 0x70
@@ -17,7 +17,7 @@
 uint64_t* timer_ticks = (uint64_t*)&TICKS_AMOUNT;
 
 
-#include "headers/asm.h" // for outb()
+#include "asm.h" // for outb()
 
 // ----------------- PIC -----------------
 void pic_remap() {

@@ -1,6 +1,6 @@
-#include "headers/syscalls.h"
-#include "headers/asm.h"
-#include "headers/Logger.h"
+#include "syscalls.h"
+#include "asm.h"
+#include "Logger.h"
 
 syscall_args_t _syscall_args;
 

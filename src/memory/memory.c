@@ -1,11 +1,11 @@
-#include "headers/memory.h"
-#include "headers/string.h"
-#include "headers/multiboot_info.h"
-#include "headers/io.h"
+#include "memory.h"
+#include "string.h"
+#include "multiboot_info.h"
+#include "io.h"
 #include <stdint.h>
-#include "config/config.h"
-#include "headers/Logger.h"
-#include "headers/paging.h"
+#include "config.h"
+#include "Logger.h"
+#include "paging.h"
 
 #define  KERNEL_RESERVED_PAGES 4
 

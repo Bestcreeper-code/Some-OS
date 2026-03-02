@@ -1,3 +1,4 @@
+[BITS 32]
     %define CTRL_KEY_COMBO 159
 
     ; 256 chars

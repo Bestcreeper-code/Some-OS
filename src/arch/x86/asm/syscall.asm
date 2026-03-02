@@ -1,3 +1,4 @@
+[BITS 32]
 global _syscall_int_80_handler
 extern syscall_handler
 

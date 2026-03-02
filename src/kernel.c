@@ -1,26 +1,27 @@
 #include <stdint.h>
 #include <stdbool.h>
-#include "headers/console.h"
-#include "headers/ATA_IO.h"
-#include "headers/io.h"
-#include "headers/multiboot_info.h"
-#include "headers/FileSystem.h"
-#include "headers/memory.h"
-#include "headers/idt.h"
-#include "headers/time.h"
-#include "headers/Logger.h"
-#include "headers/gdt.h"
+#include "console.h"
+#include "ATA_IO.h"
+#include "io.h"
+#include "multiboot_info.h"
+#include "FileSystem.h"
+#include "memory.h"
+#include "idt.h"
+#include "time.h"
+#include "Logger.h"
+#include "arch.h"
 #include "../FatFs/ff.h"
-#include "headers/asm.h"
-#include "headers/video.h"
-#include "headers/vga_modes.h"
-#include "headers/mouse.h"
-// #include "headers/usb.h"
-#include "headers/bios.h"
-#include "headers/elf.h"
-#include "headers/paging.h"
-#include "headers/scheduler.h"
-#include "headers/symbols.h"
+#include "asm.h"
+#include "video.h"
+#include "vga_modes.h"
+#include "mouse.h"
+#include "gdt.h"
+// #include "usb.h"
+#include "bios.h"
+#include "elf.h"
+#include "paging.h"
+#include "scheduler.h"
+#include "symbols.h"
 
 #include "config/config.h"
 #include "cpu.h"
@@ -29,7 +30,7 @@
 
 
 
-#include "../output.h"
+
 #include "kernel_data.h"
 #include "string.h"
 
@@ -76,7 +77,7 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     Sys_log("kernel called with: %s\n", cmdline);
 
     
-    init_desc_tables();
+    arch_init();
 
     
     idt_init();
@@ -231,7 +232,7 @@ end_mounting:
     scheduler_init();
     
     Sys_log("Loading login manager...\n");
-    exec_ELF("0:/loop.elf");//DEBUG sched just crashes when there is more than 1 process
+    // exec_ELF("0:/loop.elf");//DEBUG sched just crashes when there is more than 1 process
     
     task_switching_flag = 1;
     

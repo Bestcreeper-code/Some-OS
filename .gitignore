@@ -18,3 +18,8 @@ diskmount/
 *.raw
 *.bin
 outpu.h
+build.sh
+buildlib.sh
+*.png
+run.txt
+test.txt

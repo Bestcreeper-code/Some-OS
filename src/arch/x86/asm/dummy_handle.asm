@@ -1,3 +1,5 @@
+[BITS 32]
+
 global irq_dummy_handler
 
 section .text

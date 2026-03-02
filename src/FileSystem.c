@@ -1,17 +1,17 @@
-#include "headers/FileSystem.h"
-#include "headers/string.h"
-#include "headers/memory.h"
-#include "headers/time.h"
-#include "headers/video.h"
-#include "headers/vga_modes.h"
-// #include "headers/loader.h"
-#include "headers/Logger.h"
-#include "headers/mouse.h"
-#include "headers/paging.h"
+#include "FileSystem.h"
+#include "string.h"
+#include "memory.h"
+#include "time.h"
+#include "video.h"
+#include "vga_modes.h"
+// #include "loader.h"
+#include "Logger.h"
+#include "mouse.h"
+#include "paging.h"
 
 #include "data/textconsts.h"
 
-#define EXEC_LOAD_ADRESS 0x200000
+
 
 PARTITION VolToPart[16] = {
     {0, 0}, 
@@ -251,53 +251,6 @@ FRESULT change_Current_Dir(char** currdir, const char* _path) {
     }
 }
 
-
-
-// int Load_bin_exe(const char* file_path,int argc, char** argv){
-//     FIL file;              // File object
-//     FRESULT res;           // Result code
-//     UINT bytesRead;        // Number of bytes read
-//     void* buffer;
-//     UINT fileSize;
-
-//     memset((void*)0x200000,0,0x200000);
-//     // Open the binary file for reading
-//     res = f_open(&file,file_path, FA_READ);
-//     if (res == FR_OK) {
-//         fileSize = f_size(&file);  // Get file size
-
-//         // Allocate memory for file contents
-//         force_alloc(EXEC_LOAD_ADRESS, fileSize);
-//         buffer = (void*)EXEC_LOAD_ADRESS; // Use a fixed address for simplicity
-//         // Read the file contents into buffer
-//         res = f_read(&file, buffer, fileSize, &bytesRead);
-//         if (res == FR_OK && bytesRead == fileSize) {
-//             // File successfully read into buffer
-//             Sys_log("File %s read successfully \n",file_path);
-            
-//             // Define a function pointer to the entry point
-//             int (*entry)(int, char**) = (int (*)(int, char**))buffer;
-
-
-//             // Call the loaded binary
-//             entry(argc, argv);
-
-//             vga_set_mode(0x03);
-//             disable_mouse_display();
-//             ClearScreen();
-
-//             // Wipe the memory region after execution
-//             memset(buffer, 0, fileSize);
-        
-//         } else {
-//             Sys_log("File read error(%s): %d\n", file_path, res);
-//         }
-
-//         f_close(&file);
-//     } else {
-//         Sys_log("Failed to open file %s : %d\n", file_path, res);
-//     }
-// }
 
 char* Get_Dir(const char* path){
     if (!path) return NULL;

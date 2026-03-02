@@ -1,3 +1,4 @@
+[BITS 32]
 global _sched_next_process
 
 extern serial_write_string
@@ -8,7 +9,7 @@ extern setTssEsp                  ; function to set TSS.esp0
 
 
 ; on/off logging
-%define DEBUG_SCHED_LOG 1
+%define DEBUG_SCHED_LOG 0 
 
 
 

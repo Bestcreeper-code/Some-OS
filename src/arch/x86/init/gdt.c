@@ -1,5 +1,5 @@
-#include "headers/gdt.h"
-#include "headers/string.h"
+#include "gdt.h"
+#include "string.h"
 
 extern void gdt_flush(uint32_t);
 
@@ -7,7 +7,7 @@ struct gdt_entry_struct gdt_entries[6];
 struct gdt_ptr_struct gdt_ptr;
 static struct tss_entry tss;
 
-void init_desc_tables(){
+void init_gdt(){
     gdt_ptr.limit = (sizeof(struct gdt_entry_struct)*6) - 1;
     gdt_ptr.base = (uint32_t)&gdt_entries;
     

@@ -1,4 +1,4 @@
-
+[BITS 32]
 %define MOUSE_FLAGS_K_DATA_Off    0x0004+256
 %define MOUSE_FLAG_ENABLED      1 << 7
 

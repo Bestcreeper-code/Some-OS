@@ -1,11 +1,11 @@
-#include "headers/scheduler.h"
+#include "scheduler.h"
 #include "Logger.h"
-#include "headers/paging.h"
-#include "headers/memory.h"
-#include "headers/string.h"
-#include "headers/gdt.h"
-#include "headers/asm.h"
-#include "headers/time.h"
+#include "paging.h"
+#include "memory.h"
+#include "string.h"
+#include "gdt.h"
+#include "asm.h"
+#include "time.h"
 
 
 Linked_PCB_t* _scheduler_first_process = 0;

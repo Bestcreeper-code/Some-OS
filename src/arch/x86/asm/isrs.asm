@@ -1,3 +1,4 @@
+[BITS 32]
 %define Max_Stack_Trace_Size 16
 
 

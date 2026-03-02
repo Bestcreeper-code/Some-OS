@@ -43,12 +43,12 @@ struct tss_entry {
 
 // extern struct tss_entry tss;
 
+void init_gdt();
 void init_tss(uint32_t esp);
 void setTssGate(uint32_t index, uint32_t base, uint32_t limit);
 
 void setTssEsp(uint32_t esp);
 
-void init_desc_tables();
 void setGdtGate(uint32_t gate, uint32_t base, uint32_t limit, uint8_t access, uint8_t granularity);
 
 

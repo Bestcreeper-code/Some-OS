@@ -5,11 +5,25 @@ CC = gcc
 NASM = nasm
 LD = ld
 OBJCOPY = objcopy
-CFLAGS = -m32 -g -ffreestanding -Isrc -Isrc/headers -fno-stack-protector -mno-sse -mno-sse2 -fno-tree-vectorize
-LDFLAGS = -m elf_i386 -T linker.ld -z noexecstack 
+
+ARCH = x86
+ARCH_DIR = src/arch/$(ARCH)
+
+
+INCLUDE_DIRS = src src/config src/headers \
+	src/bootloader                        \
+	src/arch $(ARCH_DIR) $(ARCH_DIR)/elf  \
+	$(ARCH_DIR)/memory $(ARCH_DIR)/init   \
+	$(ARCH_DIR)/asm
+
+INCLUDES := $(addprefix -I,$(INCLUDE_DIRS))
+
+CFLAGS = -m32 -g -ffreestanding $(INCLUDES) -fno-stack-protector -mno-sse -mno-sse2 -fno-tree-vectorize
+
+LDFLAGS = -m elf_i386 -T src/arch/$(ARCH)/linker.ld -z noexecstack 
 
 # === Directories ===
-SRC_DIRS = src FatFs distorm/src
+SRC_DIRS = src FatFs 
 BUILD_DIR = build
 ISO_DIR = iso/boot
 GRUB_DIR = $(ISO_DIR)/grub
@@ -51,7 +65,7 @@ $(BUILD_DIR)/%_asm.o: %.asm
 	$(NASM) -f elf32 $< -o $@
 
 # Special rule for multiboot header
-$(MULTIBOOT_OBJ): src/multiboot_header.asm
+$(MULTIBOOT_OBJ): src/bootloader/multiboot1/multiboot_header.asm
 	@mkdir -p $(dir $@)
 	@echo "Assembling multiboot header..."
 	$(NASM) -f elf32 $< -o $@

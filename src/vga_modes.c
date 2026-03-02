@@ -1,7 +1,7 @@
-#include "headers/vga_modes.h"
-#include "headers/asm.h"
+#include "vga_modes.h"
+#include "asm.h"
 #include "data/textconsts.h"
-#include "headers/multiboot_info.h"
+#include "multiboot_info.h"
 
 
 const vga_mode vga_mode_13h = {

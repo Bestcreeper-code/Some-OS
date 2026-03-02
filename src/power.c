@@ -1,5 +1,5 @@
-#include "headers/power.h"
-#include "headers/asm.h"
+#include "power.h"
+#include "asm.h"
 
 void pc_reboot() {
     __asm__ volatile ("cli"); 

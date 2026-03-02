@@ -1,9 +1,9 @@
-#include "headers/idt.h"
-#include "headers/asm.h"
-#include "headers/string.h"
-#include "headers/Logger.h"
-#include "headers/mouse.h"
-#include "headers/io.h"
+#include "idt.h"
+#include "asm.h"
+#include "string.h"
+#include "Logger.h"
+#include "mouse.h"
+#include "io.h"
 
 #define IDT_ENTRIES 256
 struct IDTEntry idt[IDT_ENTRIES];

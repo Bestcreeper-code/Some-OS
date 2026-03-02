@@ -1,23 +1,31 @@
 [
   {
+    "file": "src/kernel.c",
     "arguments": [
-      "/usr/bin/gcc",
+      "gcc",
       "-m32",
       "-g",
       "-ffreestanding",
       "-Isrc",
+      "-Isrc/config",
       "-Isrc/headers",
+      "-Isrc/bootloader",
+      "-Isrc/arch",
+      "-Isrc/arch/x86",
+      "-Isrc/arch/x86/elf",
+      "-Isrc/arch/x86/memory",
+      "-Isrc/arch/x86/init",
+      "-Isrc/arch/x86/asm",
       "-fno-stack-protector",
       "-mno-sse",
       "-mno-sse2",
       "-fno-tree-vectorize",
       "-c",
+      "src/kernel.c",
       "-o",
-      "build/src/memory/paging.o",
-      "src/memory/paging.c"
+      "build/src/kernel.o"
     ],
     "directory": "/home/bestcreeper/Code/Some-OS",
-    "file": "/home/bestcreeper/Code/Some-OS/src/memory/paging.c",
-    "output": "/home/bestcreeper/Code/Some-OS/build/src/memory/paging.o"
+    "output": "build/src/kernel.o"
   }
 ]

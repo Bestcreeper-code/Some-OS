@@ -1,6 +1,6 @@
-#include "headers/symbols.h"
-#include "headers/memory.h"
-#include "headers/string.h"
+#include "symbols.h"
+#include "memory.h"
+#include "string.h"
 
 // Embedded syms.bin
 extern const uint8_t _binary_syms_bin_start[];
