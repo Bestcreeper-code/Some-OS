@@ -1,11 +1,11 @@
-#include "headers/elf.h"
+#include "elf.h"
 #include "asm.h"
-#include "headers/Logger.h"
-#include "headers/string.h"
-#include "headers/FileSystem.h"
-#include "headers/memory.h"
-#include "headers/paging.h"
-#include "headers/scheduler.h"
+#include "Logger.h"
+#include "string.h"
+#include "FileSystem.h"
+#include "memory.h"
+#include "paging.h"
+#include "scheduler.h"
 
 #include <stdint.h>
 
@@ -120,9 +120,9 @@ LoadedElf* LoadElf(const char* path) {
 
     uintptr_t kernel_start = (uintptr_t)&_kernel_start;
     uintptr_t kernel_end   = (uintptr_t)&_kernel_end;
-    uintptr_t id_map_start = kernel_start & ~(_PAGE_SIZE - 1);
-    uintptr_t id_map_end   = (kernel_end + (_PAGE_SIZE - 1)) & ~(_PAGE_SIZE - 1);
-    size_t kernel_pages    = (id_map_end - id_map_start) / _PAGE_SIZE;
+    uintptr_t id_map_start = kernel_start & ~(PAGE_SIZE - 1);
+    uintptr_t id_map_end   = (kernel_end + (PAGE_SIZE - 1)) & ~(PAGE_SIZE - 1);
+    size_t kernel_pages    = (id_map_end - id_map_start) / PAGE_SIZE;
 
 #if ELF_DEBUG_MODE
     Sys_log("Mapping kernel: 0x%x - 0x%x (%u pages)\n", id_map_start, id_map_end, kernel_pages);
@@ -141,9 +141,9 @@ LoadedElf* LoadElf(const char* path) {
         Elf32_Phdr* phdr = &program_headers[i];
         if (phdr->p_type != PT_LOAD) continue;
 
-        size_t num_pages = (phdr->p_memsz + _PAGE_SIZE - 1) / _PAGE_SIZE;
+        size_t num_pages = (phdr->p_memsz + PAGE_SIZE - 1) / PAGE_SIZE;
         uintptr_t phdr_vaddr = phdr->p_vaddr;
-        uintptr_t segment_mem = page_alloc(num_pages, (phdr->p_flags & PF_W) ? 1 : 0, 1)<<12;
+        uintptr_t segment_mem = page_alloc(num_pages, ((phdr->p_flags & PF_W) ? PAGE_FLAG_RW : 0) | PAGE_FLAG_USER)<<12;
         if (!segment_mem) {
             Sys_log("Failed to allocate memory for segment %d\n", i);
             //free segs page
@@ -194,8 +194,8 @@ LoadedElf* LoadElf(const char* path) {
     
     //stack
 
-    page_index us_stack_pa = page_alloc(DEFAULT_STACK_PAGE_AMOUNT, 1, 1);
-    page_index k_stack_pa = page_alloc(DEFAULT_STACK_PAGE_AMOUNT, 1, 1);
+    page_index us_stack_pa = page_alloc(DEFAULT_STACK_PAGE_AMOUNT, PAGE_FLAG_RW | PAGE_FLAG_USER);
+    page_index k_stack_pa = page_alloc(DEFAULT_STACK_PAGE_AMOUNT, PAGE_FLAG_RW);
     if (!us_stack_pa || !k_stack_pa) {
         Sys_log("Failed to allocate stack\n");
         
@@ -254,13 +254,13 @@ LoadedElf* LoadElf(const char* path) {
     loaded_elf->page_dir     = app_page_dir;
     loaded_elf->filename     = strdup(path);
     
-    loaded_elf->us_stack.bottom = Page_idx_to_Addr(us_stack_pa);
-    loaded_elf->us_stack.top    = Page_idx_to_Addr(us_stack_pa) + (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
+    loaded_elf->us_stack.bottom = PAGE_ADDR(us_stack_pa);
+    loaded_elf->us_stack.top    = PAGE_ADDR(us_stack_pa) + (DEFAULT_STACK_PAGE_AMOUNT * PAGE_SIZE);
 
-    loaded_elf->k_stack.bottom          = Page_idx_to_Addr(k_stack_pa);
-    loaded_elf->k_stack.top          = Page_idx_to_Addr(k_stack_pa) + (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
+    loaded_elf->k_stack.bottom          = PAGE_ADDR(k_stack_pa);
+    loaded_elf->k_stack.top          = PAGE_ADDR(k_stack_pa) + (DEFAULT_STACK_PAGE_AMOUNT * PAGE_SIZE);
 
-    loaded_elf->k_esp          = Page_idx_to_Addr(k_stack_pa) + (DEFAULT_STACK_PAGE_AMOUNT * _PAGE_SIZE);
+    loaded_elf->k_esp          = PAGE_ADDR(k_stack_pa) + (DEFAULT_STACK_PAGE_AMOUNT * PAGE_SIZE);
     
 
     f_close(&file);

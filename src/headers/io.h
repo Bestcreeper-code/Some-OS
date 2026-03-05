@@ -89,7 +89,7 @@ int vsnprintf(char* buffer, int size, const char* format, va_list args);
 int write_char(char* buffer, int pos, char c, int size);
 int write_str(char* buffer, int pos, const char* s, int size);
 int write_number(char* buffer, int pos, int num, int size);
-int write_unsigned(char* buffer, int pos, uint32_t num, int size);
+int write_uint32(char* buffer, int pos, uint32_t num, int size);
 int write_hex32(char* buffer, int pos, uint32_t num, int size);
 int write_number_fixed_width(char* buffer, int pos, int num, int width, int size);
 

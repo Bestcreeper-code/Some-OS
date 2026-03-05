@@ -603,7 +603,7 @@ int write_number(char* buffer, int pos, int num, int size) {
     return total_len;
 }
 
-int write_unsigned(char* buffer, int pos, uint32_t num, int size) {
+int write_uint32(char* buffer, int pos, uint32_t num, int size) {
     char temp[11];
     int i = 0;
 
@@ -760,7 +760,7 @@ int vsnprintf(char* buffer, int size, const char* format, va_list args) {
                 }
                 case 'u': {
                     uint32_t val = va_arg(args, uint32_t);
-                    pos += write_unsigned(buffer, pos, val, size);
+                    pos += write_uint32(buffer, pos, val, size);
                     break;
                 }
                 case 'x':case 'p':
@@ -854,7 +854,7 @@ int vsprintf(char* buffer, const char* format, va_list args) {
                 }
                 case 'u': {
                     uint32_t val = va_arg(args, uint32_t);
-                    pos += write_unsigned(buffer, pos, val, 0);
+                    pos += write_uint32(buffer, pos, val, 0);
                     break;
                 }
                 case 'x':

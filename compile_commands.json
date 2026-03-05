@@ -1,6 +1,6 @@
 [
   {
-    "file": "src/kernel.c",
+    "file": "src/arch/x86/elf/elf.c",
     "arguments": [
       "gcc",
       "-m32",
@@ -10,22 +10,26 @@
       "-Isrc/config",
       "-Isrc/headers",
       "-Isrc/bootloader",
-      "-Isrc/arch",
+      "-Isrc/arch/includes",
       "-Isrc/arch/x86",
       "-Isrc/arch/x86/elf",
       "-Isrc/arch/x86/memory",
       "-Isrc/arch/x86/init",
       "-Isrc/arch/x86/asm",
+      "-Isrc/arch/x86/cpu",
+      "-Isrc/arch/x86/scheduler",
+      "-Isrc/drivers/ATA",
+      "-Isrc/drivers/PS-2",
       "-fno-stack-protector",
       "-mno-sse",
       "-mno-sse2",
       "-fno-tree-vectorize",
       "-c",
-      "src/kernel.c",
+      "src/arch/x86/elf/elf.c",
       "-o",
-      "build/src/kernel.o"
+      "build/src/arch/x86/elf/elf.o"
     ],
     "directory": "/home/bestcreeper/Code/Some-OS",
-    "output": "build/src/kernel.o"
+    "output": "build/src/arch/x86/elf/elf.o"
   }
 ]

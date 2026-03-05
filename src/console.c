@@ -1,4 +1,4 @@
-#include "headers/console.h"
+#include "console.h"
 
 
 #include <stdint.h>
@@ -6,14 +6,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include "asm.h"
-#include "headers/string.h"
-#include "headers/ATA_IO.h"
-#include "headers/time.h"
-#include "headers/io.h"
-#include "headers/memory.h"
-#include "headers/multiboot_info.h"
+#include "cpu/cpu.h"
+#include "string.h"
+#include "ATA_IO.h"
+#include "time.h"
+#include "io.h"
+#include "memory.h"
+#include "multiboot_info.h"
 #include "../FatFs/ff.h"
-#include "headers/FileSystem.h"
+#include "FileSystem.h"
 
 #include "data/textconsts.h"
 #include "paging.h"
@@ -234,13 +235,8 @@ bool Console_Process_Command(char* command) {
             result = false;
         }
     }
-    else if (!strcmp(tokens[0], "edit")) {
-        if (token_count > 1) {
-            // Placeholder 
-            if (echoing) printstr("\n");
-        } else {
-            result = false;
-        }
+    else if (!strcmp(tokens[0], "cpu")) {
+        cpu_log_specs();
     }
     else if (!strcmp(tokens[0], "new")) {
         if (token_count < 2) {
@@ -277,6 +273,7 @@ bool Console_Process_Command(char* command) {
             }
         }
     }
+    
     else if (!strcmp(tokens[0], "mem")) {
         char buffer[16];
         byte_nb_simplify(get_used_ram(),buffer);

@@ -12,9 +12,15 @@ ARCH_DIR = src/arch/$(ARCH)
 
 INCLUDE_DIRS = src src/config src/headers \
 	src/bootloader                        \
-	src/arch $(ARCH_DIR) $(ARCH_DIR)/elf  \
+	src/arch/includes $(ARCH_DIR) $(ARCH_DIR)/elf  \
 	$(ARCH_DIR)/memory $(ARCH_DIR)/init   \
-	$(ARCH_DIR)/asm
+	$(ARCH_DIR)/asm $(ARCH_DIR)/cpu 	  \
+	$(ARCH_DIR)/scheduler                 \
+	\
+	\
+	\
+	\
+	src/drivers/ATA src/drivers/PS-2 
 
 INCLUDES := $(addprefix -I,$(INCLUDE_DIRS))
 

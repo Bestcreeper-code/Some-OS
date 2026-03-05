@@ -1,5 +1,4 @@
-#ifndef PAGING_H
-#define PAGING_H
+#pragma once
 
 #include <stdint.h>
 #include <stddef.h>
@@ -17,8 +16,6 @@ typedef uintptr_t page_index;
 
 #define _PAGETABLE_MAPPED_SIZE 0x400000
 
-
-#define Page_idx_to_Addr(idx) (idx*_PAGE_SIZE)
 
 // typedef enum {
 //     OS_PAGE_FLAGS_ALLOCATED     = 1 << 0,
@@ -106,4 +103,3 @@ void dump_pd();
 
 uint32_t get_used_ram();
 
-#endif

@@ -1,5 +1,4 @@
-// #include "headers/console.h"  // for print()
-#include "headers/ATA_IO.h"
+#include "ATA_IO.h"
 #include <asm.h>
 
 #include <stdint.h>
@@ -17,6 +16,7 @@ static void ata_wait_drq() {
 
 void ata_pio_write_sector(uint32_t lba, const uint8_t *buffer) {
     ata_wait_busy();
+    
 
     outb(ATA_DRIVE, 0xE0 | ((lba >> 24) & 0x0F));
     outb(ATA_SECTOR_CNT, 1);

@@ -1,10 +1,10 @@
-#include "headers/mouse.h"
+#include "mouse.h"
 #include "Logger.h"
-#include "headers/kernel_data.h"
-#include "headers/video.h"
+#include "kernel_data.h"
+#include "video.h"
 #include "asm.h"
-#include "headers/Logger.h"
-#include "headers/io.h"
+#include "Logger.h"
+#include "io.h"
 #include <stdint.h>
 
 

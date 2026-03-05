@@ -17,7 +17,7 @@
 #include "mouse.h"
 #include "gdt.h"
 // #include "usb.h"
-#include "bios.h"
+
 #include "elf.h"
 #include "paging.h"
 #include "scheduler.h"
@@ -80,8 +80,6 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     arch_init();
 
     
-    idt_init();
-    
 
     
 
@@ -122,7 +120,7 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     init_tss(allocated_stack_top);
     
     
-    multiboot_info_t* temp_ptr = (multiboot_info_t*)Page_idx_to_Addr(page_alloc(1, 1, 0));
+    multiboot_info_t* temp_ptr = (multiboot_info_t*)PAGE_ADDR(page_alloc(1, 1, 0));
     memcpy(temp_ptr, mb_struct_ptr, sizeof(multiboot_info_t));
     get_pte((uintptr_t)temp_ptr/1024)->rw=0;
     invlpg((uintptr_t)temp_ptr/1024);
@@ -247,18 +245,6 @@ end_mounting:
 
 
 
-// entry point
-__attribute__((naked)) void _start() {
-    __asm__ volatile (
-        
-        "push %ebx\n"       // push multiboot_info pointer
-        "push %eax\n"       // push magic
-        "call kmain\n"
-        "add $8, %esp\n"    
-        "cli\n"
-        "hlt\n"
-        "jmp .\n"
-    );
-}
+
 
 

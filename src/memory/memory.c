@@ -1,8 +1,9 @@
 #include "memory.h"
 #include "string.h"
 #include "multiboot_info.h"
-#include "io.h"
+#include <stddef.h>
 #include <stdint.h>
+#include <io.h>
 #include "config.h"
 #include "Logger.h"
 #include "paging.h"
@@ -21,17 +22,13 @@ static inline free_region_map_t* get_free_region_map(void) {
     return k_mmap;
 }
 
-void force_alloc(uint32_t address, uint32_t size) {
+void force_alloc(uintptr_t address, uint32_t size) {
     free_region_map_t* k_mmap = get_free_region_map();
-    uint32_t end = address + size;
-    uint32_t page_size = 0x1000;
+    uintptr_t end = address + size;
+    size_t page_size = 0x1000;
 
     for (uint32_t page_addr = address & ~(page_size - 1); page_addr < end; page_addr += page_size) {
-        PTE* pte = get_pte(page_addr);
-        if (!pte) continue;
-
-        pte->os_unused3 = 1;
-
+        
         uint32_t page_start = page_addr;
         uint32_t page_end = page_addr + page_size;
 
@@ -173,14 +170,7 @@ void parse_memory_map(multiboot_info_t* mb_info) {
         uintptr_t len  = (mmap->len + 0xFFF) & ~0xFFF;
         uintptr_t page_end = base + len;
         
-        // Only mark non-available memory (type != 1) as unallocatable
-        if (mmap->type != 1) {
-            for (uintptr_t pa = base; pa < page_end; pa += _PAGE_SIZE) {
-                PTE* pte = get_pte_for_pa(pa);
-                if (!pte) continue;
-                pte->os_unused1 = 1;
-            }
-        }
+        
         
         mmap = (multiboot_mmap_entry_t*)((uintptr_t)mmap + mmap->size + sizeof(mmap->size));
     }
@@ -189,10 +179,10 @@ void parse_memory_map(multiboot_info_t* mb_info) {
     
     
     for (int i = 0; i < KERNEL_RESERVED_PAGES; i++) {
-        uintptr_t page_addr = Page_idx_to_Addr(page_alloc(1,1,0));
+        uintptr_t page_addr = PAGE_ADDR(page_alloc(1,PAGE_FLAG_RW));
 
         k_mmap->free_regions[k_mmap->free_region_count].base_addr = page_addr;
-        k_mmap->free_regions[k_mmap->free_region_count].length = _PAGE_SIZE;
+        k_mmap->free_regions[k_mmap->free_region_count].length = PAGE_SIZE;
         k_mmap->free_region_count++;
 
         
@@ -305,17 +295,17 @@ void* malloc_impl(size_t size) {
     free_region_t* region = FirstRegionOfSizeOrMore(full_size);
 
     if (!region || region->base_addr <= 0xFFFF) {
-        uint32_t pages_needed = (full_size + _PAGE_SIZE - 1) / _PAGE_SIZE;
-        page_index base = page_alloc(pages_needed,1,0);
+        uint32_t pages_needed = (full_size + PAGE_SIZE - 1) / PAGE_SIZE;
+        page_index base = page_alloc(pages_needed, PAGE_FLAG_RW);
         if (!base) {
             return NULL;
         }
         Sys_Error("malloc failed(not enough pages): %u bytes\n", (unsigned)size);
 
         // force free only above 0x10000
-        uintptr_t page_addr = Page_idx_to_Addr(base);
+        uintptr_t page_addr = PAGE_ADDR(base);
         if (page_addr < 0x10000) page_addr = 0x10000;
-        force_free((uint32_t)page_addr, pages_needed * _PAGE_SIZE);
+        force_free((uint32_t)page_addr, pages_needed * PAGE_SIZE);
 
         region = FirstRegionOfSizeOrMore(full_size);
     }
@@ -350,7 +340,7 @@ void free_impl(void* _Memory) {
 #if MEM_DEBUG_MODE
     Sys_log("[MEM_DBG] this func was called with %d\n",_Memory);
 #endif
-    if (!_Memory) return;
+    
 
     free_region_map_t* k_mmap = get_free_region_map();
 
@@ -461,7 +451,7 @@ void* aligned_malloc(size_t size, size_t alignment) {
 }
 
 void aligned_free(void* ptr) {
-    if (!ptr) return;
+    
 
     uintptr_t aligned_addr = (uintptr_t)ptr;
     void* raw = (void*)(uintptr_t)((uint32_t*)((uintptr_t)aligned_addr))[-1];
