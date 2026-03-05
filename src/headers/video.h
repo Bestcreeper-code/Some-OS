@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+typedef uint32_t rgbacolor;
+
 typedef struct {
     unsigned char r;  // 0–63
     unsigned char g;

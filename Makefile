@@ -15,7 +15,7 @@ INCLUDE_DIRS = src src/config src/headers \
 	src/arch/includes $(ARCH_DIR) $(ARCH_DIR)/elf  \
 	$(ARCH_DIR)/memory $(ARCH_DIR)/init   \
 	$(ARCH_DIR)/asm $(ARCH_DIR)/cpu 	  \
-	$(ARCH_DIR)/scheduler                 \
+	$(ARCH_DIR)/scheduler $(ARCH_DIR)/panic\
 	\
 	\
 	\

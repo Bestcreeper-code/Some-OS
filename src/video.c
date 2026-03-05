@@ -15,7 +15,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-volatile uint32_t* graph_mode_fb = (uint32_t*)0xA0000;
+volatile rgbacolor* graph_mode_fb;
 // volatile uint8_t* color_pal_size = (volatile uint8_t*)MODE13H_COLOR_PALETTE_SIZE_ADDR;
 
 void init_graphics() {
@@ -29,19 +29,19 @@ void init_graphics() {
             (unsigned)Multiboot_info->framebuffer_addr, (unsigned)fb_page_amount);
 
     
-    Multiboot_info->framebuffer_addr = k_append_pages(fb_base_page, fb_page_amount, 1, 0) * _PAGE_SIZE;
+    Multiboot_info->framebuffer_addr = PAGE_ADDR(vmap(fb_base_page, fb_page_amount, PAGE_FLAG_RW));
     if (Multiboot_info->framebuffer_addr == 0) {
         Sys_log("Failed to map framebuffer pages!\n");
         _manual_panic("Graphics Initialization Failed", "Could not map framebuffer pages.");
     }
 
-    graph_mode_fb = (volatile uint32_t*)(uintptr_t)Multiboot_info->framebuffer_addr;
+    graph_mode_fb = (volatile rgbacolor*)(uintptr_t)Multiboot_info->framebuffer_addr;
 
     Sys_Success("graphics init was successful\n");
 }
 
 
-void put_pixel(int x, int y, uint32_t color) {
+void put_pixel(int x, int y, rgbacolor color) {
 
     int pitch = Multiboot_info->framebuffer_pitch/(Multiboot_info->framebuffer_bpp/8);
     short mx,my;
@@ -52,20 +52,20 @@ void put_pixel(int x, int y, uint32_t color) {
     }
 }
 
-void Force_put_pixel(int x, int y, uint32_t color) {//no mouse check
+void Force_put_pixel(int x, int y, rgbacolor color) {//no mouse check
 
     int pitch = Multiboot_info->framebuffer_pitch/(Multiboot_info->framebuffer_bpp/8);
     graph_mode_fb[y * pitch + x] = color;
 }
 
-uint32_t get_pixel(int x, int y){
+rgbacolor get_pixel(int x, int y){
     
     return graph_mode_fb[y * Multiboot_info->framebuffer_width + x];
 }
 
 // Draw a char from 32 to 127
 //(charact, charx, chary, 4, 6, color, NULL, true) for default
-void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int width, int height, uint32_t color, void* font, bool use_default_font, bool ignore_cursor, bool row_major) {
+void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int width, int height, rgbacolor color, void* font, bool use_default_font, bool ignore_cursor, bool row_major) {
     if (width <= 0 || height <= 0 || character < 32 || character > 127) return;
 
     uint8_t* font_array = (uint8_t*)font;
@@ -121,7 +121,7 @@ void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int w
 }
 
 
-void draw_bitmap_string(const char* str, int x_pos, int y_pos, int font_width, int font_height, uint32_t color, void* font, bool use_default_font, bool row_major, int space) {
+void draw_bitmap_string(const char* str, int x_pos, int y_pos, int font_width, int font_height, rgbacolor color, void* font, bool use_default_font, bool row_major, int space) {
     if (!str) return;
 
     int cursor_x = x_pos;
@@ -138,7 +138,7 @@ void clear_13h_screen(char color) {
     memset((void*)0xA0000, color, 320 * 200);
 }
 
-void draw_rect(Rect rect, uint32_t color) {
+void draw_rect(Rect rect, rgbacolor color) {
     if (rect.w <= 0 || rect.h <= 0) return;
 
     int fb_width  = Multiboot_info->framebuffer_pitch / (Multiboot_info->framebuffer_bpp / 8);
@@ -149,7 +149,7 @@ void draw_rect(Rect rect, uint32_t color) {
     if (rect.x + rect.w > fb_width)  rect.w = fb_width  - rect.x;
     if (rect.y + rect.h > fb_height) rect.h = fb_height - rect.y;
 
-    volatile uint32_t* fb = graph_mode_fb + rect.y * fb_width + rect.x;
+    volatile rgbacolor* fb = graph_mode_fb + rect.y * fb_width + rect.x;
 
     
     for (int y = 0; y < rect.h; y++) {

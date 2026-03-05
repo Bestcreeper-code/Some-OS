@@ -4,7 +4,7 @@
 #include "string.h"
 #include "FileSystem.h"
 #include "memory.h"
-#include "paging.h"
+#include "arch_paging.h"
 #include "scheduler.h"
 
 #include <stdint.h>

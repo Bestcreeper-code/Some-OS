@@ -110,8 +110,8 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     Sys_Success("Paging set up successfully.\n");
     
     Sys_log("Setting up Kernel Stack.\n");
-    page_index allocated_stack_pages = page_alloc(KERNEL_STACK_PAGE_AMOUNT, 1, 0);
-    uintptr_t allocated_stack_top = allocated_stack_pages + (KERNEL_STACK_PAGE_AMOUNT * _PAGE_SIZE);
+    page_index allocated_stack_pages = page_alloc(KERNEL_STACK_PAGE_AMOUNT, PAGE_FLAG_RW);
+    uintptr_t allocated_stack_top = allocated_stack_pages + (KERNEL_STACK_PAGE_AMOUNT * PAGE_SIZE);
     __asm__ volatile(
         "movl %0, %%esp\n"
         :
@@ -120,7 +120,7 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     init_tss(allocated_stack_top);
     
     
-    multiboot_info_t* temp_ptr = (multiboot_info_t*)PAGE_ADDR(page_alloc(1, 1, 0));
+    multiboot_info_t* temp_ptr = (multiboot_info_t*)PAGE_ADDR(page_alloc(1, PAGE_FLAG_RW));
     memcpy(temp_ptr, mb_struct_ptr, sizeof(multiboot_info_t));
     get_pte((uintptr_t)temp_ptr/1024)->rw=0;
     invlpg((uintptr_t)temp_ptr/1024);

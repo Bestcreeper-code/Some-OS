@@ -27,13 +27,13 @@ PTE* kernel_page_table_ptr;
 int setup_paging() {
     Sys_log("Setting up paging...\n");
 
-    _pages_amount = ((Get_multiboot_info()->mem_upper * 1024) + 1024*1024) / _PAGE_SIZE;
+    _pages_amount = ((Get_multiboot_info()->mem_upper * 1024) + 1024*1024) / PAGE_SIZE;
     if (_pages_amount < MIN_OS_PAGES * 1.5) return -1;
     if (_pages_amount > 1024 * 1024) _pages_amount = 1024 * 1024;
 
     
     
-    _pages_tables_amount = _pages_amount / _PAGE_SIZE;
+    _pages_tables_amount = _pages_amount / PAGE_SIZE;
 
     dw_memset(_free_pages_bitmap, 0xFFFFFFFF, sizeof(_free_pages_bitmap)/sizeof(uint32_t));
     reserve_kernel_pages();
@@ -44,16 +44,16 @@ int setup_paging() {
 
     _k_pd.pde_arr = (PDE*)(page_alloc_nomap(1)<<12);
     
-    dw_memset(_k_pd.pde_arr, 0, _PAGE_SIZE/4);
+    dw_memset(_k_pd.pde_arr, 0, PAGE_SIZE/4);
 
     PTE* k_pte_array = (PTE*)(page_alloc_nomap(_MAX_PT_AMOUNT) << 12); 
-    dw_memset(k_pte_array, 0, _MAX_PT_AMOUNT * _PAGE_SIZE);
+    dw_memset(k_pte_array, 0, _MAX_PT_AMOUNT * PAGE_SIZE);
     kernel_page_table_ptr = k_pte_array;  
 
     for (uint32_t i = 0; i < _MAX_PT_AMOUNT ; i++) {
         if (i * 1024 >= _pages_amount) break;
 
-        PTE* pt_base = (PTE*)&kernel_page_table_ptr[i * _PAGE_SIZE / 4];
+        PTE* pt_base = (PTE*)&kernel_page_table_ptr[i * PAGE_SIZE / 4];
         
         for (uint32_t j = 0; j < 1024; j++) {
             uint32_t page_idx = i * 1024 + j;
@@ -103,7 +103,7 @@ void reserve_kernel_pages() {
 
     Sys_log("Reserving kernel pages from 0 to %p\n", &_kernel_end);
 
-    uint32_t end_page = (kend + _PAGE_SIZE - 1) >> 12;
+    uint32_t end_page = (kend + PAGE_SIZE - 1) >> 12;
     uint32_t reserved = 0;
 
     for (uint32_t i = 0; i < end_page && i < _pages_amount; i++) {
@@ -140,7 +140,7 @@ void pd_map_page(PD_t* pd, uint32_t virtual_addr, uint32_t physical_addr, uint8_
         pt_base = (PTE*)((uint32_t)page_alloc(1, PAGE_FLAG_RW) << 12);
         if (!pt_base) return;
 
-        memset(pt_base, 0, _PAGE_SIZE);
+        memset(pt_base, 0, PAGE_SIZE);
 
         pde->present = 1;
         pde->rw = rw;
@@ -264,7 +264,7 @@ page_index page_alloc_nomap(size_t amount) {
                     _free_pages_bitmap[idx / 32] &= ~(1 << (idx % 32));
                 }
 #if PAGE_DEBUG_MODE
-                Sys_log("page_alloc_nomap called for %u pages (%x)\n", (unsigned)amount, start * _PAGE_SIZE);
+                Sys_log("page_alloc_nomap called for %u pages (%x)\n", (unsigned)amount, start * PAGE_SIZE);
 #endif
                 return start;
             }
@@ -297,7 +297,7 @@ page_index page_alloc(size_t amount, char flags) {
         }
     }
 #if PAGE_DEBUG_MODE
-    Sys_log("page_alloc called for %u pages (%x) with mapping\n", (unsigned)amount, start * _PAGE_SIZE);
+    Sys_log("page_alloc called for %u pages (%x) with mapping\n", (unsigned)amount, start * PAGE_SIZE);
 #endif    
     return start;
 }
@@ -321,7 +321,7 @@ void dump_pd() {
     uint32_t* pdes = (uint32_t*)_k_pd.pde_arr;
 #if PAGE_DEBUG_MODE
     Sys_log("Dumping Page Directory from %x\n", _k_pd.pde_arr);
-    Sys_log("first pde: %x\n", ((PTE*)pdes)[0].addr * _PAGE_SIZE);
+    Sys_log("first pde: %x\n", ((PTE*)pdes)[0].addr * PAGE_SIZE);
 #endif
     for (int i = 0; i < 1; i++) {
         if (!(pdes[i] & 1)) continue;
@@ -361,7 +361,7 @@ uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, PD_t* out_pd_t)
 
     PDE* pd_addr = (PDE*)PAGE_ADDR(page_alloc(1, PAGE_FLAG_RW));
     if (!pd_addr) return 0;
-    memset(pd_addr, 0, _PAGE_SIZE);
+    memset(pd_addr, 0, PAGE_SIZE);
     out_pd_t->pde_arr = pd_addr;
 
     for (uint32_t i = 0; i < 1024; i++) {
@@ -386,7 +386,7 @@ uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, PD_t* out_pd_t)
                 char flags = PAGE_FLAG_RW | (group->pte_bits.user ? PAGE_FLAG_USER : 0);
                 PTE* new_pt = (PTE*)PAGE_ADDR(page_alloc(1, flags));
                 if (!new_pt) return 0;
-                memset(new_pt, 0, _PAGE_SIZE);
+                memset(new_pt, 0, PAGE_SIZE);
 
                 pde->present   = 1;
                 pde->rw        = group->pte_bits.rw;
@@ -453,7 +453,7 @@ int v_map(PD_t* page_dir, Page_Group* groups, uint32_t group_count) {
             if (!pde->present) {
                 pt_base = (PTE*)page_alloc(1, PAGE_FLAG_RW);
                 if (!pt_base) return false;
-                memset(pt_base, 0, _PAGE_SIZE);
+                memset(pt_base, 0, PAGE_SIZE);
 
                 pde->present = 1;
                 pde->rw = 1;
@@ -525,7 +525,7 @@ uintptr_t PD_append_pages(PD_t* page_dir, PTE* ptes, uint32_t pte_count) {
         if (!pde->present) {
             pt_base = (PTE*)page_alloc(1, PAGE_FLAG_RW);
             if (!pt_base) return 0;
-            memset(pt_base, 0, _PAGE_SIZE);
+            memset(pt_base, 0, PAGE_SIZE);
 
             pde->present = 1;
             pde->rw = 1;
@@ -603,7 +603,7 @@ page_index k_append_pages(page_index phys_start_page, uint32_t amount, uint8_t r
 #endif
     }
 #if PAGE_DEBUG_MODE
-    Sys_log("k_append_pages mapped %u pages at VA %x\n", amount, start_page_idx * _PAGE_SIZE);
+    Sys_log("k_append_pages mapped %u pages at VA %x\n", amount, start_page_idx * PAGE_SIZE);
 #endif
     return start_page_idx;
 }
@@ -628,7 +628,7 @@ int page_write(page_index virt, PAGE page) {
     return 0;
 }
 
-uint32_t get_used_ram() {
+size_t get_used_ram() {
     uint32_t used_pages = 0;
 
     for (uint32_t i = 0; i < (_pages_amount + 31) / 32; i++) {
@@ -640,5 +640,27 @@ uint32_t get_used_ram() {
         used_pages += used_in_word;
     }
 
-    return used_pages * _PAGE_SIZE; 
+    return used_pages * PAGE_SIZE; 
+}
+
+page_index vmap(page_index phys, size_t count, char flags) {
+    if (count == 0) return 0;
+
+    page_index run_start = 0;
+    size_t     run_len   = 0;
+
+    for (page_index i = KVSPACE_FIRST_PAGE; i <= KVSPACE_LAST_PAGE; i++) {
+        if (!page_is_present(i)) {
+            if (run_len == 0) run_start = i;
+            run_len++;
+            if (run_len == count) goto found;
+        } else {
+            run_len = 0;
+        }
+    }
+    return 0; 
+
+found:
+    if (map_range(run_start, phys, count, flags) != 0) return 0;
+    return run_start;
 }
