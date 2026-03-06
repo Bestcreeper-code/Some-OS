@@ -5,7 +5,7 @@ extern serial_write_string
 extern serial_log_hex
 extern _scheduler_current_process ; Linked_PCB_t*
 extern _scheduler_first_process   ; Linked_PCB_t*
-extern setTssEsp                  ; function to set TSS.esp0
+extern setTss_sp                  ; function to set TSS.esp0
 
 
 ; on/off logging
@@ -121,7 +121,7 @@ LOG_PCB esi
     ; --- Update TSS.esp0 for the kernel stack of the new process ---
     mov eax, [esi + Linked_PCB_kstack_top]
     push eax
-    call setTssEsp
+    call setTss_sp
     add esp, 4
     ; --- Restore kernel stack ---
     mov esp, [esi + Linked_PCB_k_esp]

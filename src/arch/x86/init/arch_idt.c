@@ -1,4 +1,5 @@
 #include "idt.h"
+#include "arch_idt.h"
 #include "asm.h"
 #include "string.h"
 #include "Logger.h"

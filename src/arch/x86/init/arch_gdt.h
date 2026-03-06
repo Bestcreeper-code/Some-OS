@@ -2,9 +2,6 @@
 #define GDT_H
 #include <stdint.h>
 
-#define USER_CODE_SEGMENT 0x1B
-#define USER_DATA_SEGMENT 0x23
-
 #define TSS_GDT_INDEX 5
 
 struct gdt_entry_struct
@@ -44,12 +41,9 @@ struct tss_entry {
 // extern struct tss_entry tss;
 
 void init_gdt();
-void init_tss(uint32_t esp);
-void setTssGate(uint32_t index, uint32_t base, uint32_t limit);
+void init_tss(uintptr_t stack_ptr);
 
-void setTssEsp(uint32_t esp);
-
-void setGdtGate(uint32_t gate, uint32_t base, uint32_t limit, uint8_t access, uint8_t granularity);
+void setTss_sp(uintptr_t stack_ptr);
 
 
 

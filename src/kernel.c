@@ -230,7 +230,7 @@ end_mounting:
     scheduler_init();
     
     Sys_log("Loading login manager...\n");
-    // exec_ELF("0:/loop.elf");//DEBUG sched just crashes when there is more than 1 process
+    exec_ELF("0:/loop.elf");//DEBUG sched just crashes when there is more than 1 process
     
     task_switching_flag = 1;
     
