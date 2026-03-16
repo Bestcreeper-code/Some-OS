@@ -1,10 +1,10 @@
 #include "scheduler.h"
 #include "Logger.h"
 #include "paging.h"
-#include "memory.h"
 #include "string.h"
-#include "gdt.h"
+#include "arch_gdt.h"
 #include "asm.h"
+#include "memory.h"
 #include "time.h"
 
 
@@ -113,7 +113,19 @@ int kill_process(short proc_pid){
     return 0;
 }
 
-void testing();
+
+void testing(){
+    while (1) {
+    
+        __asm__ volatile (
+            "movl $1, %%eax\n"
+            "int $0x80\n"
+            :
+            :
+            : "eax"
+        );
+    }
+}
 
 int scheduler_init(){   
     

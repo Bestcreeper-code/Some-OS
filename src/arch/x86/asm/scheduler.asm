@@ -9,7 +9,7 @@ extern setTss_sp                  ; function to set TSS.esp0
 
 
 ; on/off logging
-%define DEBUG_SCHED_LOG 0 
+%define DEBUG_SCHED_LOG 1 
 
 
 
@@ -117,7 +117,7 @@ LOG_PCB esi
     ; --- Load new process page directory ---
     mov eax, [esi + Linked_PCB_cr3]
     mov cr3, eax
-
+LOG_PCB esi
     ; --- Update TSS.esp0 for the kernel stack of the new process ---
     mov eax, [esi + Linked_PCB_kstack_top]
     push eax

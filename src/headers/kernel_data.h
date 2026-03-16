@@ -52,7 +52,7 @@ typedef struct {
     
     uint32_t kernel_flags[2];
                                                    
-} KernelData_t __attribute__((__packed__));
+} __attribute__((__packed__)) KernelData_t ;
 
 
 extern KernelData_t kernel_data;

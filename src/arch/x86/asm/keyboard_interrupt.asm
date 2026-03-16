@@ -2,7 +2,7 @@
     %define CTRL_KEY_COMBO 159
 
     ; 256 chars
-    %define INPUT_CHAR_BUFFER_OFFSET 397
+    extern input_char_buffer
 
     global irq1_handler ; PS/2 keyboard 
 
@@ -26,8 +26,7 @@ section .text
         
         mov ecx, 0
         
-        mov edi, dword  [kernel_data_ptr]
-        add edi, INPUT_CHAR_BUFFER_OFFSET
+        mov edi, input_char_buffer
         
 
 

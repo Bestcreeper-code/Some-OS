@@ -14,9 +14,9 @@
 
 volatile uint8_t mouse_cycle = 0;//3 (1by1 bytes) per action
 volatile uint8_t mouse_bytes[3];
-volatile short* mouse_x = (volatile short*)&MOUSE_X_POS;
-volatile short* mouse_y = (volatile short*)&MOUSE_Y_POS;
-volatile uint8_t* mouse_buttons = (volatile uint8_t*)&MOUSE_FLAGS;
+volatile short mouse_x;
+volatile short mouse_y;
+volatile uint8_t mouse_buttons;
 
 void mouse_wait(uint8_t type) {
     if (type == 0) {
@@ -65,9 +65,9 @@ void init_mouse() {
     mouse_write(0xF4);
     mouse_read();
 
-    *mouse_x = 160;
-    *mouse_y = 100;
-    *mouse_buttons = 0;
+    mouse_x = 160;
+    mouse_y = 100;
+    mouse_buttons = 0;
 }
 
 void mouse_irq_handler() {
@@ -78,23 +78,23 @@ void mouse_irq_handler() {
     mouse_bytes[mouse_cycle] = data;
     mouse_cycle = (mouse_cycle + 1) % 3;
 
-    if (mouse_cycle == 0 && (*mouse_buttons & MOUSE_DISPLAYED_FLAG)) { // full packet received
+    if (mouse_cycle == 0 && (mouse_buttons & MOUSE_DISPLAYED_FLAG)) { // full packet received
         // Byte 0: buttons and sign bits
         uint8_t buttons = mouse_bytes[0] & 0x07; // left, right, middle buttons (Left | Right | Middle)
         int8_t x_move = (int8_t)mouse_bytes[1];  // X movement delta (signed)
         int8_t y_move = (int8_t)mouse_bytes[2];  // Y movement delta (signed)
 
-        *mouse_buttons = (*mouse_buttons & ~0x07) | (buttons & 0x07);
+        mouse_buttons = (mouse_buttons & ~0x07) | (buttons & 0x07);
         
 
 
-        *mouse_x += x_move;
-        *mouse_y -= y_move; // Y inverted 
+        mouse_x += x_move;
+        mouse_y -= y_move; // Y inverted 
         
-        if(*mouse_x < 0)*mouse_x = 0; 
-        if(*mouse_y < 0)*mouse_y = 0;
-        if(*mouse_x > MAX_MOUSE_X-1)*mouse_x = MAX_MOUSE_X-1; 
-        if(*mouse_y > MAX_MOUSE_Y-1)*mouse_y = MAX_MOUSE_Y-1; 
+        if(mouse_x < 0)mouse_x = 0; 
+        if(mouse_y < 0)mouse_y = 0;
+        if(mouse_x > MAX_MOUSE_X-1)mouse_x = MAX_MOUSE_X-1; 
+        if(mouse_y > MAX_MOUSE_Y-1)mouse_y = MAX_MOUSE_Y-1; 
 
         
     }
@@ -103,12 +103,12 @@ void mouse_irq_handler() {
 
 
 bool Get_Mouse_Button(Mouse_FLAGS button){
-    return (*mouse_buttons & button) != 0;
+    return (mouse_buttons & button) != 0;
 }
 
 void Get_Mouse_Pos(short* x, short* y){
-    if(x)*x = *mouse_x;
-    if(y)*y = *mouse_y;
+    if(x)*x = mouse_x;
+    if(y)*y = mouse_y;
 }
 
 
@@ -160,8 +160,8 @@ void Redraw_Mouse_Cursor() {
 
     for (int dy = 0; dy < 16; dy++) {
         for (int dx = 0; dx < 16; dx++) {
-            int px = *mouse_x + dx;
-            int py = *mouse_y + dy;
+            int px = mouse_x + dx;
+            int py = mouse_y + dy;
 
     
             if (px >= 0 && px < MAX_MOUSE_X && py >= 0 && py < MAX_MOUSE_Y){
@@ -171,19 +171,19 @@ void Redraw_Mouse_Cursor() {
         }
     }
 
-    draw_bitmap_char(32+mouse_state, *mouse_x, *mouse_y, mouse_w, mouse_h, 0xFFFFFFFF, (char*)def_mouse_icons6x8, false, true, false);
+    draw_bitmap_char(32+mouse_state, mouse_x, mouse_y, mouse_w, mouse_h, 0xFFFFFFFF, (char*)def_mouse_icons6x8, false, true, false);
 
-    MOUSE_X_POS_PREV = *mouse_x;
-    MOUSE_Y_POS_PREV = *mouse_y;
+    MOUSE_X_POS_PREV = mouse_x;
+    MOUSE_Y_POS_PREV = mouse_y;
 }
 
 
 void enable_mouse_display(){
-    *mouse_buttons |= MOUSE_DISPLAYED_FLAG;
+    mouse_buttons |= MOUSE_DISPLAYED_FLAG;
 }
 
 void disable_mouse_display(){
-    *mouse_buttons &= ~MOUSE_DISPLAYED_FLAG;
+    mouse_buttons &= ~MOUSE_DISPLAYED_FLAG;
 }
 
 void change_mouse_state(Cursorstate state){

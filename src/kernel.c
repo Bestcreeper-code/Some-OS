@@ -230,7 +230,10 @@ end_mounting:
     scheduler_init();
     
     Sys_log("Loading login manager...\n");
-    exec_ELF("0:/loop.elf");//DEBUG sched just crashes when there is more than 1 process
+    if(exec_ELF("0:/loop.elf").pid == 0){
+        Sys_Error("why does it not load???");
+        Sys_Breakpoint();
+    }
     
     task_switching_flag = 1;
     

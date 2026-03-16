@@ -293,7 +293,7 @@ bool Console_Process_Command(char* command) {
 }
 
 
-char** console_requests = (char**)CONSOLE_REQUEST_QUEUE;
+char* console_requests[32];
 
 void Start_Console() {
     Sys_log("Kernel Console started\n");

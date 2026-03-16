@@ -16,7 +16,7 @@
 
 #define PAGE_IS_ALIGNED(addr)  (((uintptr_t)(addr) & ~PAGE_MASK) == 0)
 
-#define PAGE_ADDR(idx)         ((uintptr_t)(idx) << 12)
+#define PAGE_ADDR(idx)         ((uintptr_t)(idx << 12))
 
 #define ADDR_TO_PAGE(addr)     ((page_index)((uintptr_t)(addr) >> 12))
 

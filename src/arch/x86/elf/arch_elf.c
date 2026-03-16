@@ -7,6 +7,7 @@
 #include "arch_paging.h"
 #include "scheduler.h"
 
+#include <assert.h>
 #include <stdint.h>
 
 extern char _kernel_start;
@@ -236,9 +237,13 @@ LoadedElf* LoadElf(const char* path) {
     
     //make pd
     new_page_dir(page_groups, seg_index + 3, &app_page_dir);
-    for(int i=0;i<1024;i++){
-        Sys_color_log("pde %u = %u\n",ANSI_WHITE,ANSI_BG_BLACK,i,app_page_dir.pde_arr[i]);
-    }
+    
+    // for(int i=0;i<1024;i++){
+    //     Sys_color_log("pde %u = 0x%x\n",ANSI_WHITE,ANSI_BG_BLACK,i,app_page_dir.pde_arr[i]);
+        
+    // }
+
+    
     free(program_headers);
     free(page_groups);
 

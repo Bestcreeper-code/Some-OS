@@ -38,6 +38,7 @@ static inline uint32_t inl(uint16_t port) {
 static void inline invlpg(uint32_t index) {
     asm volatile("invlpg (%0)" : : "r"(index) : "memory");
 }
+
 static uintptr_t inline get_esp(void) {
     uintptr_t esp;
     asm volatile("mov %%esp, %0" : "=r"(esp));

@@ -24,7 +24,7 @@ INCLUDE_DIRS = src src/config src/headers \
 
 INCLUDES := $(addprefix -I,$(INCLUDE_DIRS))
 
-CFLAGS = -m32 -g -ffreestanding $(INCLUDES) -fno-stack-protector -mno-sse -mno-sse2 -fno-tree-vectorize
+CFLAGS = -m32 -O0 -g -ffreestanding $(INCLUDES) -fno-stack-protector -mno-sse -mno-sse2 -fno-tree-vectorize
 
 LDFLAGS = -m elf_i386 -T src/arch/$(ARCH)/linker.ld -z noexecstack 
 

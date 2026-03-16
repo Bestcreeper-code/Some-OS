@@ -29,7 +29,7 @@ void serial_write_string(const char* str);
 void serial_log_hex(const char* label, uint32_t val);
 
 void sys_serial_logf(const char* frmt, const char* file, const char* func, int line, ...) __attribute__ ((format (printf, 1, 5)));
-void sys_color_serial_logf(const char* format, uint8_t fg, uint8_t bg, const char* file, const char* func, int line, ...);
+void sys_color_serial_logf(const char* format, uint8_t fg, uint8_t bg, const char* file, const char* func, int line, ...) __attribute__((format(printf, 1, 7)));
 
 typedef enum {
     

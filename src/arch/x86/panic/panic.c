@@ -13,6 +13,7 @@
 #include "scheduler.h"
 #include "../data/textconsts.h"
 #include "kernel_data.h"
+#include <assert.h>
 #include <stdint.h>
 // #include "../../distorm/include/distorm.h"
 
@@ -323,3 +324,4 @@ void _manual_panic(const char* error, const char* info) {
 
     pc_reboot();
 }
+

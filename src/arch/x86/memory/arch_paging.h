@@ -50,7 +50,7 @@ typedef struct {
 } __attribute__((packed)) PTE;
 
 typedef struct {
-    PDE* pde_arr;
+    volatile PDE* pde_arr;
 } __attribute__((packed)) PD_t;
 
 typedef struct {
@@ -60,7 +60,7 @@ typedef struct {
 } __attribute__((packed)) Page_Group;
 
 
-extern PD_t _k_pd;
+extern volatile PD_t _k_pd;
 
 
 
@@ -78,7 +78,7 @@ void page_force_alloc(page_index pa, size_t amount);
 int  is_page_allocated(page_index pa);
 
 
-uintptr_t  new_page_dir(Page_Group* groups, uint32_t group_count, PD_t* out_pd_t);
+uintptr_t  new_page_dir(Page_Group* groups, uint32_t group_count, volatile PD_t* out_pd_t);
 void       pd_free(PD_t* pd);
 
 int        v_map(PD_t* page_dir, Page_Group* groups, uint32_t group_count);

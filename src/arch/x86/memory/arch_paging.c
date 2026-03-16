@@ -1,3 +1,4 @@
+#include "asm.h"
 #include "paging.h"
 #include "arch_paging.h"
 // #include "memory.h"
@@ -8,10 +9,12 @@
 #include "io.h"
 #include "Logger.h"
 #include "memory.h"
+#include <assert.h>
+#include <stdatomic.h>
 #include <stdint.h>
 #include <stdnoreturn.h>
 
-PD_t _k_pd;
+volatile PD_t _k_pd;
 
 extern char _kernel_start;
 extern char _kernel_end;
@@ -44,7 +47,7 @@ int setup_paging() {
 
     _k_pd.pde_arr = (PDE*)(page_alloc_nomap(1)<<12);
     
-    dw_memset(_k_pd.pde_arr, 0, PAGE_SIZE/4);
+    dw_memset((void*)_k_pd.pde_arr, 0, PAGE_SIZE/4);
 
     PTE* k_pte_array = (PTE*)(page_alloc_nomap(_MAX_PT_AMOUNT) << 12); 
     dw_memset(k_pte_array, 0, _MAX_PT_AMOUNT * PAGE_SIZE);
@@ -133,7 +136,7 @@ void pd_map_page(PD_t* pd, uint32_t virtual_addr, uint32_t physical_addr, uint8_
     uint32_t pd_index = (virtual_addr >> 22) & 0x3FF;
     uint32_t pt_index = (virtual_addr >> 12) & 0x3FF;
 
-    PDE* pde = &pd->pde_arr[pd_index];
+    volatile PDE* pde = &pd->pde_arr[pd_index];
 
     PTE* pt_base;
     if (!pde->present) {
@@ -165,7 +168,7 @@ void pd_map_page(PD_t* pd, uint32_t virtual_addr, uint32_t physical_addr, uint8_
 
 
 int map_page(page_index virt, page_index phys, uint8_t present, uint8_t rw, uint8_t user) {
-    pd_map_page(&_k_pd, (uint32_t)(virt << 12), (uint32_t)(phys << 12), present, rw, user);
+    pd_map_page((PD_t*)&_k_pd, (uint32_t)(virt << 12), (uint32_t)(phys << 12), present, rw, user);
     return 0;
 }
 
@@ -174,7 +177,7 @@ int map_range(page_index virt, page_index phys, size_t count, char flags) {
     uint8_t rw   = (flags & PAGE_FLAG_RW)   ? 1 : 0;
     uint8_t user = (flags & PAGE_FLAG_USER) ? 1 : 0;
     for (size_t i = 0; i < count; i++) {
-        pd_map_page(&_k_pd, (uint32_t)((virt + i) << 12), (uint32_t)((phys + i) << 12), 1, rw, user);
+        pd_map_page((PD_t*)&_k_pd, (uint32_t)((virt + i) << 12), (uint32_t)((phys + i) << 12), 1, rw, user);
     }
     return 0;
 }
@@ -184,7 +187,7 @@ int pd_unmap_page(PD_t* target_pd, uint32_t virtual_addr) {
     uint32_t pd_index = (virtual_addr >> 22) & 0x3FF;
     uint32_t pt_index = (virtual_addr >> 12) & 0x3FF;
 
-    PDE* pde = &target_pd->pde_arr[pd_index];
+    volatile PDE* pde = &target_pd->pde_arr[pd_index];
     if (!pde->present) return -1;
 
     PTE* pt_base = (PTE*)((uintptr_t)pde->addr << 12);
@@ -200,7 +203,7 @@ int pd_unmap_page(PD_t* target_pd, uint32_t virtual_addr) {
 
 
 int unmap_page(page_index virt) {
-    return pd_unmap_page(&_k_pd, (uint32_t)(virt << 12));
+    return pd_unmap_page((PD_t*)&_k_pd, (uint32_t)(virt << 12));
 }
 
 
@@ -210,7 +213,7 @@ PTE* get_pte(uint32_t index) {
     uint32_t pd_index = index >> 10; 
     uint32_t pt_index = index & 0x3FF;
 
-    PDE* pde = &_k_pd.pde_arr[pd_index];
+    volatile PDE* pde = &_k_pd.pde_arr[pd_index];
     if (!pde) return NULL;
     if (!pde->present) return NULL;
 
@@ -230,11 +233,15 @@ PAGE virt_to_page(void *address) {
 
     PAGE result = {0};
 
-    PDE* pde = &_k_pd.pde_arr[pd_i];
+    volatile PDE* pde = &_k_pd.pde_arr[pd_i];
+    if (!pde) return result;
     if (!pde->present) return result;
+    if (!pde->addr) return result;
 
     PTE* pt_base = (PTE*)((uintptr_t)pde->addr << 12);
+    if (!pt_base) return result;
     PTE* pte     = &pt_base[pt_i];
+    if (!pte) return result;
 
     result.present = pte->present;
     result.addr    = (uintptr_t)pte->addr << 12;
@@ -264,7 +271,7 @@ page_index page_alloc_nomap(size_t amount) {
                     _free_pages_bitmap[idx / 32] &= ~(1 << (idx % 32));
                 }
 #if PAGE_DEBUG_MODE
-                Sys_log("page_alloc_nomap called for %u pages (%x)\n", (unsigned)amount, start * PAGE_SIZE);
+                Sys_Success("page_alloc_nomap success for %u pages\n", (unsigned)amount );
 #endif
                 return start;
             }
@@ -277,30 +284,24 @@ page_index page_alloc_nomap(size_t amount) {
 #endif
     return 0;
 }
-
-
+// #warning  fix the fing page alloc not smh mapping shit
 page_index page_alloc(size_t amount, char flags) {
-    uint8_t rw   = (flags & PAGE_FLAG_RW)   ? 1 : 0;
-    uint8_t user = (flags & PAGE_FLAG_USER) ? 1 : 0;
-
-    page_index start = page_alloc_nomap(amount);
-    if (start == 0) return 0;
-
-    for (uint32_t j = 0; j < amount; j++) {
-        uint32_t idx = start + j;
-        PTE* p = get_pte(idx);
-        if (p) {
-            p->present = 1;
-            p->rw      = rw;
-            p->user    = user;
-            p->addr    = idx;
-        }
+    page_index phys = page_alloc_nomap(amount);
+    if (!phys){
+        Sys_Error("page_alloc_nomap failed for %u pages (p_page: 0x%x) with %d used ram\n", (unsigned)amount, phys, get_used_ram() );
+        return 0;
     }
-#if PAGE_DEBUG_MODE
-    Sys_log("page_alloc called for %u pages (%x) with mapping\n", (unsigned)amount, start * PAGE_SIZE);
-#endif    
-    return start;
+
+    page_index virt = vmap(phys, amount, flags);
+    if (!virt) {
+        page_free(phys, amount);
+        Sys_Error("page_alloc failed for %u pages (p_page: 0x%x) with mapping\n", (unsigned)amount, phys );
+        return 0;
+    }
+    Sys_log("page_alloc called for %u pages (page: 0x%x) with mapping\n", (unsigned)amount, virt );
+    return virt;  
 }
+
 
 void page_free(page_index pa, size_t amount) {
     uint32_t start_index = pa >> 12;
@@ -343,7 +344,7 @@ void debug_dump_kernel_mapping(PD_t* pd, uint32_t va) {
     uint32_t pd_i = (va >> 22) & 0x3FF;
     uint32_t pt_i = (va >> 12) & 0x3FF;
 
-    PDE* pde = &pd->pde_arr[pd_i];
+    volatile PDE* pde = &pd->pde_arr[pd_i];
     Sys_Warning("K-VA 0x%x: PDE[%u] present=%u rw=%u user=%u addr=0x%x\n",
             va, pd_i, pde->present, pde->rw, pde->user, pde->addr << 12);
 
@@ -356,17 +357,42 @@ void debug_dump_kernel_mapping(PD_t* pd, uint32_t va) {
             pt_i, pte->present, pte->rw, pte->user, pte->addr << 12);
 }
 
-uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, PD_t* out_pd_t) {
+uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, volatile PD_t* out_pd) {
     if (!groups || group_count == 0) return 0;
+    
+    asm volatile("sti\n");
 
     PDE* pd_addr = (PDE*)PAGE_ADDR(page_alloc(1, PAGE_FLAG_RW));
+    // PDE pd_addr[1024];
     if (!pd_addr) return 0;
-    memset(pd_addr, 0, PAGE_SIZE);
-    out_pd_t->pde_arr = pd_addr;
 
+    memset(pd_addr, 0, PAGE_SIZE);
+    out_pd->pde_arr = pd_addr;
+
+    
     for (uint32_t i = 0; i < 1024; i++) {
-        out_pd_t->pde_arr[i] = _k_pd.pde_arr[i];
+        uint32_t val;
+        asm volatile(
+            "movl %1, %0"
+            : "=r"(val)                     // output to register 'val'
+            : "m"(_k_pd.pde_arr[i])         // input from memory
+            : "memory"
+        );
+
+        asm volatile(
+            "movl %1, %0"
+            : "=m"(out_pd->pde_arr[i])    // store 'val' into out_pd_t
+            : "r"(val)
+            : "memory"
+        );
+
+        // serial_log_hex("pde nb", i);
+        // serial_log_hex("pde in _k_pd: ", *(uint32_t*)&_k_pd.pde_arr[i]);
+        // serial_log_hex("pde copied to out_pd: ", *(uint32_t*)&out_pd->pde_arr[i]);
     }
+    
+    
+    
 
     for (uint32_t g = 0; g < group_count; g++) {
         Sys_log("%x  %x   %x\n\n\n\n", groups[g].vaddr, groups[g].pte_bits, groups[g].size);
@@ -380,7 +406,7 @@ uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, PD_t* out_pd_t)
             uint32_t pd_i = virt_page >> 10;
             uint32_t pt_i = virt_page & 0x3FF;
 
-            PDE* pde = &out_pd_t->pde_arr[pd_i];
+            volatile PDE* pde = &out_pd->pde_arr[pd_i];
 
             if (!pde->present) {
                 char flags = PAGE_FLAG_RW | (group->pte_bits.user ? PAGE_FLAG_USER : 0);
@@ -403,15 +429,16 @@ uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, PD_t* out_pd_t)
         }
     }
 
-    Sys_Warning("new_page_dir: cr3 at %x\n", out_pd_t->pde_arr);
-    return (uintptr_t)out_pd_t->pde_arr;
+    Sys_Warning("new_page_dir: cr3 at %x\n", out_pd->pde_arr);
+    
+    return (uintptr_t)_k_pd.pde_arr;
 }
 
 void pd_free(PD_t* pd) {
     if (!pd || !pd->pde_arr) return;
 
     for (uint32_t pd_i = 0; pd_i < 1024; pd_i++) {
-        PDE* pde = &pd->pde_arr[pd_i];
+        volatile PDE* pde = &pd->pde_arr[pd_i];
         if (!pde->present || !pde->user) continue;
 
         PTE* pt_base = (PTE*)((uintptr_t)(pde->addr) << 12);
@@ -447,7 +474,7 @@ int v_map(PD_t* page_dir, Page_Group* groups, uint32_t group_count) {
             uint32_t pd_i = virt_page_idx >> 10;   
             uint32_t pt_i = virt_page_idx & 0x3FF; 
 
-            PDE* pde = &page_dir->pde_arr[pd_i];
+            volatile PDE* pde = &page_dir->pde_arr[pd_i];
             PTE* pt_base;
 
             if (!pde->present) {
@@ -486,7 +513,7 @@ uintptr_t PD_append_pages(PD_t* page_dir, PTE* ptes, uint32_t pte_count) {
         uint32_t pd_i = i >> 10;
         uint32_t pt_i = i & 0x3FF;
 
-        PDE* pde = &page_dir->pde_arr[pd_i];
+        volatile PDE* pde = &page_dir->pde_arr[pd_i];
 
         if (!pde->present) {
             run_length++;
@@ -519,7 +546,7 @@ uintptr_t PD_append_pages(PD_t* page_dir, PTE* ptes, uint32_t pte_count) {
         uint32_t pd_i = virt_page_idx >> 10;
         uint32_t pt_i = virt_page_idx & 0x3FF;
 
-        PDE* pde = &page_dir->pde_arr[pd_i];
+        volatile PDE* pde = &page_dir->pde_arr[pd_i];
         PTE* pt_base;
 
         if (!pde->present) {
@@ -613,7 +640,7 @@ int page_write(page_index virt, PAGE page) {
     uint32_t pd_i = (va >> 22) & 0x3FF;
     uint32_t pt_i = (va >> 12) & 0x3FF;
 
-    PDE* pde = &_k_pd.pde_arr[pd_i];
+    volatile PDE* pde = &_k_pd.pde_arr[pd_i];
     if (!pde->present) return -1;
 
     PTE* pt_base = (PTE*)((uintptr_t)pde->addr << 12);

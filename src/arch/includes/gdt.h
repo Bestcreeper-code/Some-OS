@@ -2,8 +2,6 @@
 #define GDT_H
 #include <stdint.h>
 
-#define USER_CODE_SEGMENT 0x1B
-#define USER_DATA_SEGMENT 0x23
 
 
 void init_gdt();

@@ -156,7 +156,7 @@ int printlen(const char *buffer, unsigned int length) {
 
 bool extended = false;
 
-volatile uint8_t* input_char_buffer = (volatile uint8_t*)&INPUT_CHAR_BUFFER;
+volatile uint8_t input_char_buffer[256] ;
 
 
 
