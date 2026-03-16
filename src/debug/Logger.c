@@ -3,6 +3,7 @@
 #include "../headers/string.h"
 #include "asm.h"
 #include "../headers/io.h"
+#include <assert.h>
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdint.h>
@@ -41,13 +42,15 @@ void serial_write_string(const char* str) {
     }
 }
 
+
+#define LOG_BUFFER_SIZE 512
 void sys_serial_vlogf(const char* format, const char* file, const char* func, int line, va_list args) {
-    char frmt[512];
-    int size = strlen(format) < 512 ? strlen(format) : 511;
+    char frmt[LOG_BUFFER_SIZE];
+    int size = strlen(format) < LOG_BUFFER_SIZE ? strlen(format) : 511;
     strncpy(frmt, format, size);
     frmt[size] = '\0';
 
-    char prefix[128];
+    char prefix[LOG_BUFFER_SIZE];
     
     if (func != NULL && line != 0) {
         snprintf(prefix, sizeof(prefix), "< %s:%d(%s)> ", file, line, func);
@@ -55,10 +58,10 @@ void sys_serial_vlogf(const char* format, const char* file, const char* func, in
         snprintf(prefix, sizeof(prefix), "<%s> ", file);
     }
 
-    char msg[512];
+    char msg[LOG_BUFFER_SIZE];
     vsnprintf(msg, sizeof(msg), frmt, args);
 
-    char output[640];
+    char output[LOG_BUFFER_SIZE];
     snprintf(output, sizeof(output), "%s%s", prefix, msg);
 
     serial_write_string(output);
@@ -164,4 +167,17 @@ void sys_color_serial_logf(const char* format, uint8_t fg, uint8_t bg, const cha
     set_print_color(0xF);
 
     va_end(args);
+}
+
+void __assert_fail(const char *__assertion, const char *__file,
+			   unsigned int __line, const char *__function){
+    serial_set_color(ANSI_RED,ANSI_BG_BLACK);
+    set_print_color(4);
+    sys_serial_logf("assert failed: \n", __file, __function, __line);
+
+    serial_set_color(ANSI_CYAN,ANSI_BG_BLACK);
+    set_print_color(3);
+    sys_serial_logf("%s\n", "", "", 0,__assertion);
+
+    for(;;);
 }
