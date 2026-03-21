@@ -15,6 +15,9 @@ ztest/
 *.deprec
 diskmount/
 *.txt
+*.elf
+*.o
+*.syms
 *.raw
 *.bin
 outpu.h
@@ -25,3 +28,4 @@ run.txt
 test.txt
 .cache/
 compile_commands.json
+

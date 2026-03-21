@@ -1,3 +1,19 @@
-ignore the janky .gitignore that didn't include half the temp files 
+# I386 OS(mostly kernel right now)
 
-<img src="https://cdn.discordapp.com/emojis/1364328571572850799.webp?quality=lossless&79221&size=48"  width="100"/>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+the errors are making me crazy
+ <img src="https://cdn.discordapp.com/emojis/1364328571572850799.webp?quality=lossless&79221&size=48"  width="20
+ "/>
