@@ -3,7 +3,7 @@
 #include "paging.h"
 #include "string.h"
 #include "arch_gdt.h"
-#include "asm.h"
+#include "arch_asm.h"
 #include "memory.h"
 #include "time.h"
 

@@ -7,7 +7,7 @@
 #include "time.h"
 #include "vga_modes.h"
 #include "power.h"
-#include "asm.h"
+#include "arch_asm.h"
 #include "panic.h"
 #include "symbols.h"
 #include "scheduler.h"
@@ -278,7 +278,7 @@ void _panic_handler(int argc, uint32_t* argv) {
         sleep(1000);
     }
 
-    pc_reboot();
+    // pc_reboot();
 }
 
 
@@ -322,6 +322,6 @@ void _manual_panic(const char* error, const char* info) {
         sleep(1000);
     }
 
-    pc_reboot();
+    // pc_reboot();
 }
 

@@ -17,7 +17,7 @@
 uint64_t timer_ticks;
 
 
-#include "asm.h" // for outb()
+
 
 // ----------------- PIC -----------------
 void pic_remap() {

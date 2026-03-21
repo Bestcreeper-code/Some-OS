@@ -1,5 +1,5 @@
-#include "syscalls.h"
-#include "asm.h"
+#include "arch_syscalls.h"
+#include "arch_asm.h"
 #include "Logger.h"
 
 syscall_args_t _syscall_args;

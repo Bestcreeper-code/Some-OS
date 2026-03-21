@@ -1,38 +1,27 @@
-#include <stdint.h>
-#include <stdbool.h>
-#include "console.h"
 #include "ATA_IO.h"
-#include "io.h"
-#include "multiboot_info.h"
 #include "FileSystem.h"
+#include "asm.h"
+#include "console.h"
+#include "io.h"
 #include "memory.h"
-#include "idt.h"
-#include "time.h"
+#include "multiboot_info.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include "ff.h"
 #include "Logger.h"
 #include "arch.h"
-#include "../FatFs/ff.h"
-#include "asm.h"
+#include "time.h"
 #include "video.h"
-#include "vga_modes.h"
-#include "mouse.h"
 #include "gdt.h"
-// #include "usb.h"
-
-#include "elf.h"
+#include "mouse.h"
 #include "paging.h"
 #include "scheduler.h"
 #include "symbols.h"
-
 #include "config/config.h"
 #include "cpu.h"
-
-
-
-
-
-
 #include "kernel_data.h"
 #include "string.h"
+#include "vfs.h"
 
 
 
@@ -86,10 +75,10 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     
     pic_remap();
     
-
     
     
-    disable_mouse_display();
+    
+    // disable_mouse_display();
     // enable_cursor(0, 2);
 
     
@@ -230,10 +219,7 @@ end_mounting:
     scheduler_init();
     
     Sys_log("Loading login manager...\n");
-    if(exec_ELF("0:/loop.elf").pid == 0){
-        Sys_Error("why does it not load???");
-        Sys_Breakpoint();
-    }
+    
     
     task_switching_flag = 1;
     

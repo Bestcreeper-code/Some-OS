@@ -7,24 +7,30 @@ LD = ld
 OBJCOPY = objcopy
 
 ARCH = x86
+DEFINES = __ARCH_X86__
+
+
 ARCH_DIR = src/arch/$(ARCH)
 
 
-INCLUDE_DIRS = src src/config src/headers \
+INCLUDE_DIRS = src FatFs src/config src/headers src/headers/defines \
 	src/bootloader                        \
-	src/arch/includes $(ARCH_DIR) $(ARCH_DIR)/elf  \
+	src/arch/includes src/arch/includes/asm \
+	$(ARCH_DIR) $(ARCH_DIR)/elf  \
 	$(ARCH_DIR)/memory $(ARCH_DIR)/init   \
 	$(ARCH_DIR)/asm $(ARCH_DIR)/cpu 	  \
 	$(ARCH_DIR)/scheduler $(ARCH_DIR)/panic\
+	$(ARCH_DIR)/syscalls\
 	\
 	\
 	\
-	\
-	src/drivers/ATA src/drivers/PS-2 
+	src/drivers/ATA src/drivers/PS-2  
+	
 
 INCLUDES := $(addprefix -I,$(INCLUDE_DIRS))
+DEFINES_FLAGS := $(addprefix -D,$(DEFINES))
 
-CFLAGS = -m32 -O0 -g -ffreestanding $(INCLUDES) -fno-stack-protector -mno-sse -mno-sse2 -fno-tree-vectorize
+CFLAGS = -m32 -O0 -g -ffreestanding $(INCLUDES) $(DEFINES_FLAGS) -fno-stack-protector -mno-sse -mno-sse2 -fno-tree-vectorize
 
 LDFLAGS = -m elf_i386 -T src/arch/$(ARCH)/linker.ld -z noexecstack 
 

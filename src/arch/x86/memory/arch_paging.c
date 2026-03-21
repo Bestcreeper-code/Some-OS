@@ -1,4 +1,4 @@
-#include "asm.h"
+#include "arch_asm.h"
 #include "paging.h"
 #include "arch_paging.h"
 // #include "memory.h"
@@ -394,40 +394,40 @@ uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, volatile PD_t* 
     
     
 
-    for (uint32_t g = 0; g < group_count; g++) {
-        Sys_log("%x  %x   %x\n\n\n\n", groups[g].vaddr, groups[g].pte_bits, groups[g].size);
-        Page_Group* group = &groups[g];
-        if (group->size == 0) continue;
+    // for (uint32_t g = 0; g < group_count; g++) {
+    //     Sys_log("%x  %x   %x\n\n\n\n", groups[g].vaddr, groups[g].pte_bits, groups[g].size);
+    //     Page_Group* group = &groups[g];
+    //     if (group->size == 0) continue;
 
-        for (uint32_t i = 0; i < group->size; i++) {
-            uint32_t virt_page = group->vaddr + i;
-            uint32_t phys_page = group->pte_bits.addr + i;
+    //     for (uint32_t i = 0; i < group->size; i++) {
+    //         uint32_t virt_page = group->vaddr + i;
+    //         uint32_t phys_page = group->pte_bits.addr + i;
 
-            uint32_t pd_i = virt_page >> 10;
-            uint32_t pt_i = virt_page & 0x3FF;
+    //         uint32_t pd_i = virt_page >> 10;
+    //         uint32_t pt_i = virt_page & 0x3FF;
 
-            volatile PDE* pde = &out_pd->pde_arr[pd_i];
+    //         volatile PDE* pde = &out_pd->pde_arr[pd_i];
 
-            if (!pde->present) {
-                char flags = PAGE_FLAG_RW | (group->pte_bits.user ? PAGE_FLAG_USER : 0);
-                PTE* new_pt = (PTE*)PAGE_ADDR(page_alloc(1, flags));
-                if (!new_pt) return 0;
-                memset(new_pt, 0, PAGE_SIZE);
+    //         if (!pde->present) {
+    //             char flags = PAGE_FLAG_RW | (group->pte_bits.user ? PAGE_FLAG_USER : 0);
+    //             PTE* new_pt = (PTE*)PAGE_ADDR(page_alloc(1, flags));
+    //             if (!new_pt) return 0;
+    //             memset(new_pt, 0, PAGE_SIZE);
 
-                pde->present   = 1;
-                pde->rw        = group->pte_bits.rw;
-                pde->user      = group->pte_bits.user;
-                pde->page_size = 0;
-                pde->addr      = (uintptr_t)new_pt >> 12;
-            }
+    //             pde->present   = 1;
+    //             pde->rw        = group->pte_bits.rw;
+    //             pde->user      = group->pte_bits.user;
+    //             pde->page_size = 0;
+    //             pde->addr      = (uintptr_t)new_pt >> 12;
+    //         }
 
-            PTE* pt    = (PTE*)((uintptr_t)pde->addr << 12);
-            PTE  entry = group->pte_bits;
-            entry.addr = phys_page;
-            entry.present = 1;
-            pt[pt_i]   = entry;
-        }
-    }
+    //         PTE* pt    = (PTE*)((uintptr_t)pde->addr << 12);
+    //         PTE  entry = group->pte_bits;
+    //         entry.addr = phys_page;
+    //         entry.present = 1;
+    //         pt[pt_i]   = entry;
+    //     }
+    // }
 
     Sys_Warning("new_page_dir: cr3 at %x\n", out_pd->pde_arr);
     

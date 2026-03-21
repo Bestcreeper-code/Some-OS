@@ -4,7 +4,7 @@
 #include <limits.h>
 #include <stdint.h>
 
-#include "asm.h"
+#include "arch_asm.h"
 #include "arch_paging.h"
 
 #define MAX_PID SHRT_MAX
