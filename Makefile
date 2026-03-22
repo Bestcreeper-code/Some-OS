@@ -28,7 +28,12 @@ INCLUDE_DIRS = src FatFs src/config src/headers src/headers/defines \
 	
 
 INCLUDES := $(addprefix -I,$(INCLUDE_DIRS))
-DEFINES_FLAGS := $(addprefix -D,$(DEFINES))
+
+ifeq ($(wildcard $(SYMS_OBJ)),)
+    DEFINES_FLAGS := $(addprefix -D,$(DEFINES) __NO_KSYMS)
+else
+    DEFINES_FLAGS := $(addprefix -D,$(DEFINES))
+endif
 
 CFLAGS = -m32 -O0 -g -ffreestanding $(INCLUDES) $(DEFINES_FLAGS) -fno-stack-protector -mno-sse -mno-sse2 -fno-tree-vectorize
 
@@ -41,10 +46,25 @@ ISO_DIR = iso/boot
 GRUB_DIR = $(ISO_DIR)/grub
 
 # === Output files ===
+KERNEL_NOSYMS_ELF = kernel.nosyms.elf
 KERNEL_ELF = $(ISO_DIR)/kernel.elf
-KERNEL_BIN = $(ISO_DIR)/kernel.bin
+KERNEL_BIN = kernel.bin
 DISK_IMG = disk.img
 ISO_FILE = os.iso
+
+
+
+
+#syms file
+# Conditionally set deps
+SYMS_FILE_DEPS = KERNEL_ELF
+ifeq ($(wildcard $(SYMS_OBJ)),)
+    SYMS_FILE_DEPS = KERNEL_NOSYMS_ELF
+else
+    SYMS_FILE_DEPS = KERNEL_NOSYMS_ELF
+endif
+
+
 
 # === Source discovery ===
 C_SOURCES := $(shell find $(SRC_DIRS) -type f -name "*.c")
@@ -57,6 +77,7 @@ MULTIBOOT_OBJ := $(BUILD_DIR)/src/multiboot_header.o
 FILTERED_ASM_OBJECTS := $(filter-out $(MULTIBOOT_OBJ),$(ASM_OBJECTS))
 OBJECTS := $(C_OBJECTS) $(FILTERED_ASM_OBJECTS)
 
+
 SYMS_BIN = syms.bin
 SYMS_OBJ = $(BUILD_DIR)/syms.o
 
@@ -64,6 +85,8 @@ SYMS_OBJ = $(BUILD_DIR)/syms.o
 .PHONY: all run gdb clean disk-img iso
 
 all: $(KERNEL_BIN) $(KERNEL_ELF) iso
+
+
 
 # === Compilation rules ===
 $(BUILD_DIR)/%.o: %.c
@@ -82,6 +105,15 @@ $(MULTIBOOT_OBJ): src/bootloader/multiboot1/multiboot_header.asm
 	@echo "Assembling multiboot header..."
 	$(NASM) -f elf32 $< -o $@
 
+# Build kernel without syms.o
+$(KERNEL_NOSYMS_ELF): $(MULTIBOOT_OBJ) $(OBJECTS) | $(ISO_DIR)
+	@echo "Linking temporary kernel (no syms.o)..."
+	$(LD) $(LDFLAGS) -o $@ $(MULTIBOOT_OBJ) $(OBJECTS) 
+
+# Generate syms.bin from the temporary kernel ELF
+$(SYMS_BIN): $(KERNEL_NOSYMS_ELF)
+	@echo "Generating syms.bin from $< ..."
+	sh ./syms_file_maker.sh $< $@
 # Convert syms.bin to ELF object
 $(SYMS_OBJ): $(SYMS_BIN)
 	@mkdir -p $(dir $@)
@@ -103,12 +135,11 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 $(ISO_DIR):
 	mkdir -p $(GRUB_DIR)
 
+
 # === ISO ===
 iso: $(KERNEL_ELF) $(KERNEL_BIN) $(GRUB_DIR)
 	
-	sh ./syms_file_maker.sh $(KERNEL_ELF) $(SYMS_BIN)
 	
-	objcopy -I binary -O elf32-i386 -B i386 $(SYMS_BIN) $(SYMS_OBJ)
 	
 	$(LD) $(LDFLAGS) -o $(KERNEL_ELF) $(SYMS_OBJ) $(MULTIBOOT_OBJ) $(OBJECTS)
 	
