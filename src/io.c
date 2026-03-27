@@ -1,4 +1,5 @@
 #include "io.h"
+#include "Logger.h"
 #include "string.h"
 #include "asm.h"
 #include "video.h"
@@ -544,7 +545,7 @@ void init_keyboard(){
 
 
 int write_char(char* buffer, int pos, char c, int size) {
-    // If size == 0, ignore size limits (unbounded)
+    
     if (buffer && (size == 0 || pos < size - 1)) {
         buffer[pos] = c;
     }
@@ -574,7 +575,7 @@ int write_number(char* buffer, int pos, int num, int size) {
     if (num < 0) {
         negative = true;
         if (num == (int)0x80000000) {
-            // Special case for INT_MIN
+            
             return write_str(buffer, pos, "-2147483648", size);
         }
         num = -num;
@@ -621,6 +622,28 @@ int write_uint32(char* buffer, int pos, uint32_t num, int size) {
         if (buffer && (size == 0 || cur_pos < size - 1)) {
             buffer[cur_pos] = temp[i - j - 1];
         }
+        cur_pos++;
+    }
+    return i;
+}
+
+int write_hex64(char* buffer, int pos, uint64_t num, int size) {
+    char temp[17];
+    int i = 0;
+
+    if (num == 0)
+        return write_char(buffer, pos, '0', size);
+
+    while (num) {
+        uint8_t nibble = num & 0xF;
+        temp[i++] = (nibble < 10) ? ('0' + nibble) : ('a' + nibble - 10);
+        num >>= 4;
+    }
+
+    int cur_pos = pos;
+    for (int j = 0; j < i; j++) {
+        if (buffer && (size == 0 || cur_pos < size - 1))
+            buffer[cur_pos] = temp[i - j - 1];
         cur_pos++;
     }
     return i;
@@ -712,7 +735,7 @@ int write_hex32_fixed_width(char* buffer, int pos, uint32_t val, int width, int 
     return len;
 }
 
-// buffer be NULL to just calculate size 
+
 int vsnprintf(char* buffer, int size, const char* format, va_list args) {
     int pos = 0;
 
@@ -721,7 +744,7 @@ int vsnprintf(char* buffer, int size, const char* format, va_list args) {
             format++;
             if (*format == '\0') break;
 
-            // Handle %0Nd for fixed width integers
+            
             if (*format == '0') {
                 format++;
                 int width = 0;
@@ -769,6 +792,19 @@ int vsnprintf(char* buffer, int size, const char* format, va_list args) {
                     pos += write_hex32(buffer, pos, val, size);
                     break;
                 }
+                case 'l': {  
+                    
+                    if (*(format + 1) == 'l' && (*(format + 2) == 'x' || *(format + 2) == 'X')) {
+                        uint64_t val = va_arg(args, uint64_t);
+                        int uppercase = (*(format + 2) == 'X');
+                        pos += write_hex64(buffer, pos, val, uppercase);
+                        format += 2; 
+                    } else {
+                        pos += write_char(buffer, pos, '%', 0);
+                        pos += write_char(buffer, pos, *format, 0);
+                    }
+                    break;
+                }
                 case 'c': {
                     char c = (char)va_arg(args, int);
                     pos += write_char(buffer, pos, c, size);
@@ -801,7 +837,7 @@ int vsnprintf(char* buffer, int size, const char* format, va_list args) {
         buffer[pos] = '\0';
     }
 
-    return pos; // characters that would have been written (excluding null)
+    return pos;
 }
 
 
@@ -814,7 +850,7 @@ int vsprintf(char* buffer, const char* format, va_list args) {
             format++;
             if (*format == '\0') break;
 
-            // Handle %0Nd for fixed width integers
+            
             if (*format == '0') {
                 format++;
                 int width = 0;
@@ -858,9 +894,23 @@ int vsprintf(char* buffer, const char* format, va_list args) {
                     break;
                 }
                 case 'x':
-                case 'X': {
+                case 'X':
+                case 'p': {
                     uint32_t val = va_arg(args, uint32_t);
                     pos += write_hex32(buffer, pos, val, 0);
+                    break;
+                }
+                case 'l': {  
+                    
+                    if (*(format + 1) == 'l' && (*(format + 2) == 'x' || *(format + 2) == 'X')) {
+                        uint64_t val = va_arg(args, uint64_t);
+                        int uppercase = (*(format + 2) == 'X');
+                        pos += write_hex64(buffer, pos, val, uppercase);
+                        format += 2; 
+                    } else {
+                        pos += write_char(buffer, pos, '%', 0);
+                        pos += write_char(buffer, pos, *format, 0);
+                    }
                     break;
                 }
                 case 'c': {
@@ -891,7 +941,7 @@ int vsprintf(char* buffer, const char* format, va_list args) {
 
     buffer[pos] = '\0';
 
-    return pos; // number of characters written
+    return pos;
 }
 
 

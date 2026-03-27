@@ -10,6 +10,7 @@
 #include "ff.h"
 #include "Logger.h"
 #include "arch.h"
+#include "path.h"
 #include "time.h"
 #include "video.h"
 #include "gdt.h"
@@ -129,8 +130,10 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     int pitch = Multiboot_info->framebuffer_bpp;
     
     ClearScreen();
-    
-    
+    // #warning  remove pls
+    // ata_init();
+
+    // Sys_Breakpoint();
     
 
     __asm__ volatile ("sti"); // Enable interrupts
@@ -174,15 +177,13 @@ end_mounting:
     
     sys_color_serial_logf("Press Any key to continue\n", ANSI_BRIGHT_MAGENTA, ANSI_BG_BLACK, "", "", 0);
     
-    
-    
     getc();
 
+
     
-
-
-
-
+    char bs[16];
+    Get_Symbol((uintptr_t)getc, bs);
+    getc();
 
 
     
@@ -216,15 +217,14 @@ end_mounting:
     
     
     
-    scheduler_init();
+    // scheduler_init();
     
     Sys_log("Loading login manager...\n");
     
     
-    task_switching_flag = 1;
-    
+    // task_switching_flag = 1;
     ClearScreen();
-    enable_mouse_display();
+    // enable_mouse_display();
     Start_Console();
 
     while (1) {

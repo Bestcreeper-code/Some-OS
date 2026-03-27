@@ -12,7 +12,7 @@ Vector2 pl_pos = {0,0};
 int rotation = 90;
 
 void app_main() {
-    uint8_t* second_buffer = malloc(SCREEN_PITCH * SCREEN_HEIGHT);
+    uint8_t* second_buffer = kmalloc(SCREEN_PITCH * SCREEN_HEIGHT);
     if(!second_buffer){
         printf("[3D] memory allocation failure");
         return;

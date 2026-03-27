@@ -33,7 +33,7 @@ static char* currpath = 0;
 // #define K_TERMINAL_WIDTH K_TERMINAL_WIDTH
 // #define K_TERMINAL_HEIGHT K_TERMINAL_HEIGHT
 
-// Allocate and return a malloc'd null-terminated string for the command
+// Allocate and return a kmalloc'd null-terminated string for the command
 char* Console_Get_Command() {
     
     printf("%s> ", currpath);
@@ -41,7 +41,7 @@ char* Console_Get_Command() {
     int start = strlen(currpath) + 2;  // path length + ""> ""
     int input_start_line = vgaY;
 
-    char* buffer = malloc(MAX_COMMAND_LENGTH);
+    char* buffer = kmalloc(MAX_COMMAND_LENGTH);
     
     if (!buffer) return NULL;
     
@@ -238,24 +238,12 @@ bool Console_Process_Command(char* command) {
     else if (!strcmp(tokens[0], "cpu")) {
         cpu_log_specs();
     }
-    else if (!strcmp(tokens[0], "new")) {
-        if (token_count < 2) {
-            result = false;
-        } else {
-            if (echoing) printf("Successfully created %s\n", tokens[1]);
-        }
+    else if (!strcmp(tokens[0], "zerodiv")) {
+        int e = 8839/0;
     }
-    else if (!strcmp(tokens[0], "mkdir")) {
-        if (token_count < 2) {
-            result = false;
-        } else {
-            char* list[2] = {currpath, tokens[1]};
-            if (f_mkdir(Concat(list, 2, '/')) == FR_OK) {
-                if (echoing) printf("Successfully created directory %s\n", tokens[1]);
-            } else {
-                if (echoing) printf("Couldn't create directory %s\n", tokens[1]);
-            }
-        }
+    else if (!strcmp(tokens[0], "nullptr")) {
+        char* wtf= 0;
+        token_count = *wtf++;
     }
     else if (!strcmp(tokens[0], "rm")) {
         if (token_count < 2) {
@@ -301,7 +289,7 @@ void Start_Console() {
     // Add_Console_Request("@help");
     // int i;
     // i/=0;
-    currpath = malloc(4);
+    currpath = kmalloc(4);
     if (!currpath) {
         printf("Path Broken");
         return;
@@ -330,7 +318,7 @@ void Start_Console() {
         // Add command to history
         if (command_History_count == MAX_HISTORY && usr_input) {
             // Free oldest
-            free(command_History[0]);
+            kfree(command_History[0]);
             // Shift all left
             for (int i = 1; i < MAX_HISTORY; i++) {
                 command_History[i - 1] = command_History[i];

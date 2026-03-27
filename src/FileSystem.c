@@ -3,7 +3,7 @@
 #include "memory.h"
 #include "time.h"
 #include "video.h"
-#include "vga_modes.h"
+
 // #include "loader.h"
 #include "Logger.h"
 #include "mouse.h"
@@ -69,7 +69,7 @@ char **read_dir(const char *path, int *amount) {
     FILINFO fno;
     int nfile = 0;
     int capacity = 4;
-    char **list = malloc(capacity * sizeof(char*));
+    char **list = kmalloc(capacity * sizeof(char*));
     
     if (!list) {
         *amount = 0;
@@ -78,7 +78,7 @@ char **read_dir(const char *path, int *amount) {
 
     res = f_opendir(&dir, path);
     if (res != FR_OK) {
-        free(list);
+        kfree(list);
         *amount = 0;
         return NULL;
     }
@@ -96,9 +96,9 @@ char **read_dir(const char *path, int *amount) {
             if (!tmp) {
                 // Clean up allocated memory on realloc failure
                 for (int i = 0; i < nfile; i++) {
-                    free(list[i]);
+                    kfree(list[i]);
                 }
-                free(list);
+                kfree(list);
                 f_closedir(&dir);
                 *amount = 0;
                 return NULL;
@@ -110,13 +110,13 @@ char **read_dir(const char *path, int *amount) {
         int len = strlen(name);
         int extra = (fno.fattrib & AM_DIR) ? 1 : 0; // '/' if directory
 
-        list[nfile] = malloc(len + extra + 1);
+        list[nfile] = kmalloc(len + extra + 1);
         if (!list[nfile]) {
-            // Clean up on malloc failure
+            // Clean up on kmalloc failure
             for (int i = 0; i < nfile; i++) {
-                free(list[i]);
+                kfree(list[i]);
             }
-            free(list);
+            kfree(list);
             f_closedir(&dir);
             *amount = 0;
             return NULL;
@@ -187,7 +187,7 @@ FRESULT change_Current_Dir(char** currdir, const char* _path) {
     int part_count;
     char** cut_dir = Split(*currdir, '/', 0, &part_count);
     if (!cut_dir) {
-        free(path);
+        kfree(path);
         return FR_NOT_ENOUGH_CORE;
     }
 
@@ -196,12 +196,12 @@ FRESULT change_Current_Dir(char** currdir, const char* _path) {
         EndSplit(cut_dir, part_count);
 
         if (check_path_exists(path, FT_DIR) == FR_OK) {
-            free(*currdir);
+            kfree(*currdir);
             *currdir = strdup(path);
-            free(path);
+            kfree(path);
             return (*currdir) ? FR_OK : FR_NOT_ENOUGH_CORE;
         } else {
-            free(path);
+            kfree(path);
             return FR_NO_FILE;
         }
     }
@@ -212,7 +212,7 @@ FRESULT change_Current_Dir(char** currdir, const char* _path) {
         for(char i=0;i<3;i++){
             RemoveChar(path, 0); // Remove "../"
         }
-        free(cut_dir[--part_count]);
+        kfree(cut_dir[--part_count]);
     }
 
     // Handle "./"
@@ -227,7 +227,7 @@ FRESULT change_Current_Dir(char** currdir, const char* _path) {
     EndSplit(cut_dir, part_count);
 
     if (!basepath) {
-        free(path);
+        kfree(path);
         return FR_NOT_ENOUGH_CORE;
     }
 
@@ -235,18 +235,18 @@ FRESULT change_Current_Dir(char** currdir, const char* _path) {
     
     char* arr[2] = { basepath, path };
     char* finalpath = Concat(arr, 2, '/');
-    free(basepath);
-    free(path);
+    kfree(basepath);
+    kfree(path);
 
     if (!finalpath) return FR_NOT_ENOUGH_CORE;
 
     // Final check
     if (check_path_exists(finalpath, FT_DIR) == FR_OK) {
-        free(*currdir);
+        kfree(*currdir);
         *currdir = finalpath;
         return FR_OK;
     } else {
-        free(finalpath);
+        kfree(finalpath);
         return FR_NO_FILE;
     }
 }
@@ -268,7 +268,7 @@ char* Get_Filename(const char* path){
     if (!path) return NULL;
     int count;
     char** parts = Split(path, '/', 0, &count);
-    char* res = malloc(strlen(parts[count-1]) + 1);
+    char* res = kmalloc(strlen(parts[count-1]) + 1);
     strcpy(res, parts[count-1]);
     EndSplit(parts, count);
 

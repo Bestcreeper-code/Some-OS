@@ -7,6 +7,7 @@
 /* storage control modules to the FatFs module with a defined API.       */
 /*-----------------------------------------------------------------------*/
 
+#include "blkdev.h"
 #include "ff.h"			/* Obtains integer types */
 #include "diskio.h"		/* Declarations of disk functions */
 #include "ATA_IO.h"
@@ -208,7 +209,7 @@ DRESULT disk_ioctl (
 		case CTRL_SYNC:
     		return RES_OK;
 		case GET_SECTOR_COUNT:
-			*(DWORD*)buff = ata_get_sector_count(); 
+			*(DWORD*)buff = Get_Block_Device(0)->ops.ioctl((struct block_device*)Get_Block_Device(0),BLKGETSIZE); 
 			return RES_OK;
 		case GET_SECTOR_SIZE:
 			*(WORD*)buff = 512; 

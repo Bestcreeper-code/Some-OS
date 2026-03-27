@@ -100,7 +100,7 @@ char** Split(const char* string, char separator, int max_tokens, int* out_count)
     }
 
     int capacity = (max_tokens > 0) ? max_tokens : 8; 
-    char** tokens = malloc(sizeof(char*) * capacity);
+    char** tokens = kmalloc(sizeof(char*) * capacity);
     if (!tokens) return NULL;
 
     int token_index = 0;
@@ -110,7 +110,7 @@ char** Split(const char* string, char separator, int max_tokens, int* out_count)
     while (*ptr) {
         if (*ptr == separator) {
             int len = ptr - start;
-            char* token = malloc(len + 1);
+            char* token = kmalloc(len + 1);
             if (token) {
                 strncpy(token, start, len);
                 token[len] = '\0';
@@ -125,8 +125,8 @@ char** Split(const char* string, char separator, int max_tokens, int* out_count)
                 char** temp = realloc(tokens, sizeof(char*) * capacity);
                 if (!temp) {
                     // On failure, cleanup and return NULL
-                    for (int i = 0; i < token_index; i++) free(tokens[i]);
-                    free(tokens);
+                    for (int i = 0; i < token_index; i++) kfree(tokens[i]);
+                    kfree(tokens);
                     if (out_count) *out_count = 0;
                     return NULL;
                 }
@@ -152,9 +152,9 @@ char** Split(const char* string, char separator, int max_tokens, int* out_count)
 
 void EndSplit(char** tokens, int count) {
     for (int i = 0; i < count; i++) {
-        free(tokens[i]);
+        kfree(tokens[i]);
     }
-    free(tokens);
+    kfree(tokens);
 }
 
 
@@ -171,7 +171,7 @@ char* Concat(char** list, size_t size, char linking_char) {
 
     size_t separatorSize = (linking_char && size > 1) ? (size - 1) : 0;
 
-    char* result = (char*) malloc(totalLen + separatorSize + 1); 
+    char* result = (char*) kmalloc(totalLen + separatorSize + 1); 
     if (!result) return NULL;
 
     size_t offset = 0;
@@ -247,7 +247,7 @@ char *strchr(const char *str, int c) {
 
 char *strdup(const char *s){
     size_t len = strlen(s);
-    char* pter = malloc(len+1);
+    char* pter = kmalloc(len+1);
     if(!pter)return NULL;
     memcpy(pter,s,len+1);
     return pter;
@@ -256,7 +256,7 @@ char *strdup(const char *s){
 char *strndup( const char *str, size_t size ){
     size_t stringlen = strlen(str);
     size_t len = size < stringlen? size : stringlen; 
-    char* pter = malloc(len+1);
+    char* pter = kmalloc(len+1);
     if(!pter)return NULL;
     memcpy(pter,str,len);
     pter[len] = '\0';
@@ -408,7 +408,7 @@ char* strlow(const char* str) {
     if (str == NULL) return NULL;
 
     size_t len = strlen(str);
-    char* newstr = malloc(len + 1);
+    char* newstr = kmalloc(len + 1);
     if (!newstr) return NULL;
 
     for (int i = (int)len - 1; i >= 0; i--) {

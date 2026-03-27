@@ -19,6 +19,7 @@ diskmount/
 *.o
 *.syms
 *.raw
+*.img
 *.bin
 outpu.h
 build.sh

@@ -1,4 +1,5 @@
 #pragma once
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -6,10 +7,11 @@
 
 #include "arch_types.h"
 #include "compiler_defs.h"
+#include "types.h"
+#include "lists.h"
 #include "super_block.h"
 #include "path.h"
 
-#include "types.h"
 
 struct file {
     struct inode *f_inode;          // points to the file/directory inode
@@ -35,8 +37,8 @@ struct inode_operations{
     int (*create)(struct inode *, struct dentry *, umode_t, bool);
     int (*unlink)(struct inode *, struct dentry *);
 
-    int (*getattr)(const struct path *, struct kstat *, uint32_t, unsigned int);
-    int (*setattr)(struct dentry *, struct iattr *);
+    // int (*getattr)(const struct path *, struct kstat *, uint32_t, unsigned int);
+    // int (*setattr)(struct dentry *, struct iattr *);
 
     // int (*readlink)(struct dentry *, char __user *, int);
     // int (*symlink)(struct inode *, struct dentry *, const char *);
@@ -59,6 +61,7 @@ struct mount {
 
 
 struct inode {
+    struct dentry *i_dentry;  
     // info
     umode_t    i_mode;
     // kuid_t     i_uid;
@@ -70,11 +73,11 @@ struct inode {
     time64_t   i_atime;
     time64_t   i_mtime;
     time64_t   i_ctime;
-
+    atomic_t		i_count;
     // dev 
     dev_t      i_rdev;
 
-    // VFS funcs
+    // funcs
     const struct inode_operations *i_op;
     const struct file_operations  *i_fop;
 
@@ -93,3 +96,11 @@ struct dentry {
     struct hlist_head d_children;
 };
 
+
+
+extern struct inode_operations def_vfs_i_ops;
+extern struct dentry* root_dentry;
+
+struct dentry *vfs_lookup(struct inode* dir, struct dentry* file, unsigned int flags);
+int vfs_create(struct inode *dir, struct dentry *dentry, umode_t mode, bool excl);
+int vfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode);

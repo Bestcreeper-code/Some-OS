@@ -8,6 +8,7 @@
 #include "../config/config.h"
 #include "kernel_data.h"
 
+
 #define MULTIBOOT_MMAP_FREE_MEMORY  1
 #define MULTIBOOT_MMAP_RESERVED     2
 
@@ -33,16 +34,16 @@ void force_free(uint32_t address, uint32_t size);
 uint32_t get_pter_size(void* pter) __attribute__((nonnull (1)));
 
 void aligned_free(void* ptr)  __attribute__((nonnull (1)));;
-void* aligned_malloc(size_t size, size_t alignment) __attribute__ ((malloc, malloc (aligned_free, 1)));
+void* aligned_malloc(size_t size, size_t alignment) __attribute__ ((malloc, malloc(aligned_free, 1)));
 
-void free_impl(void* ptr) __attribute__((nonnull (1)));
-void* malloc_impl(size_t size) __attribute__ ((malloc, malloc (free_impl, 1)));
+void kfree_impl(void* ptr) __attribute__((nonnull (1)));
+void* kmalloc_impl(size_t size) __attribute__ ((malloc, malloc (kfree_impl, 1)));
 void* realloc_impl(void* ptr, size_t size);
 
 
 
-#define malloc(size)              malloc_impl(size)//;Sys_log("\n");
-#define free(ptr)                 free_impl(ptr)//;Sys_log("\n");
+#define kmalloc(size)              kmalloc_impl(size)//;Sys_log("\n");
+#define kfree(ptr)                 kfree_impl(ptr)//;Sys_log("\n");
 #define realloc             realloc_impl
 
 #endif // MEMORY_H

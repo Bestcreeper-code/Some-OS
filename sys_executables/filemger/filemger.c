@@ -122,7 +122,7 @@ change_dir:
             if(i == cursor_index){
                 color = 0x25;
                 uint8_t curr_file_n_len = strlen(curr_file_name);
-                char* temp_file_name = malloc(curr_file_n_len+3);//\0 + space and <
+                char* temp_file_name = kmalloc(curr_file_n_len+3);//\0 + space and <
                 if(temp_file_name){
                     strcpy(temp_file_name, curr_file_name);
                     temp_file_name[curr_file_n_len] = ' ';

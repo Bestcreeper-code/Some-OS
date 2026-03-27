@@ -9,7 +9,7 @@
 char* intToStr(int num) {
     // Handle zero as special case
     if (num == 0) {
-        char* zeroStr = malloc(2);
+        char* zeroStr = kmalloc(2);
         if (!zeroStr) return NULL;
         zeroStr[0] = '0';
         zeroStr[1] = '\0';
@@ -26,7 +26,7 @@ char* intToStr(int num) {
     }
 
     // Allocate string (+1 for null terminator)
-    char* str = malloc(length + 1);
+    char* str = kmalloc(length + 1);
     if (!str) return NULL;
 
     str[length] = '\0';  // Null-terminate
@@ -73,7 +73,7 @@ char* String_Input_Popup(int x, int y,int width, bool hidden) {
         if(!hidden) draw_bitmap_string(visible_str, x, y, font_w, font_h, 0X3F, NULL, true, false, space);
         else {
             int hid_len = strlen(visible_str);
-            char* hidden_str = malloc(hid_len + 1);
+            char* hidden_str = kmalloc(hid_len + 1);
             if (!hidden_str) {
                 free(buffer);
                 return NULL;
@@ -248,7 +248,7 @@ uint8_t Open_File_Edit_Popup(char* file) {
 }
 
 char* xor_crypt(const char* value, int value_size, const char* key, int key_size) {
-    char* output = malloc(value_size);
+    char* output = kmalloc(value_size);
     if (!output) return NULL;
 
     for (int i = 0; i < value_size; i++) {

@@ -5,7 +5,7 @@
 #include "string.h"
 #include "FileSystem.h"
 #include "time.h"
-#include "vga_modes.h"
+
 #include "power.h"
 #include "arch_asm.h"
 #include "panic.h"
@@ -172,7 +172,7 @@ volatile char panic_count = 0;
 void _panic_handler(int argc, uint32_t* argv) {
 
     if (panic_count >= MAX_KPANIK_COUNT) {
-        Sys_color_log_NoPos("Double Fault\n", ANSI_RED, ANSI_BG_BLACK);
+        Sys_color_log_NoPos("Double Fault (%d) %x\n", ANSI_RED, ANSI_BG_BLACK, (int)argv[0], (uint32_t)((cpu_registers_t*)argv[2])->cr2);
         Sys_color_log_NoPos("Fix your shit\n", ANSI_RED, ANSI_BG_BLACK);
         for (;;);
     }
@@ -249,24 +249,30 @@ void _panic_handler(int argc, uint32_t* argv) {
 
     Sys_log_NoPos(" CR3: 0x%x\n", _cpu_regs->cr3);
 
-    // Call Stack Trace
+    asm volatile("sti");
     if (call_stack) {
         Sys_log_NoPos(" Call Stack Trace:\n");
-
         for (int i = 0; i < MAX_STACK_TRACE_SIZE; i++) {
+            uint32_t addr = call_stack[i];
+            if (addr < 0x1000) { 
+                Sys_color_log_NoPos(" invalid backtrace addr: 0x%x\n",
+                    ANSI_RED, ANSI_BG_BLACK, addr);
+                break;
+            }
             char tmp_buffer[64];
-            const char* sym = Get_Symbol(call_stack[i], tmp_buffer)->str;
-
-            Sys_color_log_NoPos(" %s (%x)\n",
-                ANSI_BRIGHT_YELLOW,
-                ANSI_BG_BLACK,
-                sym, call_stack[i]);
+            BacktraceSymbol* sym = Get_Symbol(addr, tmp_buffer);
+            if(!sym) {
+                sym = (BacktraceSymbol*)tmp_buffer;
+                strcpy(&tmp_buffer[sizeof(*sym)], "unknown symbol");
+            }
+            Sys_color_log_NoPos("  %s (%x)\n",
+                ANSI_BRIGHT_YELLOW, ANSI_BG_BLACK, sym->str, addr);
         }
     }
 
     Sys_log_NoPos(" Rebooting in 10 sec...\n");
 
-    asm volatile("sti");
+    
 
     for (int i = 0; i < 10; i++) {
         draw_bitmap_char('#',
@@ -277,7 +283,7 @@ void _panic_handler(int argc, uint32_t* argv) {
             false, true, true);
         sleep(1000);
     }
-
+    Sys_Breakpoint();
     // pc_reboot();
 }
 

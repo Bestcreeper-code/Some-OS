@@ -57,7 +57,7 @@ void _free_pid(pid_t pid) {
 
 pid_t new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, Stack_t k_stack, Stack_t us_stack) {
     
-    Linked_PCB_t* new_pcb = (Linked_PCB_t*)malloc(sizeof(Linked_PCB_t));
+    Linked_PCB_t* new_pcb = (Linked_PCB_t*)kmalloc(sizeof(Linked_PCB_t));
     if (!new_pcb){ return -1;}
 
     
@@ -109,7 +109,7 @@ int kill_process(short proc_pid){
     old->next = pcb->next;
     
     _free_pid(pcb->pid);
-    free(pcb);
+    kfree(pcb);
     return 0;
 }
 

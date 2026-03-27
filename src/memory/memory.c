@@ -280,7 +280,7 @@ uint32_t get_pter_size(void* pter){
     return *sizeaddr;
 }
 
-void* malloc_impl(size_t size) {
+void* kmalloc_impl(size_t size) {
 #if MEM_DEBUG_MODE
     Sys_log("[MEM_DBG] this func was called with %d\n",size);
 #endif
@@ -336,7 +336,7 @@ void* malloc_impl(size_t size) {
 
 
 
-void free_impl(void* _Memory) {
+void kfree_impl(void* _Memory) {
 #if MEM_DEBUG_MODE
     Sys_log("[MEM_DBG] this func was called with %d\n",_Memory);
 #endif
@@ -410,15 +410,15 @@ void* realloc_impl(void *ptr, size_t size) {
     Sys_log("[MEM_DBG] this func was called with %x , %d\n",ptr,size);
 #endif
     if (size == 0) {
-        free(ptr);
+        kfree(ptr);
         return NULL;
     }
 
     if (!ptr) {
-        return malloc(size);
+        return kmalloc(size);
     }
 
-    void *new_ptr = malloc(size);
+    void *new_ptr = kmalloc(size);
     if (!new_ptr) {
         return NULL;
     }
@@ -427,7 +427,7 @@ void* realloc_impl(void *ptr, size_t size) {
     size_t copy_size = (size < old_len) ? size : old_len;
 
     memcpy(new_ptr, ptr, copy_size);
-    free(ptr);
+    kfree(ptr);
 
     return new_ptr;
 }
@@ -439,7 +439,7 @@ void* aligned_malloc(size_t size, size_t alignment) {
     }
 
     uint32_t extra = (uint32_t)(alignment - 1 + sizeof(uint32_t));
-    void* raw = malloc_impl(size + extra);
+    void* raw = kmalloc_impl(size + extra);
     if (!raw) return NULL;
 
     uintptr_t raw_addr = (uintptr_t)raw;
@@ -456,6 +456,6 @@ void aligned_free(void* ptr) {
     uintptr_t aligned_addr = (uintptr_t)ptr;
     void* raw = (void*)(uintptr_t)((uint32_t*)((uintptr_t)aligned_addr))[-1];
 
-    free_impl(raw);
+    kfree_impl(raw);
 }
 

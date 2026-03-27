@@ -37,7 +37,7 @@ void app_main(int argc, char** argv) {
         && f_open(&file, argv[1], FA_READ) == FR_OK) {
         
         size = f_size(&file);
-        data = malloc(size + 1);
+        data = kmalloc(size + 1);
         if (data != NULL) {
             if (f_read(&file, data, size, &br) == FR_OK && br == size) {
                 data[size] = '\0';
@@ -52,7 +52,7 @@ void app_main(int argc, char** argv) {
 
     // Fallback text if file fails
     size = strlen(DEFAULT_FILE_STRING);
-    data = malloc(size + 1);
+    data = kmalloc(size + 1);
     if (data != NULL) {
         memcpy(data, DEFAULT_FILE_STRING, size + 1);
     }

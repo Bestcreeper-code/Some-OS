@@ -30,14 +30,14 @@ static char* currpath = 0;
 #define K_TERMINAL_WIDTH 25
 #define K_TERMINAL_HEIGHT 80
 
-// Allocate and return a malloc'd null-terminated string for the command
+// Allocate and return a kmalloc'd null-terminated string for the command
 char* Console_Get_Command() {
     printf("%s>", currpath);
     int command_history_index = command_History_count;
     int start = strlen(currpath) + 1;  // prompt length + '>'
     int input_start_line = vgaY;
 
-    char* buffer = malloc(MAX_COMMAND_LENGTH);
+    char* buffer = kmalloc(MAX_COMMAND_LENGTH);
     if (!buffer) return NULL;
     int length = 0;
     int cursor_index = 0;
@@ -280,7 +280,7 @@ bool Console_Process_Command(char* command) {
 
 
 void Start_Console() {
-    currpath = malloc(4);
+    currpath = kmalloc(4);
     if (!currpath) {
         printf("Path Broken");
         return;

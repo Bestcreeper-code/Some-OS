@@ -19,7 +19,13 @@
 #include <stdbool.h>
 
 
-
+struct Ata_blkdev {
+    uint8_t drive;
+    uint32_t sector_count;
+    uint32_t sector_size;
+    uint16_t info_data[256];
+};
+int ata_init();
 
 void ata_pio_write_sector(uint32_t lba, const uint8_t *buffer);
 void ata_pio_read_sector(uint32_t lba, uint8_t *buffer);

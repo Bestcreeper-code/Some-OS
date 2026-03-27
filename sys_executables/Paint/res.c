@@ -10,7 +10,7 @@
 char* intToStr(int num) {
     // Handle zero as special case
     if (num == 0) {
-        char* zeroStr = malloc(2);
+        char* zeroStr = kmalloc(2);
         if (!zeroStr) return NULL;
         zeroStr[0] = '0';
         zeroStr[1] = '\0';
@@ -27,7 +27,7 @@ char* intToStr(int num) {
     }
 
     // Allocate string (+1 for null terminator)
-    char* str = malloc(length + 1);
+    char* str = kmalloc(length + 1);
     if (!str) return NULL;
 
     str[length] = '\0';  // Null-terminate
@@ -238,7 +238,7 @@ uint8_t Open_File_Edit_Popup(char* file) {
 
     
 void* create_default_paint_header() {
-    void* data = malloc(sizeof(PaintFileHeader) + 320 * 175);
+    void* data = kmalloc(sizeof(PaintFileHeader) + 320 * 175);
     if (!data) return NULL;
     
     PaintFileHeader* header = (PaintFileHeader*)data;

@@ -69,7 +69,7 @@ char* String_Input_Popup(int x, int y,int width) {
 char** split_text_lines(const char* text,int char_per_line, int* out_line_count) {
     int capacity = 16;
     int count = 0;
-    char** lines = malloc(sizeof(char*) * capacity);
+    char** lines = kmalloc(sizeof(char*) * capacity);
 
     int text_len = strlen(text);
     int i = 0;

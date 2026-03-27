@@ -41,7 +41,7 @@
 //     }
 
 //     // === Step 2: Create a new FAT32 partition AFTER ISO ===
-//     Disk_MBR_t* MBR_buff = malloc(512);
+//     Disk_MBR_t* MBR_buff = kmalloc(512);
 //     if (!MBR_buff) {
 //         Sys_log("Failed to allocate MBR buffer");
 //         return DISK_INSTALLER_RET_MALLOC_FAIL;

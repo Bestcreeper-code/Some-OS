@@ -36,7 +36,7 @@ void app_main(int argc, char** argv) {
         && f_open(&file, argv[1], FA_READ) == FR_OK) {
         
         file_size = f_size(&file);
-        file_data = malloc(file_size);
+        file_data = kmalloc(file_size);
         if (file_data != NULL) {
             if (f_read(&file, file_data, file_size, &br) == FR_OK && br == file_size) {
                 f_close(&file);
@@ -75,7 +75,7 @@ done:
     }
 
     // Allocate canvas buffer
-    canvas = malloc(header->height * header->width);
+    canvas = kmalloc(header->height * header->width);
     if (!canvas) {
         printf("not enough memory\n");
         sleep(2000);
@@ -231,7 +231,7 @@ ask_f_name:
             goto ask_f_name;
         }
         if (strcmp(&input[strlen(input) - 6], ".paint")) {
-            char* new_input = malloc(strlen(input) + 7);
+            char* new_input = kmalloc(strlen(input) + 7);
             sprintf(new_input, "%s.paint", input);
             free(input);
             input = new_input;
@@ -239,7 +239,7 @@ ask_f_name:
         filepath = input;
     }
     // Update header colors from current palette
-    PaintFileHeader* hdr = malloc(sizeof(PaintFileHeader) + palette_size * 3 + header->width * header->height);
+    PaintFileHeader* hdr = kmalloc(sizeof(PaintFileHeader) + palette_size * 3 + header->width * header->height);
     for (int i = 0; i < palette_size; i++) {
         RGBColor color = get_palette_color(64 + i);
         hdr->colors[i] = color;

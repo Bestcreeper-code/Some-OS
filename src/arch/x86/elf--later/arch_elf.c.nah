@@ -92,7 +92,7 @@ LoadedElf* LoadElf(const char* path) {
 #endif
 
     f_lseek(&file, elf_header.e_phoff);
-    Elf32_Phdr* program_headers = malloc(sizeof(Elf32_Phdr) * elf_header.e_phnum);
+    Elf32_Phdr* program_headers = kmalloc(sizeof(Elf32_Phdr) * elf_header.e_phnum);
     
     if (!program_headers) {
         Sys_log("Failed to allocate memory for program headers\n");
@@ -110,7 +110,7 @@ LoadedElf* LoadElf(const char* path) {
 
     PD_t app_page_dir;
     
-    Page_Group* page_groups = malloc(sizeof(Page_Group) * (elf_header.e_phnum + 3));
+    Page_Group* page_groups = kmalloc(sizeof(Page_Group) * (elf_header.e_phnum + 3));
     if (!page_groups) {
         Sys_log("Failed to allocate page_groups\n");
         free(program_headers);
@@ -247,7 +247,7 @@ LoadedElf* LoadElf(const char* path) {
     free(program_headers);
     free(page_groups);
 
-    LoadedElf* loaded_elf = malloc(sizeof(LoadedElf));
+    LoadedElf* loaded_elf = kmalloc(sizeof(LoadedElf));
     if (!loaded_elf) {
         Sys_log("Failed to allocate LoadedElf struct\n");
         pd_free(&app_page_dir);

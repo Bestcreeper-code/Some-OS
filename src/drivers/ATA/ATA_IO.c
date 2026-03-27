@@ -1,7 +1,14 @@
 #include "ATA_IO.h"
+#include "Logger.h"
+#include "blkdev.h"
+#include "helpers.h"
+#include "ioctl.h"
+#include "memory.h"
 #include <asm.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdio.h>
 
 #define ATA_DATA       0x1F0
 #define ATA_ERROR      0x1F1
@@ -150,25 +157,123 @@ void ata_pio_write_sector(uint32_t lba, const uint8_t *buffer)
     ata_wait_busy();
 }
 
-uint32_t ata_get_sector_count()
-{
-    outb(ATA_DRIVE, 0xA0);
-    ata_io_wait();
 
-    outb(ATA_SECTOR_CNT, 0);
-    outb(ATA_LBA_LOW, 0);
-    outb(ATA_LBA_MID, 0);
-    outb(ATA_LBA_HIGH, 0);
+// int (*read)(struct block_device *, void *buf, size_t data_size, loff_t read_addr);
+int ATA_blkdev_disk_read(struct block_device *dev, void* buffer, size_t data_size, loff_t read_addr) {
+    RET_IF(!dev, -1);
+}
 
-    outb(ATA_COMMAND, ATA_CMD_IDENTIFY);
+// int (*write)(struct block_device *, const void *buf, size_t data_size, loff_t write_addr);
+int ATA_blkdev_disk_write(struct block_device *dev, const void *buf, size_t data_size, loff_t write_addr) {
+    RET_IF(!dev, -1);
+}
 
-    if (ata_wait_drq() != 0)
-        return 0;
-
-    uint16_t data[256];
-
-    for (int i = 0; i < 256; i++)
-        data[i] = inw(ATA_DATA);
-
+uint32_t ATA_get_sector_count_from_dev(struct block_device *dev) {
+    uint16_t *data = (uint16_t*)dev->private_data;
     return ((uint32_t)data[61] << 16) | data[60];
+}
+
+uint32_t ATA_get_sector_size_from_dev(struct block_device *dev) {
+    uint16_t *data = (uint16_t*)dev->private_data;
+    uint16_t words_per_sector = data[106] & 0xFFFF;
+    // return words_per_sector ? words_per_sector * 2 : 512;
+    return  512;
+}
+
+int ATA_blkdev_ioctl(struct block_device * blkdev, int op,...) {
+    RET_IF(_IOC_TYPE(op) != 0x12, 1);
+    switch (_IOC_NR(op)) {
+        case BLKROSET:{
+            return 0;
+        }
+        case BLKROGET:{
+            return 0;
+        }
+        case BLKRRPART:{
+            return 0;
+        }
+        case BLKGETSIZE:{
+            return ATA_get_sector_count_from_dev(blkdev);
+        }
+        case BLKFLSBUF:{
+            return 0;
+        }
+        case BLKRASET:{
+            return 0;
+        }
+        case BLKRAGET:{
+            return 0;
+        }
+        case BLKFRASET:{
+            return 0;
+        }
+        case BLKFRAGET:{
+            return 0;
+        }
+        case BLKSECTSET:{
+            return 0;
+        }
+        case BLKSECTGET:{
+            return 0;
+        }
+        case BLKSSZGET:{
+            return ATA_get_sector_size_from_dev(blkdev);
+        }
+        default:
+            return 0;
+    }
+}
+
+
+static struct block_device_ops ata_ops = {
+    .read  = ATA_blkdev_disk_read,
+    .write = ATA_blkdev_disk_write,
+    .ioctl = ATA_blkdev_ioctl,
+};
+
+int ata_init() {
+    const char *names[4] = {"ata0", "ata1", "ata2", "ata3"};
+    uint8_t drives[4] = {0xA0, 0xB0, 0xE0, 0xF0}; 
+
+    for (int i = 0; i < 4; i++) {
+        struct Ata_blkdev *ata = kmalloc(sizeof(struct Ata_blkdev));
+        if (!ata) continue;
+
+        ata->drive = drives[i];
+
+        outb(ATA_DRIVE, ata->drive);
+        ata_io_wait();
+        outb(ATA_SECTOR_CNT, 0);
+        outb(ATA_LBA_LOW, 0);
+        outb(ATA_LBA_MID, 0);
+        outb(ATA_LBA_HIGH, 0);
+        outb(ATA_COMMAND, ATA_CMD_IDENTIFY);
+
+        
+        if (ata_wait_drq() != 0) {
+            kfree(ata);
+            continue; // perhaps no drive 
+        }
+
+        for (int j = 0; j < 256; j++)
+            ata->info_data[j] = inw(ATA_DATA);
+
+        
+        ata->sector_count =
+            ((uint32_t)ata->info_data[61] << 16) | ata->info_data[60];
+
+        ata->sector_size =512;
+
+        
+
+        Register_Block_Device(
+            names[i],
+            (uint64_t)ata->sector_count * (uint64_t)ata->sector_size,
+            ata->sector_size,
+            ata_ops,
+            ata
+        );
+    }
+
+    return 0;
 }

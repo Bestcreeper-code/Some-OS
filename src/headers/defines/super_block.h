@@ -3,7 +3,7 @@
 #include "path.h"
 
 
-
+struct super_block;
 
 
 

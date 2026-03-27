@@ -45,7 +45,7 @@ int atoi(const char* str);
 //int to str
 void itoa(int value, char* str, int base);
 
-//allocates a lowercase copy of <str>
+
 char* strlow(const char* str);
 
 

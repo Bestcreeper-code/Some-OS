@@ -70,7 +70,7 @@ void main(int argc, char** argv) {
 
         // Generate random key
         int key_size = rand() % 11 + 1;
-        char* key = malloc(key_size);
+        char* key = kmalloc(key_size);
         for (int i = 0; i < key_size; i++) {
             key[i] = (rand() % 255) + 1;
         }
@@ -79,7 +79,7 @@ void main(int argc, char** argv) {
         char* encrypt_pword = xor_crypt(pwrd, pwrd_len, key, key_size);
 
         uint16_t fulldata_size = 3 + usr_len + pwrd_len + key_size;
-        char* fulldata = malloc(fulldata_size);
+        char* fulldata = kmalloc(fulldata_size);
 
         int pos = 0;
         fulldata[pos++] = (char)usr_len;
@@ -113,7 +113,7 @@ login:
     f_open(&file, "0:/SYSTEM_CORE/Security/kys.dta", FA_READ);
 
     UINT file_size = f_size(&file);
-    char* buffer = malloc(file_size);
+    char* buffer = kmalloc(file_size);
     f_read(&file, buffer, file_size, NULL);
     f_close(&file);
 
@@ -128,14 +128,14 @@ login:
         goto new_username;
     }
 
-    char* username = malloc(usr_len);
+    char* username = kmalloc(usr_len);
     memcpy(username, &buffer[3], usr_len);
 
-    char* encrypted_pword = malloc(pwrd_len);
+    char* encrypted_pword = kmalloc(pwrd_len);
     memcpy(encrypted_pword, &buffer[3 + usr_len], pwrd_len);
 
     // Extract key starting after encrypted password
-    char* key = malloc(key_size);
+    char* key = kmalloc(key_size);
     memcpy(key, &buffer[3 + usr_len + pwrd_len], key_size);
 
     // Decrypt password
@@ -145,7 +145,7 @@ login:
     short attempts = 0;
     while (attempts < MAX_ATTEMPTS) {
         clear_13h_screen(0x9);
-        char* usrnm = malloc(usr_len + 6);
+        char* usrnm = kmalloc(usr_len + 6);
         sprintf(usrnm, "Hello %s", username);
         draw_bitmap_string(username, 0, 0, 4, 6, 0x3F, NULL, true,  false, 0);
         draw_bitmap_string("Type your password:", 0, 10, 4, 6, 0x3F, NULL, true,  false, 0);

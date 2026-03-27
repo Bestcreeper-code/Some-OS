@@ -18,7 +18,7 @@ extern Vector2 bottomright;
 void Draw_Border();
 
 int app_main() {
-    pl_parts = malloc(sizeof(Vector2) * pl_size);
+    pl_parts = kmalloc(sizeof(Vector2) * pl_size);
     if (!pl_parts) {
         printf("Initial allocation failed!\n");
         return 0;
