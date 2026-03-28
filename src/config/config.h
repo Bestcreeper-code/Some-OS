@@ -5,15 +5,16 @@
 
 
 // DEBUG flags
-#define DEBUG_MODE      0
-#define PAGE_DEBUG_MODE 0
-#define MEM_DEBUG_MODE  0
-#define BLKDEV_DEBUG_MODE  1
-#define ELF_DEBUG_MODE  1
+#define DEBUG           0
+#define PAGE_DEBUG      0
+#define MEM_DEBUG       0
+#define KSYMS_DEBUG     1
+#define BLKDEV_DEBUG    1
+#define ELF_DEBUG       1
 #define DEV_BUILD       1
 #define SYSCALL_DEBUG   0
 
-#define FREE_NO_MERGE   1 
+
 
 
 

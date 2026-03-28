@@ -35,7 +35,7 @@ typedef enum {
 
 typedef struct {
     bool     present;
-    uintptr_t addr;
+    uintptr_t index;
     bool     rw;
     bool     us;
 } PAGE;

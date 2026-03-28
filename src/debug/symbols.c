@@ -1,4 +1,5 @@
 #include "symbols.h"
+#include "Logger.h"
 #include "memory.h"
 #include "string.h"
 #include <stdint.h>
@@ -17,8 +18,28 @@ static const uint8_t* k_syms_buffer = NULL;
 static size_t sym_list_size = 0;
 
 int Setup_Kernel_Syms() {
+    Sys_Info("setting up kernel syms\n");
+        
+    
     k_syms_buffer = _syms_bin_start;
     sym_list_size = _syms_bin_end - _syms_bin_start;
+
+    #ifdef KSYMS_DEBUG
+        const uint8_t* current = k_syms_buffer;
+        const uint8_t* end = k_syms_buffer + sym_list_size;
+    
+        Sys_color_log_NoPos("symbols list:\n", ANSI_BRIGHT_CYAN, ANSI_BG_BLACK);
+        while (current + offsetof(BacktraceSymbol, str) <= end) {
+            BacktraceSymbol* sym = (BacktraceSymbol*)current;
+    
+            // if (current + offsetof(BacktraceSymbol, str) + sym->str_len > end) break;
+    
+            Sys_color_log_NoPos("     func: %s          addr:0x%x\n", ANSI_BRIGHT_CYAN, ANSI_BG_BLACK, sym->str, (uintptr_t)sym->addr);
+            
+            current += offsetof(BacktraceSymbol, str) + sym->str_len;
+        }
+    #endif
+
     return 0;
 }
 

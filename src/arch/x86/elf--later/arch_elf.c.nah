@@ -1,3 +1,4 @@
+#include "elf--later/elf.h"
 #include "elf.h"
 #include "asm.h"
 #include "Logger.h"
@@ -61,7 +62,7 @@ bool elf_check_support(Elf32_Ehdr* elf_header, const char* path){
 }
 
 LoadedElf* LoadElf(const char* path) {
-#if ELF_DEBUG_MODE
+#if ELF_DEBUG
     Sys_log("Opening ELF file: %s\n", path);
 #endif
 
@@ -87,7 +88,7 @@ LoadedElf* LoadElf(const char* path) {
         return NULL;
     }
 
-#if ELF_DEBUG_MODE
+#if ELF_DEBUG
     Sys_log("ELF entry point: 0x%x\n", elf_header.e_entry);
 #endif
 
@@ -103,7 +104,7 @@ LoadedElf* LoadElf(const char* path) {
     res = f_read(&file, program_headers, sizeof(Elf32_Phdr) * elf_header.e_phnum, &bytesRead);
     if (res != FR_OK || bytesRead != sizeof(Elf32_Phdr) * elf_header.e_phnum) {
         Sys_log("Failed to read program headers\n");
-        free(program_headers);
+        kfree(program_headers);
         f_close(&file);
         return NULL;
     }
@@ -113,7 +114,7 @@ LoadedElf* LoadElf(const char* path) {
     Page_Group* page_groups = kmalloc(sizeof(Page_Group) * (elf_header.e_phnum + 3));
     if (!page_groups) {
         Sys_log("Failed to allocate page_groups\n");
-        free(program_headers);
+        kfree(program_headers);
         f_close(&file);
         return NULL;
     }
@@ -125,7 +126,7 @@ LoadedElf* LoadElf(const char* path) {
     uintptr_t id_map_end   = (kernel_end + (PAGE_SIZE - 1)) & ~(PAGE_SIZE - 1);
     size_t kernel_pages    = (id_map_end - id_map_start) / PAGE_SIZE;
 
-#if ELF_DEBUG_MODE
+#if ELF_DEBUG
     Sys_log("Mapping kernel: 0x%x - 0x%x (%u pages)\n", id_map_start, id_map_end, kernel_pages);
 #endif
 
@@ -152,13 +153,13 @@ LoadedElf* LoadElf(const char* path) {
                 if (page_groups[j].size)
                     page_free(page_groups[j].pte_bits.addr << 12, page_groups[j].size);
             }
-            free(page_groups);
-            free(program_headers);
+            kfree(page_groups);
+            kfree(program_headers);
             f_close(&file);
             return NULL;
         }
 
-#if ELF_DEBUG_MODE
+#if ELF_DEBUG
         Sys_log("Segment %d -> VA: 0x%x, PA: 0x%x, Size: %u bytes \n", seg_index, phdr_vaddr, segment_mem, phdr->p_memsz,i);
 #endif
 
@@ -182,8 +183,8 @@ LoadedElf* LoadElf(const char* path) {
                 if (page_groups[j+1].size)
                     page_free(page_groups[j+1].pte_bits.addr << 12, page_groups[j+1].size);
             }
-            free(page_groups);
-            free(program_headers);
+            kfree(page_groups);
+            kfree(program_headers);
             f_close(&file);
             return NULL;
         }
@@ -206,13 +207,13 @@ LoadedElf* LoadElf(const char* path) {
         }
         if (us_stack_pa) page_free(us_stack_pa << 12, DEFAULT_STACK_PAGE_AMOUNT);
         if (k_stack_pa)  page_free(k_stack_pa << 12, DEFAULT_STACK_PAGE_AMOUNT);
-        free(page_groups);
-        free(program_headers);
+        kfree(page_groups);
+        kfree(program_headers);
         f_close(&file);
         return NULL;
     }
 
-#if ELF_DEBUG_MODE
+#if ELF_DEBUG
     Sys_log("Stack physical allocated at PA: 0x%x (pages: %u)\n", us_stack_pa, (unsigned)DEFAULT_STACK_PAGE_AMOUNT);
 #endif
 
@@ -244,8 +245,8 @@ LoadedElf* LoadElf(const char* path) {
     // }
 
     
-    free(program_headers);
-    free(page_groups);
+    kfree(program_headers);
+    kfree(page_groups);
 
     LoadedElf* loaded_elf = kmalloc(sizeof(LoadedElf));
     if (!loaded_elf) {
@@ -269,7 +270,7 @@ LoadedElf* LoadElf(const char* path) {
     
 
     f_close(&file);
-#if ELF_DEBUG_MODE
+#if ELF_DEBUG
     Sys_log("ELF file '%s' loaded successfully. Entry: 0x%x\n", path, loaded_elf->entry_point);
     Sys_log("LoadedElf: u_stack_bott=0x%x u_stack_top=0x%x   k_stack_bott=0x%x k_stack_top=0x%x k_esp=0x%x\n",
             loaded_elf->us_stack.bottom, loaded_elf->us_stack.top,
@@ -285,13 +286,13 @@ LoadedElf* LoadElf(const char* path) {
 
 
 ProcessInfo exec_ELF(char* path){
-#if ELF_DEBUG_MODE
+#if ELF_DEBUG
     Sys_log("Executing ELF: %s\n", path);
 #endif
 
     LoadedElf* elf = LoadElf(path);
     if(!elf) {
-#if ELF_DEBUG_MODE
+#if ELF_DEBUG
         Sys_Error("Failed to load ELF: %s\n", path);
 #endif
         return (ProcessInfo){0}; // pid 0 = error
@@ -301,12 +302,12 @@ ProcessInfo exec_ELF(char* path){
     uint32_t ebp = DEFAULT_USTACK_TOP_VADDR;
     pid_t pid = new_pcb(&elf->page_dir, elf->filename, &elf->k_esp, elf->k_stack, elf->us_stack);
     if(pid <0){
-#if ELF_DEBUG_MODE
+#if ELF_DEBUG
         Sys_Error("Failed to create PCB for ELF: %s (%d)\n", elf->filename, pid);
 #endif
         pd_free(&elf->page_dir);
-        free((void*)elf->filename);
-        free(elf);
+        kfree((void*)elf->filename);
+        kfree(elf);
         return (ProcessInfo){0};
     }
     
@@ -314,11 +315,11 @@ ProcessInfo exec_ELF(char* path){
     p_info.pid = pid;
     p_info.name = elf->filename;
 
-#if ELF_DEBUG_MODE
+#if ELF_DEBUG
     Sys_log("ELF '%s' launched successfully. PID: %d, Entry: 0x%x\n", elf->filename, pid, elf->entry_point);
 #endif
 
-    free(elf);
+    kfree(elf);
 
     return p_info;
 }

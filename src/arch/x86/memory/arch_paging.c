@@ -71,7 +71,7 @@ int setup_paging() {
             pt_base[j].addr = page_idx;
             if (page_idx == 0) pt_base[j].rw = 0;
         }
-#if PAGE_DEBUG_MODE
+#if PAGE_DEBUG
         Sys_log("setup pTable %d\n",i);
 #endif
         _k_pd.pde_arr[i].present = 1;
@@ -244,7 +244,7 @@ PAGE virt_to_page(void *address) {
     if (!pte) return result;
 
     result.present = pte->present;
-    result.addr    = (uintptr_t)pte->addr << 12;
+    result.index    = (uintptr_t)pte->addr ;
     result.rw      = pte->rw;
     result.us      = pte->user;
     return result;
@@ -270,7 +270,7 @@ page_index page_alloc_nomap(size_t amount) {
                     uint32_t idx = start + j;
                     _free_pages_bitmap[idx / 32] &= ~(1 << (idx % 32));
                 }
-#if PAGE_DEBUG_MODE
+#if PAGE_DEBUG
                 Sys_Success("page_alloc_nomap success for %u pages\n", (unsigned)amount );
 #endif
                 return start;
@@ -279,7 +279,7 @@ page_index page_alloc_nomap(size_t amount) {
             found = 0;
         }
     }
-#if PAGE_DEBUG_MODE
+#if PAGE_DEBUG
     Sys_Error("page_alloc_nomap for %d page(s) failed: not enough contiguous free pages\n", amount);
 #endif
     return 0;
@@ -320,7 +320,7 @@ void page_free(page_index pa, size_t amount) {
 
 void dump_pd() {
     uint32_t* pdes = (uint32_t*)_k_pd.pde_arr;
-#if PAGE_DEBUG_MODE
+#if PAGE_DEBUG
     Sys_log("Dumping Page Directory from %x\n", _k_pd.pde_arr);
     Sys_log("first pde: %x\n", ((PTE*)pdes)[0].addr * PAGE_SIZE);
 #endif
@@ -331,7 +331,7 @@ void dump_pd() {
         for (int j = 0; j < 300; j++) {
             if (1||pt[j] & 1) {
                 uint32_t pa = pt[j] & 0xFFFFF000;
-#if PAGE_DEBUG_MODE
+#if PAGE_DEBUG
                 Sys_log("PD[%03d] PT[%03d] VA=%x -> data=%x\n", i, j, (i<<22)|(j<<12), pt[j]);
 #endif
             }
@@ -534,7 +534,7 @@ uintptr_t PD_append_pages(PD_t* page_dir, PTE* ptes, uint32_t pte_count) {
     }
 
     if (run_length < pte_count) {
-#if PAGE_DEBUG_MODE
+#if PAGE_DEBUG
         Sys_log("failed for %u pages\n", pte_count);
 #endif
         return 0;
@@ -612,7 +612,7 @@ page_index k_append_pages(page_index phys_start_page, uint32_t amount, uint8_t r
     
     found:
     if (found < amount) {
-#if PAGE_DEBUG_MODE
+#if PAGE_DEBUG
         Sys_log("k_append_pages failed: not enough contiguous free pages\n");
 #endif
         return 0;
@@ -625,11 +625,11 @@ page_index k_append_pages(page_index phys_start_page, uint32_t amount, uint8_t r
         pte->rw = rw ? 1 : 0;
         pte->user = us ? 1 : 0;
         pte->addr = phys_start_page + j;
-#if PAGE_DEBUG_MODE
+#if PAGE_DEBUG
         tlb_flush_page(idx);
 #endif
     }
-#if PAGE_DEBUG_MODE
+#if PAGE_DEBUG
     Sys_log("k_append_pages mapped %u pages at VA %x\n", amount, start_page_idx * PAGE_SIZE);
 #endif
     return start_page_idx;
@@ -649,7 +649,7 @@ int page_write(page_index virt, PAGE page) {
     pte->present = page.present;
     pte->rw      = page.rw;
     pte->user    = page.us;
-    pte->addr    = page.addr >> 12;
+    pte->addr    = page.index;
 
     tlb_flush_page(va);
     return 0;

@@ -47,10 +47,12 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     Set_Kernel_Flag(KDATA_FLAG_PAGING_ON, false);
     task_switching_flag = 0;
 
-    Setup_Kernel_Syms();
-
+    
     serial_init();
-
+    
+    Setup_Kernel_Syms();
+    
+    
 
     
     Sys_log("interrupts disabled.\n");
@@ -133,7 +135,6 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     // #warning  remove pls
     // ata_init();
 
-    // Sys_Breakpoint();
     
 
     __asm__ volatile ("sti"); // Enable interrupts
@@ -181,8 +182,8 @@ end_mounting:
 
 
     
-    char bs[16];
-    Get_Symbol((uintptr_t)getc, bs);
+    // char bs[16];
+    // Get_Symbol((uintptr_t)getc, bs);
     getc();
 
 

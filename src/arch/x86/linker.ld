@@ -11,5 +11,7 @@ SECTIONS
   .data : { *(.data*) }
   .bss : { *(.bss*) }
 
+  
+
   _kernel_end = .;
 }

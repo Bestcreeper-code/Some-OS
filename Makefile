@@ -172,7 +172,7 @@ run: all
 		-drive file=$(DISK_IMG),format=raw,if=ide \
 		-usb \
 		-device VGA,vgamem_mb=32 \
-		-display sdl \
+		-display gtk \
 		-serial stdio
 
 # === Run with GDB ===

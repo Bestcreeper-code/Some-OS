@@ -265,7 +265,7 @@ void _panic_handler(int argc, uint32_t* argv) {
                 sym = (BacktraceSymbol*)tmp_buffer;
                 strcpy(&tmp_buffer[sizeof(*sym)], "unknown symbol");
             }
-            Sys_color_log_NoPos("  %s (%x)\n",
+            Sys_color_log_NoPos("    %s (%x)\n",
                 ANSI_BRIGHT_YELLOW, ANSI_BG_BLACK, sym->str, addr);
         }
     }

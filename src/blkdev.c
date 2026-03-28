@@ -19,7 +19,7 @@ short block_device_amount;
 struct block_device* Register_Block_Device(const char *name, lsize_t size,
     size_t block_size, struct block_device_ops ops, void *private_data) {
     
-#if BLKDEV_DEBUG_MODE
+#if BLKDEV_DEBUG
     Sys_log("Registered blkdev [%s] with 0x%llx bytes\n",
         name,
         size);

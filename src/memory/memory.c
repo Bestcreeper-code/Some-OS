@@ -281,7 +281,7 @@ uint32_t get_pter_size(void* pter){
 }
 
 void* kmalloc_impl(size_t size) {
-#if MEM_DEBUG_MODE
+#if MEM_DEBUG
     Sys_log("[MEM_DBG] this func was called with %d\n",size);
 #endif
     if (size == 0) return NULL;
@@ -327,7 +327,7 @@ void* kmalloc_impl(size_t size) {
         k_mmap->free_region_count--;
     }
 
-#if MEM_DEBUG_MODE
+#if MEM_DEBUG
     Sys_log("malloc'ed %u bytes at %p\n", (unsigned)full_size, header + 1);
 #endif
 
@@ -337,7 +337,7 @@ void* kmalloc_impl(size_t size) {
 
 
 void kfree_impl(void* _Memory) {
-#if MEM_DEBUG_MODE
+#if MEM_DEBUG
     Sys_log("[MEM_DBG] this func was called with %d\n",_Memory);
 #endif
     
@@ -353,7 +353,7 @@ void kfree_impl(void* _Memory) {
         if (k_mmap->free_regions[i].length == 0) {
             k_mmap->free_regions[i].base_addr = (uint32_t)(address - sizeof(uint32_t));
             k_mmap->free_regions[i].length = size;
-#if MEM_DEBUG_MODE
+#if MEM_DEBUG
             Sys_log("freeing %u bytes at %p\n", size, _Memory);
 #endif 
             break;
@@ -406,7 +406,7 @@ void kfree_impl(void* _Memory) {
 
 
 void* realloc_impl(void *ptr, size_t size) {
-#if MEM_DEBUG_MODE
+#if MEM_DEBUG
     Sys_log("[MEM_DBG] this func was called with %x , %d\n",ptr,size);
 #endif
     if (size == 0) {
