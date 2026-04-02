@@ -24,7 +24,7 @@ int Setup_Kernel_Syms() {
     k_syms_buffer = _syms_bin_start;
     sym_list_size = _syms_bin_end - _syms_bin_start;
 
-    #ifdef KSYMS_DEBUG
+    #if KSYMS_DEBUG
         const uint8_t* current = k_syms_buffer;
         const uint8_t* end = k_syms_buffer + sym_list_size;
     

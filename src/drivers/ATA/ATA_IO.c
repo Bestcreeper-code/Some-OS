@@ -8,7 +8,8 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdio.h>
+
+#define ATA_DEBUG 1
 
 #define ATA_DATA       0x1F0
 #define ATA_ERROR      0x1F1
@@ -52,11 +53,12 @@ static int ata_wait_busy()
     return 0;
 }
 
-static int ata_wait_drq()
+static int ata_wait_drq(void)
 {
     uint8_t status;
+    int timeout = 10000;
 
-    while (1)
+    while (timeout--)
     {
         status = inb(ATA_STATUS);
 
@@ -66,6 +68,10 @@ static int ata_wait_drq()
         if (status & ATA_SR_DRQ)
             return 0;
     }
+#if ATA_DEBUG
+    Sys_log("ata timed out\n");
+#endif
+    return -2;
 }
 
 bool ata_drive_exists()
@@ -97,7 +103,7 @@ bool ata_drive_exists()
     for (int i = 0; i < 256; i++)
         inw(ATA_DATA);
 
-    return true;
+    return true;    
 }
 
 void ata_pio_read_sector(uint32_t lba, uint8_t *buffer)
@@ -232,10 +238,11 @@ static struct block_device_ops ata_ops = {
 };
 
 int ata_init() {
-    const char *names[4] = {"ata0", "ata1", "ata2", "ata3"};
-    uint8_t drives[4] = {0xA0, 0xB0, 0xE0, 0xF0}; 
+    
+    const char *names[2] = {"ata0", "ata1"};
+    uint8_t drives[2] = {0xA0, 0xB0}; 
 
-    for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 2; i++) {
         struct Ata_blkdev *ata = kmalloc(sizeof(struct Ata_blkdev));
         if (!ata) continue;
 
@@ -249,8 +256,8 @@ int ata_init() {
         outb(ATA_LBA_HIGH, 0);
         outb(ATA_COMMAND, ATA_CMD_IDENTIFY);
 
-        
-        if (ata_wait_drq() != 0) {
+        int drq_res = ata_wait_drq();
+        if (drq_res != 0) {
             kfree(ata);
             continue; // perhaps no drive 
         }
@@ -273,6 +280,7 @@ int ata_init() {
             ata_ops,
             ata
         );
+        
     }
 
     return 0;

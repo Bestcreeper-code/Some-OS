@@ -3,6 +3,8 @@
 #include "lists.h"
 #include "types.h"
 #include "compiler_defs.h"
+#include "vfs.h"
+#include <stdbool.h>
 
 
 #define FS_INIT_FUNCS_SECTION _GCC_SECTION("fs_drivers_list") 
@@ -15,3 +17,12 @@ struct file_system_type {
     struct file_system_type * next;
     struct list_head fs_supers;
 };
+struct dentry* kpath_lookup(struct inode* start, const char* path);
+int kpath_create(struct inode* start, const char* path, char* name, umode_t mode, bool excl);
+int kpath_mkdir(struct inode* start, const char* path, char* name, umode_t mode);
+int kpath_rmdir(struct inode* start, const char* path, char* name);
+int path_unlink(struct inode* start, const char* path, char* name);
+
+void tree(struct dentry* d, int depth);
+
+void testvfs();

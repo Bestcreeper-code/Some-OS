@@ -40,7 +40,7 @@ void app_main() {
         char str[16];
         intToStr((int)pl_pos.x, str);
 
-        memcpy((void*)graph_mode_fb,second_buffer,SCREEN_PITCH * SCREEN_HEIGHT);
+        memcpy((void*)_display_fb,second_buffer,SCREEN_PITCH * SCREEN_HEIGHT);
         
         int string_len =16;
 

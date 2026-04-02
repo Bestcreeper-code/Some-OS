@@ -25,7 +25,8 @@ INCLUDES     := $(addprefix -I,$(INCLUDE_DIRS))
 DEFINES_FLAGS = $(addprefix -D,$(DEFINES))
 
 CFLAGS  = -m32 -O0 -g -ffreestanding $(INCLUDES) $(DEFINES_FLAGS) \
-          -fno-stack-protector -mno-sse -mno-sse2 -fno-tree-vectorize
+          -fno-stack-protector -mno-sse -mno-sse2 -fno-tree-vectorize \
+
 
 LDFLAGS = -m elf_i386 -T src/arch/$(ARCH)/linker.ld -z noexecstack
 
@@ -45,13 +46,7 @@ ISO_FILE          = os.iso
 SYMS_BIN = syms.bin
 SYMS_OBJ = $(BUILD_DIR)/syms.o
 
-# === symbols.c gets its own treatment (two-pass) ===
-#
-# Pass 1 – compiled with -D__NO_KSYMS, used only to build kernel.nosyms.elf
-#           so the linker has a placeholder symbols.o with no real data.
-# Pass 2 – compiled WITHOUT __NO_KSYMS, depends on syms.o already existing,
-#           so the extern _syms_bin_start/_syms_bin_end symbols resolve.
-#
+
 SYMBOLS_SRC        = src/debug/symbols.c
 SYMBOLS_OBJ_NOSYMS = $(BUILD_DIR)/src/debug/symbols_nosyms.o
 SYMBOLS_OBJ_FINAL  = $(BUILD_DIR)/src/debug/symbols_final.o
@@ -173,7 +168,8 @@ run: all
 		-usb \
 		-device VGA,vgamem_mb=32 \
 		-display gtk \
-		-serial stdio
+		-serial stdio \
+		-enable-kvm
 
 # === Run with GDB ===
 gdb: all

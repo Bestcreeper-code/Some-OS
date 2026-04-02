@@ -8,9 +8,9 @@
 #define DEBUG           0
 #define PAGE_DEBUG      0
 #define MEM_DEBUG       0
-#define KSYMS_DEBUG     1
+#define KSYMS_DEBUG     0
 #define BLKDEV_DEBUG    1
-#define ELF_DEBUG       1
+#define ELF_DEBUG       0
 #define DEV_BUILD       1
 #define SYSCALL_DEBUG   0
 

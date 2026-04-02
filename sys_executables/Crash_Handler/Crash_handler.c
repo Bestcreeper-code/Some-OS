@@ -86,7 +86,7 @@ enum CrashType {
 cpu_registers_t* _cpu_regs;
 
 void app_main(int argc, uint32_t* argv) {
-    graph_mode_fb = (volatile uint32_t*)(uint32_t)Multiboot_info->framebuffer_addr;
+    _display_fb = (volatile uint32_t*)(uint32_t)Multiboot_info->framebuffer_addr;
     asm volatile("sti");//incase
     
     uint32_t* call_stack = NULL;

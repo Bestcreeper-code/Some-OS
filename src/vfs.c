@@ -6,7 +6,7 @@
 #include "string.h"
 #include "memory.h"
 #include "types.h"
-#include <asm-generic/errno-base.h>
+#include "err_codes.h"
 
 static struct file_system_type *fs_registry = NULL;
 
@@ -67,7 +67,7 @@ struct dentry *vfs_lookup(struct inode* dir, struct dentry* file, unsigned int f
 
 int vfs_create(struct inode *dir, struct dentry *dentry, umode_t mode, bool excl) {
     struct inode *new_inode = kmalloc(sizeof(struct inode));
-    RET_IF(!new_inode, -ENOMEM);
+    RET_IF(!new_inode, -E_NOMEM);
 
     new_inode->i_mode = mode;
     new_inode->i_op   = dir->i_op;
@@ -77,6 +77,9 @@ int vfs_create(struct inode *dir, struct dentry *dentry, umode_t mode, bool excl
     new_inode->i_count   = 0;
     new_inode->i_private = NULL;
     
+    INIT_HLIST_HEAD(&dentry->d_children);
+    INIT_HLIST_NODE(&dentry->d_sib);
+
     dentry->inode = new_inode;
     
     
@@ -88,4 +91,41 @@ int vfs_create(struct inode *dir, struct dentry *dentry, umode_t mode, bool excl
 int vfs_mkdir(struct inode *dir, struct dentry *dentry, umode_t mode) {
 
     return vfs_create(dir, dentry, S_IFDIR | (mode & ~S_IFMT), false);
+}
+
+int vfs_rmdir(struct inode* dir, struct dentry* dentry) {
+    if (!dir || !dentry) return -E_INVAL;
+
+    struct dentry* target = vfs_lookup(dir, dentry, 0);
+    if (!target) return -E_NOENT;
+    if (!S_ISDIR(target->inode->i_mode)) return -E_NOTDIR;
+
+    // Refuse if directory still has children
+    if (!target->d_children.first) return -E_NOTEMPTY;
+
+    hlist_del(&target->d_sib);
+
+    kfree(target->inode);
+    kfree(target->name); 
+    kfree(target);
+
+    return 0;
+}
+
+int vfs_unlink(struct inode* dir, struct dentry* dentry) {
+    if (!dir || !dentry) return -E_INVAL;
+
+    struct dentry* target = vfs_lookup(dir, dentry, 0);
+    if (!target) return -E_NOENT;
+    if (S_ISDIR(target->inode->i_mode)) return -E_ISDIR;
+
+    hlist_del(&target->d_sib);
+
+    if (--target->inode->i_count <= 0)
+        kfree(target->inode);
+
+    kfree(target->name);
+    kfree(target);
+
+    return 0;
 }

@@ -45,7 +45,7 @@ void Draw_Quad(const Vector2* verts, char color) {
                 intersections[1] = temp;
             }
             // Draw horizontal line between pairs
-            memset((void*)&graph_mode_fb[y * 512 + (int)intersections[0]], color, (int)intersections[1] - (int)intersections[0]);
+            memset((void*)&_display_fb[y * 512 + (int)intersections[0]], color, (int)intersections[1] - (int)intersections[0]);
         }
     }
 }
@@ -58,7 +58,7 @@ void Draw_Rect(Vector2 pos, int width, int height,char color){
 #endif
     for (int i = 0; i < height; i++)
     {
-        memset((void*)&graph_mode_fb[(int)((pos.y+i) * pitch + pos.x)], color, width);
+        memset((void*)&_display_fb[(int)((pos.y+i) * pitch + pos.x)], color, width);
     }
 }
 

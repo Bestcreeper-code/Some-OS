@@ -2,9 +2,11 @@
 #include "FileSystem.h"
 #include "asm.h"
 #include "console.h"
+#include "fs.h"
 #include "io.h"
 #include "memory.h"
 #include "multiboot_info.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 #include "ff.h"
@@ -12,6 +14,7 @@
 #include "arch.h"
 #include "path.h"
 #include "time.h"
+#include "types.h"
 #include "video.h"
 #include "gdt.h"
 #include "mouse.h"
@@ -23,6 +26,7 @@
 #include "kernel_data.h"
 #include "string.h"
 #include "vfs.h"
+#include "devfs.h"
 
 
 
@@ -39,18 +43,22 @@ extern const uint8_t _binary_syms_bin_end[];
 
 multiboot_info_t* mb_struct_ptr;
 
+
 void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     mb_struct_ptr = (multiboot_info_t*)mb_struct_addr;
     kernel_data_ptr = &kernel_data;
     
     Set_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON, false);
     Set_Kernel_Flag(KDATA_FLAG_PAGING_ON, false);
-    task_switching_flag = 0;
+
+    arch_init();
+
+    
 
     
     serial_init();
     
-    Setup_Kernel_Syms();
+    
     
     
 
@@ -69,8 +77,23 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     Sys_log("kernel called with: %s\n", cmdline);
 
     
-    arch_init();
+    if (setup_paging() != 0  ) {
+        
+        Sys_Error("Paging setup failed, halting.");
+        
+        while (1) __asm__ volatile ("hlt");
+    }
+    Set_Kernel_Flag(KDATA_FLAG_PAGING_ON, true);
+    Sys_Success("Paging set up successfully.\n");
+    
+    init_graphics();
+    Set_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON, true);
+    int pitch = Multiboot_info->framebuffer_bpp;
+    
+    
 
+    
+    Setup_Kernel_Syms();
     
 
     
@@ -92,14 +115,7 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     
 
     
-    if (setup_paging() != 0  ) {
-        
-        Sys_Error("Paging setup failed, halting.");
-        
-        while (1) __asm__ volatile ("hlt");
-    }
-    Set_Kernel_Flag(KDATA_FLAG_PAGING_ON, true);
-    Sys_Success("Paging set up successfully.\n");
+    
     
     Sys_log("Setting up Kernel Stack.\n");
     page_index allocated_stack_pages = page_alloc(KERNEL_STACK_PAGE_AMOUNT, PAGE_FLAG_RW);
@@ -125,19 +141,17 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     pit_init(); 
     
     
+    //devfs bullshit test
     
-    init_graphics();
     
-    Set_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON, true);
-    int pitch = Multiboot_info->framebuffer_bpp;
-    
-    ClearScreen();
     // #warning  remove pls
     // ata_init();
 
     
-
+    
+    
     __asm__ volatile ("sti"); // Enable interrupts
+    
     
     int mount_counter = 0;
 mounting:
@@ -178,54 +192,28 @@ end_mounting:
     
     sys_color_serial_logf("Press Any key to continue\n", ANSI_BRIGHT_MAGENTA, ANSI_BG_BLACK, "", "", 0);
     
+    devfs_init();
+    
+    init_fb_devfs_file();
+    getc();
+    testvfs();
     getc();
 
 
-    
-    // char bs[16];
-    // Get_Symbol((uintptr_t)getc, bs);
-    getc();
+    struct dentry* fb_dentry = kpath_lookup(root_dentry->inode, "/dev/fb");
+    char testdata[] = {
+        #embed "../test.bin"
+    };
+    loff_t s = 20;
+    fb_dentry->inode->i_fop->write(NULL, testdata, sizeof(testdata),&s);
 
 
-    
-    // move_cursor(0, 0);
-
-    
-    
-    
-    
-    // // draw_bitmap_char('T',100,100,8,16,0xFFFFA500,NULL,true,false,false);
-    // uint32_t* data = (uint32_t*)image_data;
-    // //255²
-    // for (size_t i = 0; i < 56; i++) {
-    //     for (size_t j = 0; j < 56; j++) {
-    //         uint32_t pixel = data[i * 56 + j];
-    //         // Swap red and blue
-    //         pixel = (pixel & 0xFF00FF00) | ((pixel & 0x00FF0000) >> 16) | ((pixel & 0x000000FF) << 16);
-
-    //         // Draw 3x3 block for each pixel
-    //         for (size_t dy = 0; dy < 7; dy++) {
-    //             for (size_t dx = 0; dx < 7; dx++) {
-    //                 put_pixel(j * 7 + dx, i * 7 + dy + 200, pixel);
-    //             }
-    //         }
-    //     }
-    // }
-
-    // draw_bitmap_string("CREEPER OS",0,0,8,16,0x0000FF7F,font8x16,false,true,3);
-    
-    
-    
-    
-    
     // scheduler_init();
     
-    Sys_log("Loading login manager...\n");
-    
-    
     // task_switching_flag = 1;
-    ClearScreen();
-    // enable_mouse_display();
+    Sys_log("halt\n");
+    
+    Sys_Breakpoint();
     Start_Console();
 
     while (1) {

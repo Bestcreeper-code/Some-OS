@@ -79,7 +79,7 @@ void ClearScreen() {
     move_cursor(0,0);
 
     size_t fb_size = Multiboot_info->framebuffer_width * Multiboot_info->framebuffer_height ;
-    dw_memset((void*)graph_mode_fb, vga_to_32bit_color(0), fb_size);
+    dw_memset((void*)_display_fb, vga_to_32bit_color(0), fb_size);
 }
 
 // short old_cmdline_cursor_pos

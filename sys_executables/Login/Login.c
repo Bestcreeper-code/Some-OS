@@ -23,7 +23,7 @@ void main(int argc, char** argv) {
     fs_set(FATFS_SYS, 0);
     init_graphics();
     int fb_size = Multiboot_info->framebuffer_height * Multiboot_info->framebuffer_width*4;
-    memset((void*)graph_mode_fb,0x80,fb_size);
+    memset((void*)_display_fb,0x80,fb_size);
 
     draw_bitmap_string("INIT", 320, 200, 4, 6, 0x3F, NULL, true, false, 0);
     sleep(1000);

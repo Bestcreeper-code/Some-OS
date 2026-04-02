@@ -29,6 +29,9 @@ int memcmp(const void *s1, const void *s2, size_t n);
 void *memmove(void *dest, const void *src, size_t n);
 
 
+char* strtok_r(char* str, const char* delim, char** saveptr);
+
+
 
 bool Starts_With(const char* string,const char* prefix);
 // Dont forget to EndSplit() 
@@ -50,4 +53,5 @@ char* strlow(const char* str);
 
 
 const char* byte_nb_simplify(uint32_t size_bytes, char* buf);
+
 #endif // STRING_H

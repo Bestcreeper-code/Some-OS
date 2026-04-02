@@ -26,7 +26,7 @@ typedef struct {
 
 
 
-extern volatile uint32_t* graph_mode_fb;
+extern volatile uint32_t* _display_fb;
 
 void put_pixel(int x, int y, uint32_t color);
 uint32_t get_pixel(int x, int y);
@@ -48,4 +48,5 @@ void Force_put_pixel(int x, int y, uint32_t color);
 void reset_palette();
 
 void init_graphics();
+int init_fb_devfs_file();
 #endif

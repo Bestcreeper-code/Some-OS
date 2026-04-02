@@ -436,3 +436,27 @@ const char* byte_nb_simplify(uint32_t size_bytes, char* buf) {
     }
     return buf;
 }
+
+char* strtok_r(char* str, const char* delim, char** saveptr) {
+    if (!str) str = *saveptr;
+
+    while (*str && strchr(delim, *str))str++;
+
+    if (!*str) return NULL;
+
+    char* token_start = str;
+
+    
+    while (*str && !strchr(delim, *str)) {
+        str++;
+    }
+
+    if (*str) {
+        *str = '\0';
+        *saveptr = str + 1;
+    } else {
+        *saveptr = str;
+    }
+
+    return token_start;
+}

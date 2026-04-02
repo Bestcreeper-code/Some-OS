@@ -1,4 +1,5 @@
 #include "video.h"
+#include "fs.h"
 #include "io.h"
 #include "console.h"
 #include "asm.h"
@@ -11,12 +12,45 @@
 #include "Logger.h"
 #include "math.h"
 #include "panic.h"
+#include "vfs.h"
+
 
 #include <stdint.h>
 #include <stdbool.h>
 
-volatile rgbacolor* graph_mode_fb;
-// volatile uint8_t* color_pal_size = (volatile uint8_t*)MODE13H_COLOR_PALETTE_SIZE_ADDR;
+
+volatile rgbacolor* _display_fb;
+volatile size_t _display_fb_size;
+
+
+ssize_t fb_read(struct file* file, char* buffer, size_t byte_to_copy, loff_t* offset) {
+    
+    size_t bytes_available = (size_t)_display_fb - *offset;
+    size_t bytes_to_copy = min(bytes_available, bytes_available);
+
+    if (bytes_to_copy == 0)
+        return 0; 
+    
+    memcpy(buffer, (void*)(_display_fb +  byte_to_copy), byte_to_copy);
+}
+
+ssize_t fb_write(struct file* file,const char* buffer, size_t size, loff_t* offset) {
+    
+    size_t bytes_available = (size_t)_display_fb - *offset;
+    size_t bytes_to_copy = min(size, bytes_available);
+
+    if (bytes_to_copy == 0)
+        return 0; 
+    
+    memcpy((void*)(_display_fb +  bytes_to_copy), buffer, bytes_to_copy);
+}
+
+static struct file_operations fb_file_ops = {
+    .read = fb_read,
+    .write = fb_write,
+
+};
+
 
 void init_graphics() {
     Sys_log("Initialising graphics.\n");
@@ -25,7 +59,9 @@ void init_graphics() {
     page_index fb_base_page = Multiboot_info->framebuffer_addr >> 12;
     page_index fb_page_amount = ((Multiboot_info->framebuffer_pitch * Multiboot_info->framebuffer_height) + 0xFFF) >> 12;
 
-    Sys_log("Mapping framebuffer at 0x%x, pages: %u\n",
+    
+
+    Sys_log("Mapping framebuffer from phys: 0x%x, pages: %u\n",
             (unsigned)Multiboot_info->framebuffer_addr, (unsigned)fb_page_amount);
 
     
@@ -35,18 +71,30 @@ void init_graphics() {
         _manual_panic("Graphics Initialization Failed", "Could not map framebuffer pages.");
     }
 
-    graph_mode_fb = (volatile rgbacolor*)(uintptr_t)Multiboot_info->framebuffer_addr;
+    
 
-    Sys_Success("graphics init was successful\n");
+
+    _display_fb = (volatile rgbacolor*)(uintptr_t)Multiboot_info->framebuffer_addr;
+
+    Sys_Success("graphics init was successful, mapped at 0x%x\n",Multiboot_info->framebuffer_addr);
 }
 
+int init_fb_devfs_file() {
+    Sys_log("making /dev/fb\n");
+    kpath_create(root_dentry->inode, "/dev/", "fb", 0666, 0);
+    struct dentry* fb_dentry = kpath_lookup(root_dentry->inode, "/dev/fb");
+    
+    if(fb_dentry){
+        fb_dentry->inode->i_fop = &fb_file_ops;
+    }
+}
 
 void put_pixel(int x, int y, rgbacolor color) {
 
     int pitch = Multiboot_info->framebuffer_pitch/(Multiboot_info->framebuffer_bpp/8);
     short mx,my;
     Get_Mouse_Pos(&mx,&my);
-    graph_mode_fb[y * pitch + x] = color;
+    _display_fb[y * pitch + x] = color;
     if(x >= mx && x < mx + 4 && y >= my && y < my + 6){
         ((uint8_t*)MOUSE_PREV_BG)[(y - my) * 4 + (x - mx)] = color;
     }
@@ -55,12 +103,12 @@ void put_pixel(int x, int y, rgbacolor color) {
 void Force_put_pixel(int x, int y, rgbacolor color) {//no mouse check
 
     int pitch = Multiboot_info->framebuffer_pitch/(Multiboot_info->framebuffer_bpp/8);
-    graph_mode_fb[y * pitch + x] = color;
+    _display_fb[y * pitch + x] = color;
 }
 
 rgbacolor get_pixel(int x, int y){
     
-    return graph_mode_fb[y * Multiboot_info->framebuffer_width + x];
+    return _display_fb[y * Multiboot_info->framebuffer_width + x];
 }
 
 // Draw a char from 32 to 127
@@ -149,7 +197,7 @@ void draw_rect(Rect rect, rgbacolor color) {
     if (rect.x + rect.w > fb_width)  rect.w = fb_width  - rect.x;
     if (rect.y + rect.h > fb_height) rect.h = fb_height - rect.y;
 
-    volatile rgbacolor* fb = graph_mode_fb + rect.y * fb_width + rect.x;
+    volatile rgbacolor* fb = _display_fb + rect.y * fb_width + rect.x;
 
     
     for (int y = 0; y < rect.h; y++) {

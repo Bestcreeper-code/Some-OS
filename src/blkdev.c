@@ -2,10 +2,12 @@
 #include "Logger.h"
 #include "config.h"
 #include "container_of.h"
+#include "fs.h"
 #include "io.h"
 #include "memory.h"
 #include "helpers.h"
 #include "types.h"
+#include "vfs.h"
 #include <stddef.h>
 
 
@@ -41,6 +43,7 @@ struct block_device* Register_Block_Device(const char *name, lsize_t size,
         blkdev->list.prev = &blkdev->list;//ez way to get the last one
 
         block_device_amount++;
+        kpath_create(root_dentry->inode, "/dev/", name, S_IFBLK , false);
         return blkdev;
     }
 
@@ -55,6 +58,7 @@ struct block_device* Register_Block_Device(const char *name, lsize_t size,
     block_device_list_start->prev = &blkdev->list;
 
     block_device_amount++;
+    kpath_create(root_dentry->inode, "/dev/", name, S_IFBLK , false);
     return blkdev;
 }
 

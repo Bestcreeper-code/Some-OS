@@ -191,7 +191,7 @@ void _panic_handler(int argc, uint32_t* argv) {
         ClearScreen();
         // size_t fb_size = Multiboot_info->framebuffer_width *
         //                  Multiboot_info->framebuffer_height;
-        // dw_memset((void*)graph_mode_fb, 0x000000FF, fb_size);
+        // dw_memset((void*)_display_fb, 0x000000FF, fb_size);
     }
 
     uint32_t* call_stack = NULL;
@@ -290,13 +290,13 @@ void _panic_handler(int argc, uint32_t* argv) {
 
 void _manual_panic(const char* error, const char* info) {
 
-    graph_mode_fb = (volatile uint32_t*)
+    _display_fb = (volatile uint32_t*)
         (uint32_t)Multiboot_info->framebuffer_addr;
 
     int fb_size = Multiboot_info->framebuffer_height *
                   Multiboot_info->framebuffer_pitch;
 
-    memset((void*)graph_mode_fb, 0, fb_size);
+    memset((void*)_display_fb, 0, fb_size);
 
     Sys_log_NoPos("kernel panic triggered!\n");
     Sys_log_NoPos("  Error: %s\n", error ? error : "(null)");
