@@ -65,7 +65,7 @@ int kpath_create(struct inode* start, const char* path, char* name, umode_t mode
 
     newdir->name = name;
         
-    newdir->inode->i_uid = ROOT_UID;
+    
 
     return dir->inode->i_op->create(dir->inode, newdir, mode, excl);
 }
@@ -118,14 +118,8 @@ void tree(struct dentry* d, int depth){
         tree(child, depth+1);
     }
 }
-void testvfs() {
-    kpath_mkdir(root_dentry->inode, "/", "home", 0755);
-    kpath_mkdir(root_dentry->inode, "/", "etc", 0755);
-    kpath_mkdir(root_dentry->inode, "/home", "user", 0755);
-    kpath_create(root_dentry->inode, "/home/user", "file.txt", 0644, false);
-    
-    tree(root_dentry, 0);
-}
+
+
 
 /*
 int (*mkdir)(struct inode *, struct dentry *, umode_t);

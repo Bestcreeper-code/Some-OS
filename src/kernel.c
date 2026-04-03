@@ -192,31 +192,24 @@ end_mounting:
     
     sys_color_serial_logf("Press Any key to continue\n", ANSI_BRIGHT_MAGENTA, ANSI_BG_BLACK, "", "", 0);
     
-    devfs_init();
     
+    devfs_init();
     init_fb_devfs_file();
-    getc();
-    testvfs();
-    getc();
 
 
-    struct dentry* fb_dentry = kpath_lookup(root_dentry->inode, "/dev/fb");
-    char testdata[] = {
-        #embed "../test.bin"
-    };
-    loff_t s = 20;
-    fb_dentry->inode->i_fop->write(NULL, testdata, sizeof(testdata),&s);
-
+    tree(root_dentry, 0);
+    
+    
+    
 
     // scheduler_init();
     
     // task_switching_flag = 1;
-    Sys_log("halt\n");
     
     Sys_Breakpoint();
     Start_Console();
 
-    while (1) {
+    while (1) { 
         __asm__ volatile ("hlt");
     }
 }

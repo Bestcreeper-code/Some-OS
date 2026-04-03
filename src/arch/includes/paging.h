@@ -18,7 +18,7 @@
 
 #define PAGE_ADDR(idx)         ((uintptr_t)(idx << 12))
 
-#define ADDR_TO_PAGE(addr)     ((page_index)((uintptr_t)(addr) >> 12))
+#define ADDR_TO_PAGE(addr)     (((page_index)(addr)) >> 12)
 
 #define KVSPACE_PAGES       (128 * 1024)
 #define KVSPACE_FIRST_PAGE  1

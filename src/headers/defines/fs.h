@@ -25,4 +25,3 @@ int path_unlink(struct inode* start, const char* path, char* name);
 
 void tree(struct dentry* d, int depth);
 
-void testvfs();

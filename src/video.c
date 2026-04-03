@@ -12,7 +12,9 @@
 #include "Logger.h"
 #include "math.h"
 #include "panic.h"
+#include "types.h"
 #include "vfs.h"
+#include "err_codes.h"
 
 
 #include <stdint.h>
@@ -34,15 +36,19 @@ ssize_t fb_read(struct file* file, char* buffer, size_t byte_to_copy, loff_t* of
     memcpy(buffer, (void*)(_display_fb +  byte_to_copy), byte_to_copy);
 }
 
-ssize_t fb_write(struct file* file,const char* buffer, size_t size, loff_t* offset) {
-    
-    size_t bytes_available = (size_t)_display_fb - *offset;
-    size_t bytes_to_copy = min(size, bytes_available);
+ssize_t fb_write(struct file* file, const char* buffer, size_t size, loff_t* offset) {
+    if (*offset >= _display_fb_size)
+        return -E_INVAL;
+
+    size_t bytes_available = _display_fb_size - *offset;
+    size_t bytes_to_copy = (size < bytes_available) ? size : bytes_available;
 
     if (bytes_to_copy == 0)
-        return 0; 
-    
-    memcpy((void*)(_display_fb +  bytes_to_copy), buffer, bytes_to_copy);
+        return 0;
+
+    memcpy((void*)_display_fb + *offset, buffer, bytes_to_copy);
+    *offset += bytes_to_copy;
+    return bytes_to_copy;
 }
 
 static struct file_operations fb_file_ops = {
@@ -56,8 +62,10 @@ void init_graphics() {
     Sys_log("Initialising graphics.\n");
     
 
-    page_index fb_base_page = Multiboot_info->framebuffer_addr >> 12;
-    page_index fb_page_amount = ((Multiboot_info->framebuffer_pitch * Multiboot_info->framebuffer_height) + 0xFFF) >> 12;
+    _display_fb_size = (Multiboot_info->framebuffer_pitch * Multiboot_info->framebuffer_height);
+
+    page_index fb_base_page = ADDR_TO_PAGE(Multiboot_info->framebuffer_addr);
+    page_index fb_page_amount = ADDR_TO_PAGE(_display_fb_size);
 
     
 
@@ -81,12 +89,11 @@ void init_graphics() {
 
 int init_fb_devfs_file() {
     Sys_log("making /dev/fb\n");
-    kpath_create(root_dentry->inode, "/dev/", "fb", 0666, 0);
+    kpath_create(root_dentry->inode, "/dev", "fb", 0644, false);
     struct dentry* fb_dentry = kpath_lookup(root_dentry->inode, "/dev/fb");
     
-    if(fb_dentry){
-        fb_dentry->inode->i_fop = &fb_file_ops;
-    }
+    fb_dentry->inode->i_fop = &fb_file_ops;
+    
 }
 
 void put_pixel(int x, int y, rgbacolor color) {

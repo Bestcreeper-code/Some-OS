@@ -9,5 +9,5 @@
 
 
 int devfs_init(){
-    kpath_mkdir(root_dentry->inode, "/", "dev/", 0755);
+    kpath_mkdir(root_dentry->inode, "/", "dev", 0755);
 }
