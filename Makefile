@@ -19,7 +19,8 @@ INCLUDE_DIRS = src FatFs src/config src/headers src/headers/defines \
 	$(ARCH_DIR)/asm $(ARCH_DIR)/cpu         \
 	$(ARCH_DIR)/scheduler $(ARCH_DIR)/panic \
 	$(ARCH_DIR)/syscalls                    \
-	src/drivers/ATA src/drivers/PS-2 src/drivers/FS/FAT
+	src/drivers src/drivers/ATA src/drivers/PS-2 \
+	src/drivers/FS/FAT
 
 INCLUDES     := $(addprefix -I,$(INCLUDE_DIRS))
 DEFINES_FLAGS = $(addprefix -D,$(DEFINES))
@@ -161,7 +162,7 @@ disk-img:
 # === Run QEMU ===
 run: all
 	qemu-system-i386 \
-		-m 512M \
+		-m 256M \
 		-boot d \
 		-cdrom $(ISO_FILE) \
 		-drive file=$(DISK_IMG),format=raw,if=ide \

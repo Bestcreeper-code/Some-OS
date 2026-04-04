@@ -105,9 +105,12 @@ int path_unlink(struct inode* start, const char* path, char* name) {
 
 void tree(struct dentry* d, int depth){
     if(!d) return;
-    serial_write_string("||");
-    for(int i=0;i<depth-1;i++) serial_write_string("--");
+    
+    for(int i=0;i<depth-1;i++) serial_write_string("  ");
+    serial_write_string("|");
+    
     serial_write_string(d->name);
+    if(S_ISDIR(d->inode->i_mode)) serial_write_string("/");
     serial_write_string("\n");
 
     struct hlist_node* pos;

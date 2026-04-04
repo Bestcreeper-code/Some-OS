@@ -1,4 +1,5 @@
 #include "video.h"
+#include "drivers/drivers.h"
 #include "fs.h"
 #include "io.h"
 #include "console.h"
@@ -15,6 +16,7 @@
 #include "types.h"
 #include "vfs.h"
 #include "err_codes.h"
+#include "drivers.h"
 
 
 #include <stdint.h>
@@ -58,6 +60,7 @@ static struct file_operations fb_file_ops = {
 };
 
 
+
 void init_graphics() {
     Sys_log("Initialising graphics.\n");
     
@@ -87,14 +90,17 @@ void init_graphics() {
     Sys_Success("graphics init was successful, mapped at 0x%x\n",Multiboot_info->framebuffer_addr);
 }
 
+
+
 int init_fb_devfs_file() {
-    Sys_log("making /dev/fb\n");
     kpath_create(root_dentry->inode, "/dev", "fb", 0644, false);
     struct dentry* fb_dentry = kpath_lookup(root_dentry->inode, "/dev/fb");
     
     fb_dentry->inode->i_fop = &fb_file_ops;
     
 }
+
+REGISTER_DRIVER(totally_real_gpu, init_fb_devfs_file);
 
 void put_pixel(int x, int y, rgbacolor color) {
 

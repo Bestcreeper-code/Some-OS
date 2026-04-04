@@ -426,11 +426,11 @@ char* strlow(const char* str) {
 const char* byte_nb_simplify(uint32_t size_bytes, char* buf) {
     
     if (size_bytes >= 1024 * 1024 * 1024) { 
-        sprintf(buf, "%uGB", size_bytes / (1024*1024*1024));
+        sprintf(buf, "%uGiB", size_bytes / (1024*1024*1024));
     } else if (size_bytes >= 1024 * 1024) { 
-        sprintf(buf, "%uMB", size_bytes / (1024*1024));
+        sprintf(buf, "%uMiB", size_bytes / (1024*1024));
     } else if (size_bytes >= 1024) { 
-        sprintf(buf, "%uKB", size_bytes / 1024);
+        sprintf(buf, "%uKiB", size_bytes / 1024);
     } else { 
         sprintf(buf, "%uB", size_bytes);
     }

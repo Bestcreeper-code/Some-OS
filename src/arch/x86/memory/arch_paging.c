@@ -1,4 +1,5 @@
 #include "arch_asm.h"
+#include "err_codes.h"
 #include "paging.h"
 #include "arch_paging.h"
 // #include "memory.h"
@@ -31,7 +32,7 @@ int setup_paging() {
     Sys_log("Setting up paging...\n");
 
     _pages_amount = ((Get_multiboot_info()->mem_upper * 1024) + 1024*1024) / PAGE_SIZE;
-    if (_pages_amount < MIN_OS_PAGES * 1.5) return -1;
+    if (_pages_amount < MIN_OS_PAGES * 1.5) return -E_NOMEM;
     if (_pages_amount > 1024 * 1024) _pages_amount = 1024 * 1024;
 
     

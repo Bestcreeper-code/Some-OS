@@ -8,7 +8,7 @@
 
 
 
-#define MIN_OS_PAGES 8192
+#define MIN_OS_PAGES 2048
 
 #define _PT_SIZE        (_PAGE_SIZE / sizeof(PTE))
 
@@ -90,7 +90,7 @@ page_index k_append_pages(page_index phys_start_page, uint32_t amount, uint8_t r
 int pd_unmap_page(PD_t* target_pd, uint32_t virtual_addr);
 
 
-void     reserve_kernel_pages();
+void reserve_kernel_pages();
 
 
-void     dump_pd();
+void dump_pd();

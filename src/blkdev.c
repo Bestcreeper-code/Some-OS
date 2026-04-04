@@ -59,6 +59,7 @@ struct block_device* Register_Block_Device(const char *name, lsize_t size,
 
     block_device_amount++;
     kpath_create(root_dentry->inode, "/dev/", name, S_IFBLK , false);
+    
     return blkdev;
 }
 

@@ -1,6 +1,7 @@
 #include "ATA_IO.h"
 #include "Logger.h"
 #include "blkdev.h"
+#include "drivers/drivers.h"
 #include "helpers.h"
 #include "ioctl.h"
 #include "memory.h"
@@ -285,3 +286,5 @@ int ata_init() {
 
     return 0;
 }
+
+REGISTER_DRIVER(ata_drive, ata_init);

@@ -2,6 +2,7 @@
 #include "FileSystem.h"
 #include "asm.h"
 #include "console.h"
+#include "drivers/drivers.h"
 #include "fs.h"
 #include "io.h"
 #include "memory.h"
@@ -12,6 +13,7 @@
 #include "ff.h"
 #include "Logger.h"
 #include "arch.h"
+#include "panic.h"
 #include "path.h"
 #include "time.h"
 #include "types.h"
@@ -27,6 +29,7 @@
 #include "string.h"
 #include "vfs.h"
 #include "devfs.h"
+#include "drivers.h"
 
 
 
@@ -76,11 +79,12 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     const char* cmdline = (const char*)Get_multiboot_info()->cmdline;
     Sys_log("kernel called with: %s\n", cmdline);
 
-    
-    if (setup_paging() != 0  ) {
+    int pg_res = setup_paging();
+    if (pg_res != 0  ) {
         
-        Sys_Error("Paging setup failed, halting.");
-        
+        Sys_Error("Paging setup failed, halting.\n");
+        char buf[128];
+        Sys_Error("Not enough memory to init correctly [%x MiB]", (Multiboot_info->mem_upper + Multiboot_info->mem_lower)/1024);
         while (1) __asm__ volatile ("hlt");
     }
     Set_Kernel_Flag(KDATA_FLAG_PAGING_ON, true);
@@ -119,7 +123,13 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     
     Sys_log("Setting up Kernel Stack.\n");
     page_index allocated_stack_pages = page_alloc(KERNEL_STACK_PAGE_AMOUNT, PAGE_FLAG_RW);
-    uintptr_t allocated_stack_top = allocated_stack_pages + (KERNEL_STACK_PAGE_AMOUNT * PAGE_SIZE);
+    uintptr_t allocated_stack_top = (PAGE_ADDR(allocated_stack_pages) + (KERNEL_STACK_PAGE_AMOUNT * PAGE_SIZE));
+
+    if (!allocated_stack_top) {
+        Sys_Error("Couldn't allocate kernel stack :(");
+        while (1) __asm__ volatile ("hlt");
+    }
+
     __asm__ volatile(
         "movl %0, %%esp\n"
         :
@@ -194,7 +204,7 @@ end_mounting:
     
     
     devfs_init();
-    init_fb_devfs_file();
+    drivers_init();
 
 
     tree(root_dentry, 0);

@@ -13,7 +13,7 @@ static struct file_system_type *fs_registry = NULL;
 extern struct inode tmp_root_inode;
 struct dentry tmp_root_dentry = {
     .inode = &tmp_root_inode,
-    .name = "/",
+    .name = "",
     .parent = NULL
 };
 
