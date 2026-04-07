@@ -3,6 +3,7 @@
 #include "asm.h"
 #include "console.h"
 #include "drivers/drivers.h"
+#include "err_codes.h"
 #include "fs.h"
 #include "io.h"
 #include "memory.h"
@@ -51,59 +52,34 @@ void kmain(unsigned int magic, unsigned long mb_struct_addr) {
     mb_struct_ptr = (multiboot_info_t*)mb_struct_addr;
     kernel_data_ptr = &kernel_data;
     
-    Set_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON, false);
+    Set_Kernel_Flag(KDATA_FLAG_FRAMEBUFFER_ON, false);
     Set_Kernel_Flag(KDATA_FLAG_PAGING_ON, false);
 
     arch_init();
 
-    
-
-    
     serial_init();
-    
-    
-    
-    
-
-    
-    Sys_log("interrupts disabled.\n");
-    Sys_log("Kernel starting...\n");
     
     Sys_log("Multiboot magic number: 0x%x\n", magic);
     Sys_log("Multiboot info address: 0x%x\n", mb_struct_ptr);
 
     Sys_log("copying multiboot info struct...\n");
-    memcpy(Get_multiboot_info(), mb_struct_ptr, sizeof(multiboot_info_t));  
     
+    memcpy(Get_multiboot_info(), mb_struct_ptr, sizeof(multiboot_info_t));  
 
     const char* cmdline = (const char*)Get_multiboot_info()->cmdline;
+    
     Sys_log("kernel called with: %s\n", cmdline);
-
-    int pg_res = setup_paging();
-    if (pg_res != 0  ) {
-        
-        Sys_Error("Paging setup failed, halting.\n");
-        char buf[128];
-        Sys_Error("Not enough memory to init correctly [%x MiB]", (Multiboot_info->mem_upper + Multiboot_info->mem_lower)/1024);
-        while (1) __asm__ volatile ("hlt");
-    }
-    Set_Kernel_Flag(KDATA_FLAG_PAGING_ON, true);
-    Sys_Success("Paging set up successfully.\n");
-    
-    init_graphics();
-    Set_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON, true);
-    int pitch = Multiboot_info->framebuffer_bpp;
     
     
 
-    
     Setup_Kernel_Syms();
     
-
     
 
     
-    pic_remap();
+
+    
+    
     
     
     
@@ -187,8 +163,8 @@ end_mounting:
 
 
 //log kernel/cpu info
-    sys_color_serial_logf("Kernel compiled on %s at %s\n",ANSI_BRIGHT_YELLOW,0,"kernel","",0, __DATE__, __TIME__);
-    sys_color_serial_logf("with GCC ver %d.%d.%d \n",ANSI_BRIGHT_YELLOW,0,"kernel","",0, __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
+    Sys_color_log_NoPos("Kernel compiled on %s at %s\n",ANSI_BRIGHT_YELLOW,0, __DATE__, __TIME__);
+    Sys_color_log_NoPos("with GCC ver %d.%d.%d \n",ANSI_BRIGHT_YELLOW,0, __GNUC__, __GNUC_MINOR__, __GNUC_PATCHLEVEL__);
     
     cpu_log_specs();
     char simplified_nb_1[16]; 
@@ -197,14 +173,23 @@ end_mounting:
     byte_nb_simplify(get_used_ram(), simplified_nb_1);
     byte_nb_simplify(ram_amount, simplified_nb_2);
 
-    sys_color_serial_logf("Ram Used = %s / %s \n",ANSI_BRIGHT_GREEN,0,"","",0, 
-        simplified_nb_1, simplified_nb_2);
+    Sys_color_log_NoPos("Ram Used = %s / %s \n",ANSI_BRIGHT_GREEN,0,simplified_nb_1, simplified_nb_2);
     
-    sys_color_serial_logf("Press Any key to continue\n", ANSI_BRIGHT_MAGENTA, ANSI_BG_BLACK, "", "", 0);
+    Sys_color_log_NoPos("Press Any key to continue\n", ANSI_BRIGHT_MAGENTA, ANSI_BG_BLACK);
     
     
     devfs_init();
-    drivers_init();
+    
+
+
+
+
+
+
+
+
+
+    fs_init();
 
 
     tree(root_dentry, 0);

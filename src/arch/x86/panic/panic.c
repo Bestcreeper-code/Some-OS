@@ -187,7 +187,7 @@ void _panic_handler(int argc, uint32_t* argv) {
         (int)argv[1],
         ((cpu_registers_t*)argv[2])->cr2);
 
-    if (Get_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON)) {
+    if (Get_Kernel_Flag(KDATA_FLAG_FRAMEBUFFER_ON)) {
         ClearScreen();
         // size_t fb_size = Multiboot_info->framebuffer_width *
         //                  Multiboot_info->framebuffer_height;

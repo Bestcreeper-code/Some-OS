@@ -198,5 +198,5 @@ noreboot: all
 
 # === Clean ===
 clean:
-	rm -rf $(BUILD_DIR) $(ISO_FILE) $(KERNEL_ELF) $(KERNEL_BIN) \
+	rm -r $(BUILD_DIR) $(ISO_FILE) $(KERNEL_ELF) $(KERNEL_BIN) \
 	       $(KERNEL_NOSYMS_ELF) $(SYMS_BIN)

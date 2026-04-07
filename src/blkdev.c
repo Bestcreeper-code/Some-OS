@@ -40,7 +40,7 @@ struct block_device* Register_Block_Device(const char *name, lsize_t size,
     if(!block_device_list_start){
         block_device_list_start = &blkdev->list;
         blkdev->list.next = NULL;
-        blkdev->list.prev = &blkdev->list;//ez way to get the last one
+        blkdev->list.prev = &blkdev->list;//ez way to get the last one kekw
 
         block_device_amount++;
         kpath_create(root_dentry->inode, "/dev/", name, S_IFBLK , false);
@@ -58,7 +58,7 @@ struct block_device* Register_Block_Device(const char *name, lsize_t size,
     block_device_list_start->prev = &blkdev->list;
 
     block_device_amount++;
-    kpath_create(root_dentry->inode, "/dev/", name, S_IFBLK , false);
+    kpath_create(root_dentry->inode, "/dev/", name, S_IFBLK | 0660, false);
     
     return blkdev;
 }

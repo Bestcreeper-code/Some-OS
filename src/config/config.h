@@ -5,7 +5,6 @@
 
 
 // DEBUG flags
-#define DEBUG           0
 #define PAGE_DEBUG      0
 #define MEM_DEBUG       0
 #define KSYMS_DEBUG     0
@@ -13,6 +12,9 @@
 #define ELF_DEBUG       0
 #define DEV_BUILD       1
 #define SYSCALL_DEBUG   0
+
+
+#define POS_DEBUG_LOGS  1
 
 
 

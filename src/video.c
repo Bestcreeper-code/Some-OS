@@ -60,8 +60,8 @@ static struct file_operations fb_file_ops = {
 };
 
 
-
-void init_graphics() {
+REGISTER_DRIVER_DEV(graphics, init_graphics);
+int init_graphics() {
     Sys_log("Initialising graphics.\n");
     
 
@@ -84,23 +84,25 @@ void init_graphics() {
 
     
 
-
     _display_fb = (volatile rgbacolor*)(uintptr_t)Multiboot_info->framebuffer_addr;
 
-    Sys_Success("graphics init was successful, mapped at 0x%x\n",Multiboot_info->framebuffer_addr);
+    Sys_Success("framebuffer init was successful, mapped at 0x%x\n",Multiboot_info->framebuffer_addr);
+    Set_Kernel_Flag(KDATA_FLAG_FRAMEBUFFER_ON, true);
+
+    return 0;
 }
 
 
-
+REGISTER_DRIVER_FS(totally_real_gpu, init_fb_devfs_file);
 int init_fb_devfs_file() {
     kpath_create(root_dentry->inode, "/dev", "fb", 0644, false);
     struct dentry* fb_dentry = kpath_lookup(root_dentry->inode, "/dev/fb");
     
     fb_dentry->inode->i_fop = &fb_file_ops;
-    
+    return 0;
 }
 
-REGISTER_DRIVER(totally_real_gpu, init_fb_devfs_file);
+
 
 void put_pixel(int x, int y, rgbacolor color) {
 

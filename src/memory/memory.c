@@ -162,7 +162,7 @@ void parse_memory_map(multiboot_info_t* mb_info) {
     uintptr_t mmap_end = mb_info->mmap_addr + mb_info->mmap_length;
     multiboot_mmap_entry_t* mmap = (multiboot_mmap_entry_t*)mb_info->mmap_addr;
 
-    
+    Sys_log("Multiboot mmap: \n");
     // Mark all GRUB regions as unallocatable (bit 2)
     mmap = (multiboot_mmap_entry_t*)mb_info->mmap_addr;
     while ((uintptr_t)mmap < mmap_end) {
@@ -170,10 +170,11 @@ void parse_memory_map(multiboot_info_t* mb_info) {
         uintptr_t len  = (mmap->len + 0xFFF) & ~0xFFF;
         uintptr_t page_end = base + len;
         
-        
+        Sys_log("  Base = 0x%p, Length = 0x%p, Type = %d\n", (void*)base, (void*)len, mmap->type);
         
         mmap = (multiboot_mmap_entry_t*)((uintptr_t)mmap + mmap->size + sizeof(mmap->size));
     }
+    Sys_log("mmap end \n");
     
     // allocate 3 kernel pages
     
@@ -213,9 +214,6 @@ void parse_memory_map(multiboot_info_t* mb_info) {
     }
 
 
-
-    force_alloc((uint32_t)k_mmap, sizeof(free_region_map_t));
-    force_alloc(0x0, 65535);
     Sys_log("Memory map parsed.\n");
 }
 

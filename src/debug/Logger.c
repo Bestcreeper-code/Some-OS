@@ -54,8 +54,12 @@ void sys_serial_vlogf(const char* format, const char* file, const char* func, in
     
     if (func != NULL && line != 0) {
         snprintf(prefix, sizeof(prefix), "< %s:%d(%s)> ", file, line, func);
-    } else {
+    } 
+    else if (file != NULL && file[0] != '\0'){
         snprintf(prefix, sizeof(prefix), "<%s> ", file);
+    }
+    else {
+        prefix[0]='\0';
     }
 
     char msg[LOG_BUFFER_SIZE];
@@ -66,7 +70,7 @@ void sys_serial_vlogf(const char* format, const char* file, const char* func, in
 
     serial_write_string(output);
 
-    if (Get_Kernel_Flag(KDATA_FLAG_KERNEL_TERMINAL_ON) && Get_Kernel_Flag(KDATA_FLAG_PAGING_ON)) {
+    if (Get_Kernel_Flag(KDATA_FLAG_FRAMEBUFFER_ON) && Get_Kernel_Flag(KDATA_FLAG_PAGING_ON)) {
         printstr(output);
     }
 }
@@ -81,7 +85,7 @@ void sys_serial_logf(const char* format, const char* file, const char* func, int
 
 
 void serial_log_hex(const char* label, uint32_t val) {
-	sys_serial_logf("%s: 0x%x\n", "", "", 0, label, val );
+	sys_serial_logf("%s: 0x%x\n", NULL, NULL, 0, label, val );
 }
 
 
@@ -171,13 +175,15 @@ void sys_color_serial_logf(const char* format, uint8_t fg, uint8_t bg, const cha
 
 void __assert_fail(const char *__assertion, const char *__file,
 			   unsigned int __line, const char *__function){
+    
+    
     serial_set_color(ANSI_RED,ANSI_BG_BLACK);
     set_print_color(4);
     sys_serial_logf("assert failed: \n", __file, __function, __line);
 
     serial_set_color(ANSI_CYAN,ANSI_BG_BLACK);
     set_print_color(3);
-    sys_serial_logf("%s\n", "", "", 0,__assertion);
+    sys_serial_logf("%s\n", NULL, NULL, 0,__assertion);
 
     for(;;);
 }

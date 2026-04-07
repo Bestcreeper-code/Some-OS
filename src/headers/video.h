@@ -47,6 +47,6 @@ void Force_put_pixel(int x, int y, uint32_t color);
 
 void reset_palette();
 
-void init_graphics();
+int init_graphics();
 int init_fb_devfs_file();
 #endif

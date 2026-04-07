@@ -85,7 +85,7 @@ extern KernelData_t* kernel_data_ptr;
 
 
 typedef enum {
-    KDATA_FLAG_KERNEL_TERMINAL_ON,
+    KDATA_FLAG_FRAMEBUFFER_ON,
     KDATA_FLAG_PAGING_ON,
 }Kernel_Data_Flag;
 

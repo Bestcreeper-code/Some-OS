@@ -5,19 +5,44 @@
 #include <stdarg.h>
 #include <stdint.h>
 
+#include "config.h"
+
 
 #define COM1_PORT 0x3F8  
     
-#define Sys_log(frmt , ...) sys_color_serial_logf(frmt, ANSI_WHITE, ANSI_BG_BLACK, __FILE_NAME__, __func__, __LINE__ ,##__VA_ARGS__)
-#define Sys_log_NoPos(frmt , ...) sys_color_serial_logf(frmt, ANSI_WHITE, ANSI_BG_BLACK, "", "", 0, ##__VA_ARGS__)
 
-#define Sys_Error(frmt , ...) sys_color_serial_logf(frmt,ANSI_BLACK, ANSI_BG_BRIGHT_RED, __FILE_NAME__, __func__, __LINE__ ,##__VA_ARGS__)
-#define Sys_Success(frmt , ...) sys_color_serial_logf(frmt, ANSI_BRIGHT_GREEN, ANSI_BG_BLACK, __FILE_NAME__, __func__, __LINE__ ,##__VA_ARGS__)
-#define Sys_Warning(frmt , ...) sys_color_serial_logf(frmt,ANSI_WHITE, ANSI_BG_BRIGHT_YELLOW, __FILE_NAME__, __func__, __LINE__ ,##__VA_ARGS__)
+#define Sys_log_Pos(frmt , ...) sys_color_serial_logf(frmt, ANSI_WHITE, ANSI_BG_BLACK, __FILE_NAME__, __func__, __LINE__ ,##__VA_ARGS__)
+#define Sys_color_log_Pos(frmt, fg_color, bg_color, ...) sys_color_serial_logf(frmt, fg_color, bg_color, __FILE_NAME__, __func__, __LINE__ ,##__VA_ARGS__)
+
+#define Sys_log_NoPos(frmt , ...) sys_color_serial_logf(frmt, ANSI_WHITE, ANSI_BG_BLACK, NULL, NULL, 0, ##__VA_ARGS__)
+#define Sys_color_log_NoPos(frmt, fg_color, bg_color, ...) sys_color_serial_logf(frmt, fg_color, bg_color, NULL, NULL, 0,##__VA_ARGS__)
+
+
+#if POS_DEBUG_LOGS
+#define Sys_log(frmt , ...) Sys_log_Pos(frmt, ##__VA_ARGS__)
+#define Sys_color_log(frmt, fg_color, bg_color, ...) Sys_color_log_Pos(frmt, ##__VA_ARGS__)
+
+#define Sys_Error(frmt , ...) Sys_color_log_Pos(frmt,ANSI_BLACK, ANSI_BG_BRIGHT_RED ,##__VA_ARGS__)
+#define Sys_Success(frmt , ...) Sys_color_log_Pos(frmt, ANSI_BRIGHT_GREEN, ANSI_BG_BLACK ,##__VA_ARGS__)
+#define Sys_Warning(frmt , ...) Sys_color_log_Pos(frmt,ANSI_WHITE, ANSI_BG_BRIGHT_YELLOW ,##__VA_ARGS__)
+
+#else
+#define Sys_log(frmt , ...) Sys_log_NoPos(frmt, ##__VA_ARGS__)
+#define Sys_color_log(frmt, fg_color, bg_color, ...) Sys_color_log_NoPos(frmt, ##__VA_ARGS__)
+
+#define Sys_Error(frmt , ...) Sys_color_log_NoPos(frmt,ANSI_BLACK, ANSI_BG_BRIGHT_RED ,##__VA_ARGS__)
+#define Sys_Success(frmt , ...) Sys_color_log_NoPos(frmt, ANSI_BRIGHT_GREEN, ANSI_BG_BLACK ,##__VA_ARGS__)
+#define Sys_Warning(frmt , ...) Sys_color_log_NoPos(frmt,ANSI_WHITE, ANSI_BG_BRIGHT_YELLOW ,##__VA_ARGS__)
+
+#endif
+
+
+
 #define Sys_Info(frmt , ...) Sys_log(frmt, ##__VA_ARGS__)
 
-#define Sys_color_log(frmt, fg_color, bg_color, ...) sys_color_serial_logf(frmt, fg_color, bg_color, __FILE_NAME__, __func__, __LINE__ ,##__VA_ARGS__)
-#define Sys_color_log_NoPos(frmt, fg_color, bg_color, ...) sys_color_serial_logf(frmt, fg_color, bg_color, "", "", 0,##__VA_ARGS__)
+
+
+
 #define Sys_Breakpoint() Sys_log("Breakpoint hit at %s:%d\n", __FILE_NAME__, __LINE__); for(;;);
 #define Sys_Step_Point() Sys_log("Step Point hit at %s:%d\n", __FILE_NAME__, __LINE__); getc();
 

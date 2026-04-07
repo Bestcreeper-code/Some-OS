@@ -17,9 +17,9 @@ typedef struct {
 
 extern uint64_t timer_ticks;
 
-void pic_remap();
+int pic_remap();
 // PIT / Timer
-void pit_init(void);
+int pit_init(void);
 void timer_irq(void); // call this from irq_handler when IRQ0 fires
 
 // Sleeping

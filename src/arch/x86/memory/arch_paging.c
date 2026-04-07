@@ -289,17 +289,23 @@ page_index page_alloc_nomap(size_t amount) {
 page_index page_alloc(size_t amount, char flags) {
     page_index phys = page_alloc_nomap(amount);
     if (!phys){
+#if PAGE_DEBUG
         Sys_Error("page_alloc_nomap failed for %u pages (p_page: 0x%x) with %d used ram\n", (unsigned)amount, phys, get_used_ram() );
+#endif
         return 0;
     }
 
     page_index virt = vmap(phys, amount, flags);
     if (!virt) {
         page_free(phys, amount);
+#if PAGE_DEBUG
         Sys_Error("page_alloc failed for %u pages (p_page: 0x%x) with mapping\n", (unsigned)amount, phys );
+#endif
         return 0;
     }
-    Sys_log("page_alloc called for %u pages (page: 0x%x) with mapping\n", (unsigned)amount, virt );
+#if PAGE_DEBUG
+Sys_log("page_alloc called for %u pages (page: 0x%x) with mapping\n", (unsigned)amount, virt );
+#endif
     return virt;  
 }
 

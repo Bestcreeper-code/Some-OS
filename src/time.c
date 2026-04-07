@@ -1,6 +1,7 @@
 #include "time.h"
 #include "Logger.h"
 #include "asm.h"
+#include "drivers.h"
 #include "io.h"
 #include "memory.h"
 #include <stdint.h>
@@ -18,9 +19,8 @@ uint64_t timer_ticks;
 
 
 
-
 // ----------------- PIC -----------------
-void pic_remap() {
+int pic_remap() {
     Sys_log("remapping PIC...\n");
     // Initialize PICs in cascade mode
     outb(0x20, 0x11); // Start initialization (master PIC)
@@ -43,8 +43,8 @@ void pic_remap() {
 
 // ----------------- PIT -----------------
 
-void pit_init() {
-    Sys_log("Initializing PIT...\n");
+int pit_init() {
+    Sys_log("initializing pit\n");
     force_alloc(TICKS_AMOUNT,sizeof(uint64_t));
     timer_ticks =0;
     
