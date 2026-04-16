@@ -1,5 +1,6 @@
 #include "io.h"
 #include "Logger.h"
+#include "bootloader.h"
 #include "string.h"
 #include "asm.h"
 #include "video.h"
@@ -10,7 +11,7 @@
 #include "config/config.h"
 #include "data/textconsts.h"
 #include "data/KB_Layouts.h"
-#include "multiboot_info.h"
+
 
 
 int vgaX = 0;
@@ -60,13 +61,13 @@ void put_char(int x, int y, uint8_t c, uint8_t color) {
 
 void Scroll_Down(void) {
     
-    size_t line_bytes = Multiboot_info->framebuffer_pitch ;
+    size_t line_bytes = get_bootloader_fb_info()->pitch ;
 
     size_t shift = default_kterm_font_h * line_bytes;
 
-    size_t fb_size = Multiboot_info->framebuffer_height * Multiboot_info->framebuffer_pitch ;
+    size_t fb_size = get_bootloader_fb_info()->height * get_bootloader_fb_info()->pitch ;
 
-    uint8_t *fb = (uint8_t *)(uintptr_t)Multiboot_info->framebuffer_addr;
+    uint8_t *fb = (uint8_t *)(uintptr_t)get_bootloader_fb_info()->addr;
     memmove(fb, fb + shift, fb_size - shift);
     memset(fb + fb_size - shift, 0, shift);
 }
@@ -78,7 +79,7 @@ void Scroll_Down(void) {
 void ClearScreen() {
     move_cursor(0,0);
 
-    size_t fb_size = Multiboot_info->framebuffer_width * Multiboot_info->framebuffer_height ;
+    size_t fb_size = get_bootloader_fb_info()->width * get_bootloader_fb_info()->height ;
     dw_memset((void*)_display_fb, vga_to_32bit_color(0), fb_size);
 }
 
@@ -717,7 +718,6 @@ int write_number_fixed_width(char* buffer, int pos, int num, int width, int size
 
     return total_len;
 }
-
 int write_hex32_fixed_width(char* buffer, int pos, uint32_t val, int width, int uppercase) {
     char tmp[16];
     int len = 0;
@@ -725,16 +725,18 @@ int write_hex32_fixed_width(char* buffer, int pos, uint32_t val, int width, int 
 
     do {
         int digit = v & 0xF;
-        tmp[len++] = digit < 10 ? '0' + digit : (uppercase ? 'A' : 'a') + (digit - 10);
+        tmp[len++] = digit < 10 ? '0' + digit
+            : (uppercase ? 'A' : 'a') + (digit - 10);
         v >>= 4;
     } while (v);
 
+    if (len > width) len = width;
+
     while (len < width) tmp[len++] = '0';
 
-    for (int i = len-1; i >= 0; i--) buffer[pos++] = tmp[i];
+    for (int i = len - 1; i >= 0; i--) buffer[pos++] = tmp[i];
     return len;
 }
-
 
 int vsnprintf(char* buffer, int size, const char* format, va_list args) {
     int pos = 0;
@@ -752,12 +754,19 @@ int vsnprintf(char* buffer, int size, const char* format, va_list args) {
                     width = width * 10 + (*format - '0');
                     format++;
                 }
-                if (*format == 'd') {
+                if (*format == 'd' || *format == 'D') {
                     int val = va_arg(args, int);
                     pos += write_number_fixed_width(buffer, pos, val, width, size);
                     format++;
                     continue;
-                } else {
+                } else if (*format == 'x' || *format == 'X') {
+                    int val = va_arg(args, int);
+                    pos += write_hex32_fixed_width(buffer, pos, val, width, true);
+                    format++;
+                    continue;
+                }
+                
+                else {
                     if (pos < size - 1 && buffer) buffer[pos] = '%';
                     pos++;
                     if (pos < size - 1 && buffer) buffer[pos] = '0';

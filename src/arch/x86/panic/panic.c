@@ -1,3 +1,4 @@
+#include "bootloader.h"
 #include "io.h"
 #include "video.h"
 #include "Logger.h"
@@ -238,10 +239,10 @@ void _panic_handler(int argc, uint32_t* argv) {
     Sys_log_NoPos(" EIP: 0x%x  EFLAGS: 0x%x\n",
         _cpu_regs->eip, _cpu_regs->eflags);
 
-    Sys_log_NoPos(" CS:  0x%x  DS:  0x%x  ES:  0x%x\n",
+    Sys_log_NoPos(" CS:  0x%04X  DS:  0x%04X  ES:  0x%04X\n",
         _cpu_regs->cs, _cpu_regs->ds, _cpu_regs->es);
 
-    Sys_log_NoPos(" FS:  0x%x  GS:  0x%x  SS:  0x%x\n",
+    Sys_log_NoPos(" FS:  0x%04X  GS:  0x%04X  SS:  0x%04X\n",
         _cpu_regs->fs, _cpu_regs->gs, _cpu_regs->ss);
 
     Sys_log_NoPos(" CR0: 0x%x  CR2: 0x%x\n",
@@ -289,12 +290,11 @@ void _panic_handler(int argc, uint32_t* argv) {
 
 
 void _manual_panic(const char* error, const char* info) {
-
+    struct bl_framebuffer* fb_info = get_bootloader_fb_info();
     _display_fb = (volatile uint32_t*)
-        (uint32_t)Multiboot_info->framebuffer_addr;
+        (uint32_t)fb_info->addr;
 
-    int fb_size = Multiboot_info->framebuffer_height *
-                  Multiboot_info->framebuffer_pitch;
+    int fb_size = fb_info->height * fb_info->pitch;
 
     memset((void*)_display_fb, 0, fb_size);
 

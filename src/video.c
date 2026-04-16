@@ -1,4 +1,5 @@
 #include "video.h"
+#include "bootloader.h"
 #include "drivers/drivers.h"
 #include "fs.h"
 #include "io.h"
@@ -8,7 +9,7 @@
 #include "math.h"
 #include "data/textconsts.h"
 #include "config/config.h"
-#include "multiboot_info.h"
+
 #include "paging.h"
 #include "Logger.h"
 #include "math.h"
@@ -64,36 +65,40 @@ REGISTER_DRIVER_DEV(graphics, init_graphics);
 int init_graphics() {
     Sys_log("Initialising graphics.\n");
     
+    if (!check_bl_flag(BL_BOOT_FLAG_FRAMEBUFFER_INFO)) {
+        Sys_Error("Framebuffer not present\n");
+        RET_ERR(E_INVAL);
+    }
 
-    _display_fb_size = (Multiboot_info->framebuffer_pitch * Multiboot_info->framebuffer_height);
+    _display_fb_size = (get_bootloader_fb_info()->pitch * get_bootloader_fb_info()->height);
 
-    page_index fb_base_page = ADDR_TO_PAGE(Multiboot_info->framebuffer_addr);
+    page_index fb_base_page = ADDR_TO_PAGE(get_bootloader_fb_info()->addr);
     page_index fb_page_amount = ADDR_TO_PAGE(_display_fb_size);
 
     
 
     Sys_log("Mapping framebuffer from phys: 0x%x, pages: %u\n",
-            (unsigned)Multiboot_info->framebuffer_addr, (unsigned)fb_page_amount);
+            (unsigned)get_bootloader_fb_info()->addr, (unsigned)fb_page_amount);
 
     
-    Multiboot_info->framebuffer_addr = PAGE_ADDR(vmap(fb_base_page, fb_page_amount, PAGE_FLAG_RW));
-    if (Multiboot_info->framebuffer_addr == 0) {
+    get_bootloader_fb_info()->addr = PAGE_ADDR(vmap(fb_base_page, fb_page_amount, PAGE_FLAG_RW));
+    if (get_bootloader_fb_info()->addr == 0) {
         Sys_log("Failed to map framebuffer pages!\n");
         _manual_panic("Graphics Initialization Failed", "Could not map framebuffer pages.");
     }
 
     
 
-    _display_fb = (volatile rgbacolor*)(uintptr_t)Multiboot_info->framebuffer_addr;
+    _display_fb = (volatile rgbacolor*)(uintptr_t)get_bootloader_fb_info()->addr;
 
-    Sys_Success("framebuffer init was successful, mapped at 0x%x\n",Multiboot_info->framebuffer_addr);
+    Sys_Success("framebuffer init was successful, mapped at 0x%x\n",get_bootloader_fb_info()->addr);
     Set_Kernel_Flag(KDATA_FLAG_FRAMEBUFFER_ON, true);
 
     return 0;
 }
 
 
-REGISTER_DRIVER_FS(totally_real_gpu, init_fb_devfs_file);
+REGISTER_DRIVER_FS(totally_real_gpu_devfile, init_fb_devfs_file);
 int init_fb_devfs_file() {
     kpath_create(root_dentry->inode, "/dev", "fb", 0644, false);
     struct dentry* fb_dentry = kpath_lookup(root_dentry->inode, "/dev/fb");
@@ -106,7 +111,7 @@ int init_fb_devfs_file() {
 
 void put_pixel(int x, int y, rgbacolor color) {
 
-    int pitch = Multiboot_info->framebuffer_pitch/(Multiboot_info->framebuffer_bpp/8);
+    int pitch = get_bootloader_fb_info()->pitch/(get_bootloader_fb_info()->bits_per_pixels/8);
     short mx,my;
     Get_Mouse_Pos(&mx,&my);
     _display_fb[y * pitch + x] = color;
@@ -117,13 +122,13 @@ void put_pixel(int x, int y, rgbacolor color) {
 
 void Force_put_pixel(int x, int y, rgbacolor color) {//no mouse check
 
-    int pitch = Multiboot_info->framebuffer_pitch/(Multiboot_info->framebuffer_bpp/8);
+    int pitch = get_bootloader_fb_info()->pitch/(get_bootloader_fb_info()->bits_per_pixels/8);
     _display_fb[y * pitch + x] = color;
 }
 
 rgbacolor get_pixel(int x, int y){
     
-    return _display_fb[y * Multiboot_info->framebuffer_width + x];
+    return _display_fb[y * get_bootloader_fb_info()->width + x];
 }
 
 // Draw a char from 32 to 127
@@ -153,7 +158,7 @@ void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int w
             }
             for (int y = 0; y < height; y++) {
                 if ((column >> y) & 0x01) {
-                    if ((x + x_pos) < Multiboot_info->framebuffer_width && (y + y_pos) < Multiboot_info->framebuffer_height) {
+                    if ((x + x_pos) < get_bootloader_fb_info()->width && (y + y_pos) < get_bootloader_fb_info()->height) {
                         if (ignore_cursor) Force_put_pixel(x + x_pos, y + y_pos, color);
                         else put_pixel(x + x_pos, y + y_pos, color);
                     }
@@ -173,7 +178,7 @@ void draw_bitmap_char(const unsigned char character, int x_pos, int y_pos, int w
             }
             for (int x = 0; x < width; x++) {
                 if ((row >> (width - 1 - x)) & 0x01) { // MSB first
-                    if ((x + x_pos) < Multiboot_info->framebuffer_width && (y + y_pos) < Multiboot_info->framebuffer_height) {
+                    if ((x + x_pos) < get_bootloader_fb_info()->width && (y + y_pos) < get_bootloader_fb_info()->height) {
                         if (ignore_cursor) Force_put_pixel(x + x_pos, y + y_pos, color);
                         else put_pixel(x + x_pos, y + y_pos, color);
                     }
@@ -204,8 +209,8 @@ void clear_13h_screen(char color) {
 void draw_rect(Rect rect, rgbacolor color) {
     if (rect.w <= 0 || rect.h <= 0) return;
 
-    int fb_width  = Multiboot_info->framebuffer_pitch / (Multiboot_info->framebuffer_bpp / 8);
-    int fb_height = Multiboot_info->framebuffer_height;
+    int fb_width  = get_bootloader_fb_info()->pitch / (get_bootloader_fb_info()->bits_per_pixels / 8);
+    int fb_height = get_bootloader_fb_info()->height;
 
     
     if (rect.x >= fb_width || rect.y >= fb_height) return;

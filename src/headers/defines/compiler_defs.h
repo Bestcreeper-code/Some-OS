@@ -3,7 +3,7 @@
 #define _gcc_kernel_address_space 1
 #define _gcc_user_address_space 3
 
-#define GCC_ATTR __attribute__
+#define GCC_ATTR(attrib) __attribute__(attrib)
 
 #define _GCC_ADDR_SPACE(N) GCC_ATTR((address_space(N)))
 #define _GCC_SECTION(sec) GCC_ATTR((section(sec)))

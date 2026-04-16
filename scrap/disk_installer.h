@@ -1,7 +1,7 @@
 // #ifndef DISK_INSTALLER_H
 // #define DISK_INSTALLER_H
 
-// #include "multiboot_info.h"
+// 
 // #include <stdint.h>
 
 // typedef struct {

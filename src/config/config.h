@@ -17,6 +17,8 @@
 #define POS_DEBUG_LOGS  1
 
 
+#define VERY_EARLY_SERIAL 1
+
 
 
 

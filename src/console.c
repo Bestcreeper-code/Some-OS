@@ -1,18 +1,21 @@
 #include "console.h"
 
 
+#include <assert.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include "asm.h"
 #include "cpu/cpu.h"
+#include "drivers.h"
+#include "err_codes.h"
 #include "string.h"
 #include "ATA_IO.h"
 #include "time.h"
 #include "io.h"
 #include "memory.h"
-#include "multiboot_info.h"
+
 #include "../FatFs/ff.h"
 #include "FileSystem.h"
 
@@ -283,7 +286,8 @@ bool Console_Process_Command(char* command) {
 
 char* console_requests[32];
 
-void Start_Console() {
+REGISTER_DRIVER_LATE(kconsole, Start_Console);
+int Start_Console() {
     Sys_log("Kernel Console started\n");
     memset(CONSOLE_REQUEST_QUEUE, 0, sizeof(char*) * 16);
     // Add_Console_Request("@help");
@@ -292,7 +296,7 @@ void Start_Console() {
     currpath = kmalloc(4);
     if (!currpath) {
         printf("Path Broken");
-        return;
+        RET_ERR(E_NOMEM);
     }
     strcpy(currpath, "0:/");
     ClearScreen();

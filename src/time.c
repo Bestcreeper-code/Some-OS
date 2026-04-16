@@ -42,7 +42,7 @@ int pic_remap() {
 }
 
 // ----------------- PIT -----------------
-
+REGISTER_DRIVER_CORE(pit, pit_init);
 int pit_init() {
     Sys_log("initializing pit\n");
     force_alloc(TICKS_AMOUNT,sizeof(uint64_t));
@@ -54,6 +54,7 @@ int pit_init() {
     outb(PIT_CHANNEL0, divisor & 0xFF);      // Low byte
     outb(PIT_CHANNEL0, (divisor >> 8) & 0xFF); // High byte
     Sys_Success("PIT initialized.\n");
+    return 0;
 }
 
 

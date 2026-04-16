@@ -1,5 +1,6 @@
 #include "mouse.h"
 #include "Logger.h"
+#include "bootloader.h"
 #include "kernel_data.h"
 #include "video.h"
 #include "asm.h"
@@ -8,8 +9,8 @@
 #include <stdint.h>
 
 
-#define MAX_MOUSE_X Multiboot_info->framebuffer_width
-#define MAX_MOUSE_Y Multiboot_info->framebuffer_height
+#define MAX_MOUSE_X get_bootloader_fb_info()->width
+#define MAX_MOUSE_Y get_bootloader_fb_info()->height
 
 
 volatile uint8_t mouse_cycle = 0;//3 (1by1 bytes) per action

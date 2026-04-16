@@ -2,12 +2,13 @@
 global _start
 
 extern kmain
+extern bootloader_asm_entry
 
 section .text
 
 _start:
-    push ebx       ; push multiboot_info pointer
-    push eax       ; push magic
+    call bootloader_asm_entry
+    
     call kmain
     add esp, 8
     cli

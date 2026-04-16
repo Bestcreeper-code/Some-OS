@@ -9,10 +9,10 @@
 
 
 #include "kernel_data.h"
-#include "multiboot_info.h"
+#include "bootloader.h"
 //1024x768
-#define K_TERMINAL_WIDTH  (Multiboot_info->framebuffer_width /8)
-#define K_TERMINAL_HEIGHT (Multiboot_info->framebuffer_height /16)
+#define K_TERMINAL_WIDTH  (get_bootloader_fb_info()->width /8)
+#define K_TERMINAL_HEIGHT (get_bootloader_fb_info()->height /16)
 
 #define KEY_ESCAPE     27
 #define KEY_BACKSPACE  8

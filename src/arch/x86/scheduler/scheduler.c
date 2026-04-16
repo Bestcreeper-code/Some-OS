@@ -159,3 +159,61 @@ void _setup_user_stack_sched_frame(void* stack_top, uint32_t* v_esp, uint32_t en
 
     Sys_log("making a sched frame at %x (v_esp=%x)\n",stack_top,*v_esp);
 }
+
+static const char msg_switching[] = "Switching process...";
+static const char msg_pid[] = "PID";
+static const char msg_cr3[] = "CR3";
+static const char msg_esp[] = "V_ESP";
+static const char msg_next[] = "NEXT PCB phys addr";
+static inline void LOG_PCB(Linked_PCB_t* pcb) {
+    serial_write_string(msg_switching);
+    serial_write_string(pcb->name);
+
+    serial_log_hex(msg_pid, pcb->pid);
+    serial_log_hex(msg_cr3, pcb->cr3);
+    serial_log_hex(msg_esp, pcb->k_esp);
+    serial_log_hex(msg_next, (uint32_t)pcb->next);
+}
+
+void sched_next_process_core(void) {
+    Linked_PCB_t* current = _scheduler_current_process;
+
+    uint32_t esp;
+    __asm__ volatile ("mov %%esp, %0" : "=r"(esp));
+    current->k_esp = esp;
+
+    uint32_t cr3;
+    __asm__ volatile ("mov %%cr3, %0" : "=r"(cr3));
+    current->cr3 = cr3;
+
+    Linked_PCB_t* next = current->next;
+    if (!next) {
+        next = _scheduler_first_process;
+    }
+
+#if DEBUG_SCHED_LOG
+    LOG_PCB(next);
+#endif
+
+    _scheduler_current_process = next;
+
+    __asm__ volatile ("mov %0, %%cr3" :: "r"(next->cr3));
+
+    LOG_PCB(next);
+
+    setTss_sp(next->k_esp);
+
+    __asm__ volatile ("mov %0, %%esp" :: "r"(next->k_esp));
+}
+
+// __attribute__((naked)) void _sched_next_process(void) {
+//     __asm__ volatile (
+//         "cli\n\t"
+
+//         "call sched_next_process_core\n\t"
+        
+//         "popfd\n\t"
+//         "popad\n\t"
+//         "iretd\n\t"
+//     );
+// }

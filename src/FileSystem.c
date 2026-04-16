@@ -1,4 +1,5 @@
 #include "FileSystem.h"
+#include "drivers.h"
 #include "string.h"
 #include "memory.h"
 #include "time.h"
@@ -328,3 +329,24 @@ int FS_Mount_Main_Partition(FATFS* fat_filesys){
 
     return -1; // Not found
 }
+
+
+int mount_notthatrealroot(){
+    int mount_counter = 0;
+mounting:
+    Sys_log("trying to mount filesystem...\n");
+    int res = FS_Mount_Main_Partition(FatFsSys);
+
+    if (res != 0) {
+        Sys_Error("Failed to mount filesystem. Error code: %d\n Trying to mount again", res);
+        mount_counter++;
+        if(mount_counter < 3)goto mounting;
+        printf("No Os partition found. if this problem persists after a restart, you may want to reinstall the OS\n (continuing to the console in 10s)");
+        goto end_mounting;
+    } else {
+        Sys_Success("Filesystem mounted successfully.\n"); 
+        // get_string();
+    }
+end_mounting:
+}
+REGISTER_DRIVER_FS(notthatrealroot, mount_notthatrealroot);

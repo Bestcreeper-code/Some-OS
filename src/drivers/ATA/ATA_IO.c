@@ -287,4 +287,4 @@ int ata_init() {
     return 0;
 }
 
-REGISTER_DRIVER(ata_drive, ata_init);
+REGISTER_DRIVER_DEV(ata_drive, ata_init);

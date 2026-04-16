@@ -3,7 +3,6 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include "multiboot_info.h"
 #include "Logger.h"
 #include "../config/config.h"
 #include "kernel_data.h"
@@ -27,7 +26,7 @@ typedef struct {
 extern volatile uint32_t ram_amount;
 extern free_region_map_t* k_mmap;
 
-void parse_memory_map(multiboot_info_t* mb_info);
+int parse_memory_map();
 
 void force_alloc(uint32_t address, uint32_t size);
 void force_free(uint32_t address, uint32_t size);

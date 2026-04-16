@@ -20,7 +20,7 @@
 
 #if POS_DEBUG_LOGS
 #define Sys_log(frmt , ...) Sys_log_Pos(frmt, ##__VA_ARGS__)
-#define Sys_color_log(frmt, fg_color, bg_color, ...) Sys_color_log_Pos(frmt, ##__VA_ARGS__)
+#define Sys_color_log(frmt, fg_color, bg_color, ...) Sys_color_log_Pos(frmt, fg_color, bg_color, ##__VA_ARGS__)
 
 #define Sys_Error(frmt , ...) Sys_color_log_Pos(frmt,ANSI_BLACK, ANSI_BG_BRIGHT_RED ,##__VA_ARGS__)
 #define Sys_Success(frmt , ...) Sys_color_log_Pos(frmt, ANSI_BRIGHT_GREEN, ANSI_BG_BLACK ,##__VA_ARGS__)
@@ -28,7 +28,7 @@
 
 #else
 #define Sys_log(frmt , ...) Sys_log_NoPos(frmt, ##__VA_ARGS__)
-#define Sys_color_log(frmt, fg_color, bg_color, ...) Sys_color_log_NoPos(frmt, ##__VA_ARGS__)
+#define Sys_color_log(frmt, fg_color, bg_color, ...) Sys_color_log_NoPos(frmt, fg_color, bg_color, ##__VA_ARGS__)
 
 #define Sys_Error(frmt , ...) Sys_color_log_NoPos(frmt,ANSI_BLACK, ANSI_BG_BRIGHT_RED ,##__VA_ARGS__)
 #define Sys_Success(frmt , ...) Sys_color_log_NoPos(frmt, ANSI_BRIGHT_GREEN, ANSI_BG_BLACK ,##__VA_ARGS__)

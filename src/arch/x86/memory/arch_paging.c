@@ -1,9 +1,10 @@
 #include "arch_asm.h"
+#include "bootloader.h"
 #include "err_codes.h"
 #include "paging.h"
 #include "arch_paging.h"
 // #include "memory.h"
-#include "multiboot_info.h"
+
 #include "string.h"
 // #include "io.h"
 #include "time.h"
@@ -31,7 +32,7 @@ PTE* kernel_page_table_ptr;
 int setup_paging() {
     Sys_log("Setting up paging...\n");
 
-    _pages_amount = ((Get_multiboot_info()->mem_upper * 1024) + 1024*1024) / PAGE_SIZE;
+    _pages_amount = ((get_bootloader_mem_info()->mem_upper * 1024) + 1024*1024) / PAGE_SIZE;
     if (_pages_amount < MIN_OS_PAGES * 1.5) return -E_NOMEM;
     if (_pages_amount > 1024 * 1024) _pages_amount = 1024 * 1024;
 

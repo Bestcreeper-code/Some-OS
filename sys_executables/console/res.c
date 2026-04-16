@@ -10,7 +10,7 @@
 #include "../../src/headers/time.h"
 #include "../../src/headers/io.h"
 #include "../../src/headers/memory.h"
-#include "../../src/headers/multiboot_info.h"
+
 #include "../../FatFs/ff.h"
 #include "../../src/headers/FileSystem.h"
 
@@ -292,7 +292,7 @@ void Start_Console() {
     set_print_color(0x8);
     printf(TitleAsciiString);
     printf("\n");
-    printf("%d", Get_multiboot_info()->framebuffer_pitch);
+    printf("%d", Multiboot_info->framebuffer_pitch);
     set_print_color(0x0F);
 
     while (true) {
