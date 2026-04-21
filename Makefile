@@ -6,10 +6,10 @@ NASM     = nasm
 LD       = ld
 OBJCOPY  = objcopy
 
-ARCH    = x86
-BOOTLOADER = multiboot2
+ARCH    ?= x86
+BOOTLOADER ?= multiboot2
 
-DEFINES = __ARCH_X86__
+DEFINES ?= __ARCH_X86__
 
 # === Directories ===
 

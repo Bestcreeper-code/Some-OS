@@ -9,6 +9,8 @@
 
 #define MAX_PID SHRT_MAX
 
+#define DEFAULT_STACK_PAGE_AMOUNT 32
+
 typedef short pid_t;
 
 typedef struct Linked_PCB_t {
@@ -57,6 +59,26 @@ typedef struct __attribute__((packed)) ProcessStackFrame {
 } ProcessStackFrame;
 
 
+typedef struct __attribute__((packed)) KProcessStackFrame {
+    uint32_t eflags;      // pushfd (TOP of stack)
+
+    // pushad
+    uint32_t edi;
+    uint32_t esi;
+    uint32_t ebp;
+    uint32_t esp;
+    uint32_t ebx;
+    uint32_t edx;
+    uint32_t ecx;
+    uint32_t eax;
+
+    // CPU-pushed iret frame
+    uint32_t eip;
+    uint32_t cs;
+    uint32_t eflags_iret;
+
+} KProcessStackFrame;
+
 extern Linked_PCB_t* _scheduler_current_process;
 extern Linked_PCB_t* _scheduler_first_process;
 extern uint8_t task_switching_flag;
@@ -66,6 +88,10 @@ int scheduler_init();
 pid_t new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, Stack_t k_stack, Stack_t us_stack);
 
 void _setup_user_stack_sched_frame(void* stack_frame_upper, uint32_t* esp, uint32_t entry);
+void _setup_kernel_stack_sched_frame(void* stack_top, uint32_t entry, uint32_t* out_esp);
 
+pid_t ktask_start(void* entry, char* name);
+void enable_scheduler();
+void disable_scheduler();
 
 #endif // SCHEDULER_H

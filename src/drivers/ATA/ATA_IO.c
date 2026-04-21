@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <string.h>
 
 #define ATA_DEBUG 1
 
@@ -32,6 +33,7 @@
 #define ATA_SR_DRQ  0x08
 #define ATA_SR_ERR  0x01
 
+
 static void ata_io_wait()
 {
     inb(ATA_STATUS);
@@ -40,40 +42,44 @@ static void ata_io_wait()
     inb(ATA_STATUS);
 }
 
-static int ata_wait_busy()
+static int ata_wait_ready(void)
 {
-    uint8_t status;
+    for (int i = 0; i < 100000; i++) {
+        uint8_t s = inb(ATA_STATUS);
 
-    do {
-        status = inb(ATA_STATUS);
-    } while (status & ATA_SR_BSY);
+        if (s & ATA_SR_ERR) {
+            Sys_log("ATA ERROR: %x\n", inb(ATA_ERROR));
+            return -1;
+        }
 
-    if (status & ATA_SR_ERR)
-        return -1;
+        if (!(s & ATA_SR_BSY))
+            return 0;
+    }
 
-    return 0;
+    Sys_log("ATA BSY timeout\n");
+    return -2;
 }
 
 static int ata_wait_drq(void)
 {
-    uint8_t status;
-    int timeout = 10000;
+    for (int i = 0; i < 100000; i++) {
+        uint8_t s = inb(ATA_STATUS);
 
-    while (timeout--)
-    {
-        status = inb(ATA_STATUS);
-
-        if (status & ATA_SR_ERR)
+        if (s & ATA_SR_ERR) {
+            Sys_log("ATA ERROR: %x\n", inb(ATA_ERROR));
             return -1;
+        }
 
-        if (status & ATA_SR_DRQ)
+        if (!(s & ATA_SR_BSY) && (s & ATA_SR_DRQ))
             return 0;
     }
-#if ATA_DEBUG
-    Sys_log("ata timed out\n");
-#endif
+
+    Sys_log("ATA DRQ timeout\n");
     return -2;
 }
+
+
+
 
 bool ata_drive_exists()
 {
@@ -87,35 +93,29 @@ bool ata_drive_exists()
 
     outb(ATA_COMMAND, ATA_CMD_IDENTIFY);
 
-    uint8_t status = inb(ATA_STATUS);
-
-    if (status == 0)
+    if (ata_wait_drq() != 0)
         return false;
-
-    while (status & ATA_SR_BSY)
-        status = inb(ATA_STATUS);
-
-    if (status & ATA_SR_ERR)
-        return false;
-
-    while (!(status & ATA_SR_DRQ))
-        status = inb(ATA_STATUS);
 
     for (int i = 0; i < 256; i++)
         inw(ATA_DATA);
 
-    return true;    
+    return true;
 }
 
-void ata_pio_read_sector(uint32_t lba, uint8_t *buffer)
-{
-    ata_wait_busy();
 
-    outb(ATA_DRIVE, 0xE0 | ((lba >> 24) & 0x0F));
+
+
+void ata_pio_read_sector(struct ata_blkdev *ata, uint32_t lba, uint8_t *buffer)
+{
+    if (ata_wait_ready() != 0)
+        return;
+
+    uint8_t drive = 0xE0 | ((lba >> 24) & 0x0F);
+    outb(ATA_DRIVE, drive);
     ata_io_wait();
 
     outb(ATA_SECTOR_CNT, 1);
-    outb(ATA_LBA_LOW,  (uint8_t)(lba));
+    outb(ATA_LBA_LOW,  (uint8_t)lba);
     outb(ATA_LBA_MID,  (uint8_t)(lba >> 8));
     outb(ATA_LBA_HIGH, (uint8_t)(lba >> 16));
 
@@ -124,23 +124,27 @@ void ata_pio_read_sector(uint32_t lba, uint8_t *buffer)
     if (ata_wait_drq() != 0)
         return;
 
-    for (int i = 0; i < 256; i++)
-    {
-        uint16_t word = inw(ATA_DATA);
-        buffer[i * 2]     = word & 0xFF;
-        buffer[i * 2 + 1] = word >> 8;
+    for (int i = 0; i < 256; i++) {
+        uint16_t w = inw(ATA_DATA);
+        buffer[i * 2]     = w & 0xFF;
+        buffer[i * 2 + 1] = w >> 8;
     }
 }
 
-void ata_pio_write_sector(uint32_t lba, const uint8_t *buffer)
-{
-    ata_wait_busy();
 
-    outb(ATA_DRIVE, 0xE0 | ((lba >> 24) & 0x0F));
+
+
+void ata_pio_write_sector(struct ata_blkdev *ata, uint32_t lba, const uint8_t *buffer)
+{
+    if (ata_wait_ready() != 0)
+        return;
+
+    uint8_t drive = 0xE0 | ((lba >> 24) & 0x0F);
+    outb(ATA_DRIVE, drive);
     ata_io_wait();
 
     outb(ATA_SECTOR_CNT, 1);
-    outb(ATA_LBA_LOW,  (uint8_t)(lba));
+    outb(ATA_LBA_LOW,  (uint8_t)lba);
     outb(ATA_LBA_MID,  (uint8_t)(lba >> 8));
     outb(ATA_LBA_HIGH, (uint8_t)(lba >> 16));
 
@@ -149,87 +153,115 @@ void ata_pio_write_sector(uint32_t lba, const uint8_t *buffer)
     if (ata_wait_drq() != 0)
         return;
 
-    for (int i = 0; i < 256; i++)
-    {
-        uint16_t word =
+    for (int i = 0; i < 256; i++) {
+        uint16_t w =
             buffer[i * 2] |
             (buffer[i * 2 + 1] << 8);
 
-        outw(ATA_DATA, word);
+        outw(ATA_DATA, w);
     }
 
-    ata_wait_busy();
+    ata_wait_ready();
 
     outb(ATA_COMMAND, ATA_CMD_FLUSH);
-    ata_wait_busy();
+    ata_wait_ready();
 }
 
 
-// int (*read)(struct block_device *, void *buf, size_t data_size, loff_t read_addr);
-int ATA_blkdev_disk_read(struct block_device *dev, void* buffer, size_t data_size, loff_t read_addr) {
-    RET_IF(!dev, -1);
+
+
+int ATA_blkdev_disk_read(struct block_device *dev,
+                         void* buffer,
+                         size_t data_size,
+                         loff_t read_addr)
+{
+    if (!dev || !buffer) return -1;
+
+    uint8_t sector_buf[512];
+
+    size_t remaining = data_size;
+    size_t offset_buf = 0;
+
+    uint32_t lba = read_addr / 512;
+    uint32_t off = read_addr % 512;
+
+    while (remaining > 0) {
+        ata_pio_read_sector((struct ata_blkdev*)dev->private_data, lba, sector_buf);
+
+        size_t c = 512 - off;
+        if (c > remaining) c = remaining;
+
+        memcpy((uint8_t*)buffer + offset_buf,
+               sector_buf + off,
+               c);
+
+        remaining -= c;
+        offset_buf += c;
+        lba++;
+        off = 0;
+    }
+
+    return data_size;
 }
 
-// int (*write)(struct block_device *, const void *buf, size_t data_size, loff_t write_addr);
-int ATA_blkdev_disk_write(struct block_device *dev, const void *buf, size_t data_size, loff_t write_addr) {
-    RET_IF(!dev, -1);
+
+
+
+int ATA_blkdev_disk_write(struct block_device *dev,
+                          const void *buf,
+                          size_t data_size,
+                          loff_t write_addr)
+{
+    if (!dev || !buf) return -1;
+
+    uint8_t sector_buf[512];
+
+    size_t remaining = data_size;
+    size_t offset_buf = 0;
+
+    uint32_t lba = write_addr / 512;
+    uint32_t off = write_addr % 512;
+
+    while (remaining > 0) {
+        size_t c = 512 - off;
+        if (c > remaining) c = remaining;
+
+        if (off || c != 512) {
+            ata_pio_read_sector((struct ata_blkdev*)dev->private_data, lba, sector_buf);
+            memcpy(sector_buf + off,
+                   (const uint8_t*)buf + offset_buf,
+                   c);
+            ata_pio_write_sector((struct ata_blkdev*)dev->private_data, lba, sector_buf);
+        } else {
+            ata_pio_write_sector((struct ata_blkdev*)dev->private_data, lba,
+                                 (uint8_t*)buf + offset_buf);
+        }
+
+        remaining -= c;
+        offset_buf += c;
+        lba++;
+        off = 0;
+    }
+
+    return data_size;
 }
 
-uint32_t ATA_get_sector_count_from_dev(struct block_device *dev) {
-    uint16_t *data = (uint16_t*)dev->private_data;
-    return ((uint32_t)data[61] << 16) | data[60];
-}
 
-uint32_t ATA_get_sector_size_from_dev(struct block_device *dev) {
-    uint16_t *data = (uint16_t*)dev->private_data;
-    uint16_t words_per_sector = data[106] & 0xFFFF;
-    // return words_per_sector ? words_per_sector * 2 : 512;
-    return  512;
-}
 
-int ATA_blkdev_ioctl(struct block_device * blkdev, int op,...) {
-    RET_IF(_IOC_TYPE(op) != 0x12, 1);
+
+int ATA_blkdev_ioctl(struct block_device *blkdev, int op,...)
+{
     switch (_IOC_NR(op)) {
-        case BLKROSET:{
-            return 0;
-        }
-        case BLKROGET:{
-            return 0;
-        }
-        case BLKRRPART:{
-            return 0;
-        }
-        case BLKGETSIZE:{
-            return ATA_get_sector_count_from_dev(blkdev);
-        }
-        case BLKFLSBUF:{
-            return 0;
-        }
-        case BLKRASET:{
-            return 0;
-        }
-        case BLKRAGET:{
-            return 0;
-        }
-        case BLKFRASET:{
-            return 0;
-        }
-        case BLKFRAGET:{
-            return 0;
-        }
-        case BLKSECTSET:{
-            return 0;
-        }
-        case BLKSECTGET:{
-            return 0;
-        }
-        case BLKSSZGET:{
-            return ATA_get_sector_size_from_dev(blkdev);
-        }
+        case BLKGETSIZE:
+            return ((uint32_t*)blkdev->private_data)[60];
+        case BLKSSZGET:
+            return 512;
         default:
             return 0;
     }
 }
+
+
 
 
 static struct block_device_ops ata_ops = {
@@ -238,14 +270,18 @@ static struct block_device_ops ata_ops = {
     .ioctl = ATA_blkdev_ioctl,
 };
 
+const char *names[] = {"ata0", "ata1"};
+uint8_t drives[] = {0xA0, 0xB0};
+
+static struct ata_blkdev ata_devs[sizeof(drives)];
+
 int ata_init() {
-    
-    const char *names[2] = {"ata0", "ata1"};
-    uint8_t drives[2] = {0xA0, 0xB0}; 
+
 
     for (int i = 0; i < 2; i++) {
-        struct Ata_blkdev *ata = kmalloc(sizeof(struct Ata_blkdev));
-        if (!ata) continue;
+
+        struct ata_blkdev *ata = &ata_devs[i];
+        memset(ata, 0, sizeof(*ata));
 
         ata->drive = drives[i];
 
@@ -257,34 +293,39 @@ int ata_init() {
         outb(ATA_LBA_HIGH, 0);
         outb(ATA_COMMAND, ATA_CMD_IDENTIFY);
 
-        int drq_res = ata_wait_drq();
-        if (drq_res != 0) {
-            kfree(ata);
-            continue; // perhaps no drive 
-        }
+        if (ata_wait_drq() != 0)
+            continue;
 
         for (int j = 0; j < 256; j++)
             ata->info_data[j] = inw(ATA_DATA);
 
-        
         ata->sector_count =
             ((uint32_t)ata->info_data[61] << 16) | ata->info_data[60];
 
-        ata->sector_size =512;
-
-        
-
-        Register_Block_Device(
-            names[i],
-            (uint64_t)ata->sector_count * (uint64_t)ata->sector_size,
-            ata->sector_size,
-            ata_ops,
-            ata
-        );
-        
+        ata->sector_size = 512;
     }
 
     return 0;
 }
 
 REGISTER_DRIVER_DEV(ata_drive, ata_init);
+
+int ata_vfs_register_all(void) {
+    for (int i = 0; i < 2; i++) {
+
+        struct ata_blkdev *ata = &ata_devs[i];
+
+        if (ata->sector_size == 0 || ata->sector_count == 0)
+            continue;
+
+        Register_Block_Device(
+            names[i],
+            (uint64_t)ata->sector_count * (uint64_t)ata->sector_size,
+            ata->sector_size,
+            &ata_ops,
+            ata
+        );
+    }
+}
+
+REGISTER_DRIVER_FS(ata_drive_vfs, ata_vfs_register_all);

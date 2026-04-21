@@ -33,18 +33,18 @@ struct block_device_ops {
 struct block_device {
     int id;
     const char *name;
+    void *private_data;
 
     lsize_t size;
     size_t block_size;
     
-    struct block_device_ops ops;
-    void *private_data;
+    struct block_device_ops* ops;
 
     struct list_head list;
 };
 
 struct block_device* Register_Block_Device(const char *name, lsize_t size,
-    size_t block_size, struct block_device_ops ops, void *private_data);
+    size_t block_size, struct block_device_ops* ops, void *private_data);
 
 int Unregister_Block_Device(struct block_device* blkdev);
 

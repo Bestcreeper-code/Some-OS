@@ -12,6 +12,9 @@ typedef uint32_t   kuid_t;
 typedef uint32_t   kgid_t;
 typedef uint32_t   dev_t;
 
+typedef uint32_t lba32;
+typedef uint64_t lba64;
+
 typedef int atomic_t;
 
 typedef loff_t lsize_t;

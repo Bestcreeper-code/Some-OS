@@ -30,7 +30,7 @@
 #include "kernel_data.h"
 #include "string.h"
 #include "vfs.h"
-#include "devfs.h"
+#include "sysfs.h"
 #include "drivers.h"
 
 
@@ -74,11 +74,11 @@ void kmain() {
     
     core_init();
 
-
+    
+    __asm__ volatile ("sti");
 
     dev_init();
         
-    __asm__ volatile ("sti");
     
 //log kernel/cpu info
     Sys_log_NoPos("kernel called with: %s\n", get_bootloader_generic_info()->cmdline);
@@ -104,9 +104,9 @@ void kmain() {
     Sys_color_log_NoPos("Press Any key to continue\n", ANSI_BRIGHT_MAGENTA, ANSI_BG_BLACK);
     
     
-    devfs_init();
+    sysfs_init();
     
-
+    
 
 
 
@@ -118,6 +118,7 @@ void kmain() {
     fs_init();
 
 
+    
     tree(root_dentry, 0);
     
     
@@ -125,7 +126,12 @@ void kmain() {
     // scheduler_init();
     
     // task_switching_flag = 1;
-    Sys_Step_Point()
+    disable_scheduler();
+    // Sys_Step_Point();
+    extern void testing();
+    Sys_log_Pos("-------0x%x\n",ktask_start(testing, "test"));
+    // Sys_Step_Point();
+    enable_scheduler();
     late_init();
     
     while (1) { 

@@ -1,6 +1,8 @@
 [BITS 32]
 global _sched_next_process
 
+extern sched_next_process_core
+
 extern serial_write_string
 extern serial_log_hex
 extern _scheduler_current_process ; Linked_PCB_t*
@@ -9,7 +11,7 @@ extern setTss_sp                  ; function to set TSS.esp0
 
 
 ; on/off logging
-%define DEBUG_SCHED_LOG 1 
+%define DEBUG_SCHED_LOG 0
 
 
 
@@ -88,46 +90,53 @@ msg_name      db "NAME",0
 
 section .text
 _sched_next_process:
-    cli                 ; disable interrupts during switch
+    cli
 
-    ; --- Save current process state ---
-    mov esi, [_scheduler_current_process]
-
-    ; save ESP
-    mov [esi + Linked_PCB_k_esp], esp
-
-    ; save CR3
-    mov eax, cr3
-    mov [esi + Linked_PCB_cr3], eax
-
-    ; --- Select next process ---
-    mov esi, [esi + Linked_PCB_next]
-    cmp esi, 0
-    jne .found_next
-    mov esi, [_scheduler_first_process]
-
-.found_next:
-    
-    
-LOG_PCB esi
-
-    ; --- Update current process pointer ---
-    mov [_scheduler_current_process], esi
-    
-    ; --- Load new process page directory ---
-    mov eax, [esi + Linked_PCB_cr3]
-    mov cr3, eax
-LOG_PCB esi
-    ; --- Update TSS.esp0 for the kernel stack of the new process ---
-    mov eax, [esi + Linked_PCB_kstack_top]
-    push eax
-    call setTss_sp
-    add esp, 4
-    ; --- Restore kernel stack ---
-    mov esp, [esi + Linked_PCB_k_esp]
-
-
-
-    popfd       ; restore eflags 
+    call sched_next_process_core
+        
+    popfd
     popad
-    iretd       ; return from interrupt
+    iretd
+;     cli                 ; disable interrupts during switch
+
+;     ; --- Save current process state ---
+;     mov esi, [_scheduler_current_process]
+
+;     ; save ESP
+;     mov [esi + Linked_PCB_k_esp], esp
+
+;     ; save CR3
+;     mov eax, cr3
+;     mov [esi + Linked_PCB_cr3], eax
+
+;     ; --- Select next process ---
+;     mov esi, [esi + Linked_PCB_next]
+;     cmp esi, 0
+;     jne .found_next
+;     mov esi, [_scheduler_first_process]
+
+; .found_next:
+    
+    
+; LOG_PCB esi
+
+;     ; --- Update current process pointer ---
+;     mov [_scheduler_current_process], esi
+    
+;     ; --- Load new process page directory ---
+;     mov eax, [esi + Linked_PCB_cr3]
+;     mov cr3, eax
+; LOG_PCB esi
+;     ; --- Update TSS.esp0 for the kernel stack of the new process ---
+;     mov eax, [esi + Linked_PCB_kstack_top]
+;     push eax
+;     call setTss_sp
+;     add esp, 4
+;     ; --- Restore kernel stack ---
+;     mov esp, [esi + Linked_PCB_k_esp]
+
+
+
+;     popfd       ; restore eflags 
+;     popad
+;     iretd       ; return from interrupt

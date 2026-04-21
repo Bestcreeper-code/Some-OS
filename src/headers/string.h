@@ -31,6 +31,7 @@ void *memmove(void *dest, const void *src, size_t n);
 
 char* strtok_r(char* str, const char* delim, char** saveptr);
 
+char *strrchr(const char *s, int c);
 
 
 bool Starts_With(const char* string,const char* prefix);

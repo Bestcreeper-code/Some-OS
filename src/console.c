@@ -211,18 +211,18 @@ bool Console_Process_Command(char* command) {
     else if (!strcmp(tokens[0], "cls")) {
         ClearScreen();
     }
-    else if (!strcmp(tokens[0], "dir")) {
-        print_dir(currpath);
-    }
-    else if (!strcmp(tokens[0], "cd")) {
-        if (token_count > 1) {
-            if (change_Current_Dir(&currpath, tokens[1]) != FR_OK) {
-                printf("Directory not found.\n");
-            }
-        } else {
-            result = false;
-        }
-    }
+    // else if (!strcmp(tokens[0], "dir")) {
+    //     print_dir(currpath);
+    // }
+    // else if (!strcmp(tokens[0], "cd")) {
+    //     if (token_count > 1) {
+    //         if (change_Current_Dir(&currpath, tokens[1]) != FR_OK) {
+    //             printf("Directory not found.\n");
+    //         }
+    //     } else {
+    //         result = false;
+    //     }
+    // }
     else if (!strcmp(tokens[0], "echo")) {
         if (token_count > 1) {
                 printstr(tokens[1]);

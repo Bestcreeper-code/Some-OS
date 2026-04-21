@@ -1,10 +1,12 @@
 #include "scheduler.h"
 #include "Logger.h"
+#include "helpers.h"
 #include "paging.h"
 #include "string.h"
 #include "arch_gdt.h"
 #include "arch_asm.h"
 #include "memory.h"
+#include "drivers.h"
 #include "time.h"
 
 
@@ -114,28 +116,25 @@ int kill_process(short proc_pid){
 }
 
 
-void testing(){
-    while (1) {
-    
-        __asm__ volatile (
-            "movl $1, %%eax\n"
-            "int $0x80\n"
-            :
-            :
-            : "eax"
-        );
-    }
-}
-
+REGISTER_DRIVER_CORE(scheduler, scheduler_init);
 int scheduler_init(){   
     
     pid_bitmap[0] &= ~(1 << 0);
     
-    new_pcb(&_k_pd,"Kernel\n",(uint32_t*)0x200000,(Stack_t){0x200000,0x1FF000},(Stack_t){1,1}); // FIXED: give valid kernel stack
+    new_pcb(&_k_pd,"Kernel",(uint32_t*)0x200000,(Stack_t){0x200000,0x1FF000},(Stack_t){1,1}); 
 
     _scheduler_current_process = _scheduler_first_process;
     
+    enable_scheduler();
     return 0;
+}
+
+void enable_scheduler(){
+    task_switching_flag=1;
+}
+
+void disable_scheduler(){
+    task_switching_flag=0;
 }
 
 void _setup_user_stack_sched_frame(void* stack_top, uint32_t* v_esp, uint32_t entry){
@@ -160,22 +159,69 @@ void _setup_user_stack_sched_frame(void* stack_top, uint32_t* v_esp, uint32_t en
     Sys_log("making a sched frame at %x (v_esp=%x)\n",stack_top,*v_esp);
 }
 
-static const char msg_switching[] = "Switching process...";
-static const char msg_pid[] = "PID";
-static const char msg_cr3[] = "CR3";
-static const char msg_esp[] = "V_ESP";
-static const char msg_next[] = "NEXT PCB phys addr";
-static inline void LOG_PCB(Linked_PCB_t* pcb) {
-    serial_write_string(msg_switching);
-    serial_write_string(pcb->name);
 
-    serial_log_hex(msg_pid, pcb->pid);
-    serial_log_hex(msg_cr3, pcb->cr3);
-    serial_log_hex(msg_esp, pcb->k_esp);
-    serial_log_hex(msg_next, (uint32_t)pcb->next);
+
+
+void _setup_kernel_stack_sched_frame(void* stack_top, uint32_t entry, uint32_t* out_esp) {
+    uint32_t* sp = (uint32_t*)stack_top;
+
+    // iret frame (CPU would have pushed this FIRST)
+    *--sp = 0x202;                 // eflags (iret)
+    *--sp = KERNEL_CODE_SEGMENT;   // cs
+    *--sp = entry;                 // eip
+
+    // pushad (your ISR)
+    *--sp = 0; // eax
+    *--sp = 0; // ecx
+    *--sp = 0; // edx
+    *--sp = 0; // ebx
+    *--sp = 0; // esp (dummy)
+    *--sp = 0; // ebp
+    *--sp = 0; // esi
+    *--sp = 0; // edi
+
+    // pushfd (your ISR, LAST push = TOP of stack)
+    *--sp = 0x202;
+
+    *out_esp = (uint32_t)sp;
+}
+
+pid_t ktask_start(void* entry, char* name) {
+    void* stack = (void*)PAGE_ADDR(page_alloc(DEFAULT_STACK_PAGE_AMOUNT,PAGE_FLAG_RW));
+    RET_IF(!stack, 0);
+    uintptr_t out_esp;
+    _setup_kernel_stack_sched_frame(stack+PAGE_ADDR(DEFAULT_STACK_PAGE_AMOUNT), (uint32_t)entry, (uint32_t*)&out_esp);
+
+    return new_pcb((PD_t*)&_k_pd, name, &out_esp,
+        (Stack_t){.bottom = (uintptr_t)stack,.top = (uintptr_t)stack+PAGE_ADDR(DEFAULT_STACK_PAGE_AMOUNT)},
+        (Stack_t){0});
+    
+}
+
+
+int testdata;
+
+void testing(){
+    while (1) {
+    
+        Sys_log("yey\n");testdata++;
+        // int e = 293/0;
+        // int b =e/0;
+    }
+}
+
+static inline void LOG_PCB(Linked_PCB_t* pcb) {
+    RET_IF(pcb->pid==1,);
+    Sys_log_NoPos("Switching to process %s ",pcb->name);
+
+    Sys_log_NoPos("PID = 0x%04x ", pcb->pid);
+    Sys_log_NoPos("CR3 = 0x%x ", pcb->cr3);
+    Sys_log_NoPos("V_ESP = 0x%x ", pcb->k_esp);
+    Sys_log_NoPos("NEXT PCB phys addr = 0x%p\n", pcb->next);
 }
 
 void sched_next_process_core(void) {
+    Sys_log("%x\n",testdata);
     Linked_PCB_t* current = _scheduler_current_process;
 
     uint32_t esp;
@@ -199,7 +245,6 @@ void sched_next_process_core(void) {
 
     __asm__ volatile ("mov %0, %%cr3" :: "r"(next->cr3));
 
-    LOG_PCB(next);
 
     setTss_sp(next->k_esp);
 

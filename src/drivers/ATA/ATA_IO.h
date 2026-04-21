@@ -15,20 +15,24 @@
 #define ATA_SR_BSY      0x80
 #define ATA_SR_DRQ      0x08
 
+
+#define SECTOR_SIZE 512
+
+
 #include <stdint.h>
 #include <stdbool.h>
 
 
-struct Ata_blkdev {
+struct ata_blkdev {
     uint8_t drive;
     uint32_t sector_count;
     uint32_t sector_size;
     uint16_t info_data[256];
 };
-int ata_init();
+int ata_dev_init();
 
-void ata_pio_write_sector(uint32_t lba, const uint8_t *buffer);
-void ata_pio_read_sector(uint32_t lba, uint8_t *buffer);
+void ata_pio_write_sector(struct ata_blkdev *ata, uint32_t lba, const uint8_t *buffer);
+void ata_pio_read_sector(struct ata_blkdev *ata, uint32_t lba, uint8_t *buffer);
 uint32_t ata_get_sector_count();
 bool ata_drive_exists();
 

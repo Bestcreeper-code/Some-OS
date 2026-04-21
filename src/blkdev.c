@@ -4,11 +4,13 @@
 #include "container_of.h"
 #include "fs.h"
 #include "io.h"
+#include "mbr_partition.h"
 #include "memory.h"
 #include "helpers.h"
 #include "types.h"
 #include "vfs.h"
 #include <stddef.h>
+#include <string.h>
 
 
 
@@ -19,14 +21,14 @@ struct list_head* block_device_list_start;
 short block_device_amount;
 
 struct block_device* Register_Block_Device(const char *name, lsize_t size,
-    size_t block_size, struct block_device_ops ops, void *private_data) {
+    size_t block_size, struct block_device_ops* ops, void *private_data) {
+        
     
 #if BLKDEV_DEBUG
     Sys_log("Registered blkdev [%s] with 0x%llx bytes\n",
         name,
         size);
 #endif
-
     struct block_device* blkdev = kmalloc(sizeof(struct block_device));
     if(!blkdev)return NULL;
 
@@ -37,14 +39,15 @@ struct block_device* Register_Block_Device(const char *name, lsize_t size,
     blkdev->private_data = private_data;
     blkdev->id = wbitmap_alloc_first((char*)_blkdev_id_map, sizeof(_blkdev_id_map));
 
+
+    
     if(!block_device_list_start){
         block_device_list_start = &blkdev->list;
         blkdev->list.next = NULL;
         blkdev->list.prev = &blkdev->list;//ez way to get the last one kekw
 
         block_device_amount++;
-        kpath_create(root_dentry->inode, "/dev/", name, S_IFBLK , false);
-        return blkdev;
+        goto vfs_reg;
     }
 
     struct list_head* end_entry = block_device_list_start->prev;
@@ -58,7 +61,14 @@ struct block_device* Register_Block_Device(const char *name, lsize_t size,
     block_device_list_start->prev = &blkdev->list;
 
     block_device_amount++;
-    kpath_create(root_dentry->inode, "/dev/", name, S_IFBLK | 0660, false);
+vfs_reg:
+    char* tmpbuff = kmalloc(sizeof("/sys/devices/block/")+strlen(name)-1);
+    RET_IF(!tmpbuff, NULL);
+
+    sprintf(tmpbuff, "/sys/devices/block/%s", name);
+    kpath_create_force(root_dentry->inode, tmpbuff, S_IFBLK | 0660, false);
+    
+    scan_disk_mbr_vfs(blkdev);
     
     return blkdev;
 }

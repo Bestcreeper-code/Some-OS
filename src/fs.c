@@ -10,8 +10,6 @@
 #include <stdbool.h>
 #include "io.h"
 
-
-
 struct dentry* kpath_lookup(struct inode* start, const char* path) {
     if (!path || !start) return NULL;
 
@@ -54,25 +52,164 @@ struct dentry* kpath_lookup(struct inode* start, const char* path) {
 
 
 
+int kpath_create(struct inode* start, const char* path, umode_t mode, bool excl)
+{Sys_log("\n");
+Sys_log("creating %s\n",path);
+    if (!start || !path)
+        return -E_INVAL;
 
-int kpath_create(struct inode* start, const char* path, char* name, umode_t mode, bool excl){
-    struct dentry* dir = kpath_lookup(start, path);
+    char* copy = strdup(path);
+    if (!copy)
+        return -E_NOMEM;
 
-    if(!dir) RET_ERR(E_NOENT);
-    
-    struct dentry* newdir = kmalloc(sizeof(struct dentry));
-    if(!newdir) RET_ERR(E_NOMEM);
+    char* last_slash = strrchr(copy, '/');
+    char* parent_path;
+    char* name;
 
-    newdir->name = name;
-        
-    
+    if (last_slash) {
+        if (last_slash == copy) {
+            parent_path = "/";
+        } else {
+            *last_slash = '\0';
+            parent_path = copy;
+        }
+        name = last_slash + 1;
+    } else {
+        parent_path = ".";
+        name = copy;
+    }
 
-    return dir->inode->i_op->create(dir->inode, newdir, mode, excl);
+    struct dentry* dir = kpath_lookup(start, parent_path);
+    if (!dir) {
+        kfree(copy);
+        return -E_NOENT;
+    }
+
+    struct dentry* newnode = kmalloc(sizeof(struct dentry));
+    if (!newnode) {
+        kfree(copy);
+        return -E_NOMEM;
+    }
+
+    memset(newnode, 0, sizeof(struct dentry));
+
+    newnode->name   = strdup(name);
+    newnode->parent = dir;
+
+    if (!newnode->name) {
+        kfree(newnode);
+        kfree(copy);
+        return -E_NOMEM;
+    }
+
+    int ret = dir->inode->i_op->create(
+        dir->inode,
+        newnode,
+        mode,
+        excl
+    );
+
+    if (ret < 0) {
+        kfree(newnode->name);
+        kfree(newnode);
+    }
+
+    kfree(copy);
+    return ret;
 }
 
 
-int kpath_mkdir(struct inode* start, const char* path, char* name, umode_t mode) {
-    return kpath_create(start, path, name, mode | S_IFDIR, false);
+int kpath_mkdir(struct inode* start, const char* path, umode_t mode) {
+    return kpath_create(start, path, mode | S_IFDIR, true);
+}
+
+int kpath_create_force(struct inode* start, const char* path, umode_t mode, bool excl)
+{
+    if (!start || !path)
+        return -E_INVAL;
+
+    struct dentry* curr;
+
+    if (path[0] == '/')
+        curr = root_dentry;
+    else
+        curr = start->i_dentry;
+
+    char* copy = strdup(path);
+    if (!copy)
+        return -E_NOMEM;
+
+    char* save = NULL;
+    char* token = strtok_r(copy, "/", &save);
+
+    while (token) {
+
+        if (strcmp(token, ".") == 0) {
+            token = strtok_r(NULL, "/", &save);
+            continue;
+        }
+
+        if (strcmp(token, "..") == 0) {
+            if (curr->parent)
+                curr = curr->parent;
+            token = strtok_r(NULL, "/", &save);
+            continue;
+        }
+
+        struct dentry tmp = {
+            .name = token,
+            .inode = NULL,
+            .parent = curr
+        };
+
+        struct dentry* next =
+            curr->inode->i_op->lookup(curr->inode, &tmp, 0);
+
+        if (!next) {
+
+            struct dentry* newnode = kmalloc(sizeof(struct dentry));
+            if (!newnode) {
+                kfree(copy);
+                return -E_NOMEM;
+            }
+
+            memset(newnode, 0, sizeof(struct dentry));
+
+            newnode->name   = strdup(token);
+            newnode->parent = curr;
+
+            if (!newnode->name) {
+                kfree(newnode);
+                kfree(copy);
+                return -E_NOMEM;
+            }
+
+            int ret = curr->inode->i_op->mkdir(
+                curr->inode,
+                newnode,
+                S_IFDIR | mode
+            );
+
+            if (ret < 0) {
+                kfree(newnode->name);
+                kfree(newnode);
+                kfree(copy);
+                return ret;
+            }
+
+            next = newnode;
+        }
+
+        curr = next;
+        token = strtok_r(NULL, "/", &save);
+    }
+
+    kfree(copy);
+    return 0;
+}
+
+int kpath_mkdir_force(struct inode* start, const char* path, umode_t mode) {
+    kpath_create_force(start, path, S_IFDIR | mode, true);
 }
 
 int kpath_rmdir(struct inode* start, const char* path, char* name) {
@@ -106,8 +243,8 @@ int path_unlink(struct inode* start, const char* path, char* name) {
 void tree(struct dentry* d, int depth){
     if(!d) return;
     
-    for(int i=0;i<depth-1;i++) Sys_log_NoPos("  ");
-    if(depth)Sys_log_NoPos("|_");
+    for(int i=0;i<depth;i++) Sys_log_NoPos("  ");
+    
     
     Sys_log_NoPos(d->name);
     if(S_ISDIR(d->inode->i_mode)) Sys_log_NoPos("/");

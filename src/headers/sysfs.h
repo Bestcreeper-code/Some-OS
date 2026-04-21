@@ -6,4 +6,4 @@
 
 
 
-int devfs_init();
+int sysfs_init();

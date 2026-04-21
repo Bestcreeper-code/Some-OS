@@ -18,8 +18,8 @@ int bootloader_c_entry(unsigned int magic, unsigned long mb_struct_addr){
     
 
     boot_info.boot_flags = mb_info.flags;
-    memcpy(boot_info.bootloader_name, "Grub 2");
-    memcpy(boot_info.cmdline, (char*)mb_info.cmdline);
+    strcpy(boot_info.bootloader_name, (char*)mb_info.boot_loader_name);
+    strcpy(boot_info.cmdline, (char*)mb_info.cmdline);
 
     mem_info.mmap_addr = (struct bootloader_mmap_entry*)mb_info.mmap_addr;
     mem_info.mmap_length = mb_info.mmap_length;

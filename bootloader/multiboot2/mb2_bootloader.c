@@ -73,47 +73,47 @@ int bootloader_c_entry(unsigned int magic, unsigned long mb_struct_addr){
                     ((struct multiboot_tag_bootdev *) tag)->slice,
                     ((struct multiboot_tag_bootdev *) tag)->part);
                 break;
-            case MULTIBOOT_TAG_TYPE_MMAP:
-            
-                boot_info.boot_flags |= BL_BOOT_FLAG_MEM_MAP;
-                mem_info.mmap_addr = (struct bootloader_mmap_entry*)((struct multiboot_tag_mmap *) tag)->entries;
-                mem_info.mmap_length = ((struct multiboot_tag_mmap *) tag)->size;
-
-                multiboot_memory_map_t *mmap;
+                case MULTIBOOT_TAG_TYPE_MMAP:
+                {
+                    boot_info.boot_flags |= BL_BOOT_FLAG_MEM_MAP;
                 
-                struct bootloader_mmap_entry* mmap_out = boot_mmap_buffer; 
-
-                for (mmap = ((struct multiboot_tag_mmap *) tag)->entries;
-                    (multiboot_uint8_t *) mmap < (multiboot_uint8_t *) tag + tag->size;
-                    mmap = (multiboot_memory_map_t *) ((unsigned long) mmap + ((struct multiboot_tag_mmap *) tag)->entry_size)){
+                    struct multiboot_tag_mmap *tag_mmap = (struct multiboot_tag_mmap *) tag;
+                
+                    multiboot_memory_map_t *mmap;
+                    struct bootloader_mmap_entry *mmap_out = boot_mmap_buffer;
+                
+                    uint8_t *end = (uint8_t *)tag + tag->size;
+                    size_t mmap_count = 0;
+                
+                    for (mmap = tag_mmap->entries;
+                         (uint8_t *)mmap < end;
+                         mmap = (multiboot_memory_map_t *)((uint8_t *)mmap + tag_mmap->entry_size))
+                    {
+                        if (mmap_out >= boot_mmap_buffer + 64)
+                            break;
+                
+                        mmap_out->addr = mmap->addr;
+                        mmap_out->len  = mmap->len;
+                        mmap_out->type = mmap->type;
+                
+                        mmap_out->size = sizeof(struct bootloader_mmap_entry)- sizeof(mmap_out->size);
+                
+                        Sys_log(" base_addr = 0x%x%x, length = 0x%x%x, type = 0x%x\n",
+                            (unsigned)(mmap->addr >> 32),
+                            (unsigned)(mmap->addr & 0xffffffff),
+                            (unsigned)(mmap->len >> 32),
+                            (unsigned)(mmap->len & 0xffffffff),
+                            (unsigned)mmap->type);
+                        mmap_out++;
+                        mmap_count++;
+                    }
+                
+                    mem_info.mmap_addr = boot_mmap_buffer;
+                    mem_info.mmap_length = tag->size - sizeof(struct multiboot_tag_mmap);
                     
-                    multiboot_memory_map_t tmp_entry= *mmap;
-                    
-                    
-                    mmap_out->addr = tmp_entry.addr;
-                    mmap_out->len = tmp_entry.len;
-                    mmap_out->type = tmp_entry.type;
-
-                    mmap_out->size = ((struct multiboot_tag_mmap *) tag)->entry_size;
-
-                    Sys_log(" base_addr = 0x%x%x,"
-                        " length = 0x%x%x, type = 0x%x\n",
-                        (unsigned) (mmap->addr >> 32),
-                        (unsigned) (mmap->addr & 0xffffffff),
-                        (unsigned) (mmap->len >> 32),
-                        (unsigned) (mmap->len & 0xffffffff),
-                        (unsigned) mmap->type);//Sys_Breakpoint();
-
-                    Sys_log("out base_addr = 0x%x%x,"
-                        " length = 0x%x%x, type = 0x%x\n",
-                        (unsigned) (mmap_out->addr >> 32),
-                        (unsigned) (mmap_out->addr & 0xffffffff),
-                        (unsigned) (mmap_out->len >> 32),
-                        (unsigned) (mmap_out->len & 0xffffffff),
-                        (unsigned) mmap_out->type);//Sys_Breakpoint();
+                
+                    break;
                 }
-                
-                break;
             case MULTIBOOT_TAG_TYPE_FRAMEBUFFER:
             {
                 boot_info.boot_flags |= BL_BOOT_FLAG_FRAMEBUFFER_INFO;

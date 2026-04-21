@@ -22,7 +22,7 @@ struct super_operations {
 };
 
 struct super_block {
-    dev_t s_dev;                      // device / fs id
+    dev_t s_dev;                      // device id
     unsigned char s_blocksize_bits;
     unsigned long s_blocksize;
     loff_t s_maxbytes;                // max file size

@@ -109,9 +109,9 @@ DRESULT disk_read (
 	// 	return res;
 
 	case DEV_MMC : //Hard Disk
-		
+		struct ata_blkdev e = {.drive=0xA0};
 		for(int i=0;i<count;i++){
-			ata_pio_read_sector(sector+i,buff+(i*512));
+			ata_pio_read_sector(&e ,sector+i,buff+(i*512));
 		}
 		
 
@@ -159,8 +159,9 @@ DRESULT disk_write (
 	// 	return res;
 
 	case DEV_MMC :
+	struct ata_blkdev e = {.drive=0xA0};
 		for(int i=0;i<count;i++){
-			ata_pio_write_sector(sector+i,buff+(i*512));
+			ata_pio_write_sector(&e,sector+i,buff+(i*512));
 		}
 		
 
@@ -209,7 +210,7 @@ DRESULT disk_ioctl (
 		case CTRL_SYNC:
     		return RES_OK;
 		case GET_SECTOR_COUNT:
-			*(DWORD*)buff = Get_Block_Device(0)->ops.ioctl((struct block_device*)Get_Block_Device(0),BLKGETSIZE); 
+			*(DWORD*)buff = Get_Block_Device(0)->ops->ioctl((struct block_device*)Get_Block_Device(0),BLKGETSIZE); 
 			return RES_OK;
 		case GET_SECTOR_SIZE:
 			*(WORD*)buff = 512; 

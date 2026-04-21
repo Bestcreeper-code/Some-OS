@@ -150,6 +150,8 @@ void force_free(uint32_t address, uint32_t size) {
 REGISTER_DRIVER_CORE(k_allocator, parse_memory_map);
 int parse_memory_map() {
     struct bl_mem_info* mem_info = get_bootloader_mem_info();
+    Sys_log("  Base = 0x%llx, Length = 0x%llx, Type = %u, Entry size = 0x%x zr,gcfh,nh,dbtvr %p\n", 
+        mem_info->mmap_addr[0].addr, mem_info->mmap_addr[0].len, mem_info->mmap_addr[0].type,mem_info->mmap_addr[0].size,mem_info);
     Sys_log("Parsing memory map...\n");
 
     ram_amount = ((mem_info->mem_upper) + 1024)*1024;
@@ -175,7 +177,7 @@ int parse_memory_map() {
         uintptr_t len  = (mmap->len + 0xFFF) & ~0xFFF;
         uintptr_t page_end = base + len;
         
-        Sys_log("  Base = 0x%p, Length = 0x%p, Type = %d, Entry size = 0x%x\n", (void*)base, (void*)len, mmap->type,mmap);
+        Sys_log("  Base = 0x%llx, Length = 0x%llx, Type = %u, Entry size = 0x%x\n", mmap->addr, mmap->len, mmap->type,mmap->size);
         
         mmap = (struct bootloader_mmap_entry*)((uintptr_t)mmap + mmap->size + sizeof(mmap->size));
     }

@@ -18,10 +18,13 @@ struct file_system_type {
     struct list_head fs_supers;
 };
 struct dentry* kpath_lookup(struct inode* start, const char* path);
-int kpath_create(struct inode* start, const char* path, char* name, umode_t mode, bool excl);
-int kpath_mkdir(struct inode* start, const char* path, char* name, umode_t mode);
+int kpath_create(struct inode* start, const char* path, umode_t mode, bool excl);
+int kpath_mkdir(struct inode* start, const char* path, umode_t mode);
 int kpath_rmdir(struct inode* start, const char* path, char* name);
 int path_unlink(struct inode* start, const char* path, char* name);
+
+int kpath_create_force(struct inode* start, const char* path, umode_t mode, bool excl);
+int kpath_mkdir_force(struct inode* start, const char* path, umode_t mode);
 
 void tree(struct dentry* d, int depth);
 
