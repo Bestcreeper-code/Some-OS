@@ -130,6 +130,8 @@ void kmain() {
     // Sys_Step_Point();
     extern void testing();
     Sys_log_Pos("-------0x%x\n",ktask_start(testing, "test"));
+    Sys_log_Pos("-------0x%x\n",ktask_start(testing, "test"));
+    Sys_log_Pos("-------0x%x\n",ktask_start(testing, "test"));
     // Sys_Step_Point();
     enable_scheduler();
     late_init();

@@ -24,7 +24,7 @@ section .text
         cli
 
         pushad
-        pushfd
+        ; pushfd
 
         ;call the timer tick before anything else
         call timer_irq
@@ -62,7 +62,7 @@ section .text
         mov al, 0x20
         out 0x20, al
 
-        popfd
+        ; popfd
         popad
         sti
         iretd

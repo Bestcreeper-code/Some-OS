@@ -91,10 +91,11 @@ msg_name      db "NAME",0
 section .text
 _sched_next_process:
     cli
-
+    push esp
     call sched_next_process_core
-        
-    popfd
+    
+    mov esp, eax
+    ; popfd
     popad
     iretd
 ;     cli                 ; disable interrupts during switch

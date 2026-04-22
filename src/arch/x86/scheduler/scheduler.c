@@ -1,6 +1,7 @@
 #include "scheduler.h"
 #include "Logger.h"
 #include "helpers.h"
+#include "io.h"
 #include "paging.h"
 #include "string.h"
 #include "arch_gdt.h"
@@ -180,8 +181,8 @@ void _setup_kernel_stack_sched_frame(void* stack_top, uint32_t entry, uint32_t* 
     *--sp = 0; // esi
     *--sp = 0; // edi
 
-    // pushfd (your ISR, LAST push = TOP of stack)
-    *--sp = 0x202;
+    // // pushfd (your ISR, LAST push = TOP of stack)
+    // *--sp = 0x202;
 
     *out_esp = (uint32_t)sp;
 }
@@ -199,14 +200,14 @@ pid_t ktask_start(void* entry, char* name) {
 }
 
 
-int testdata;
+volatile int testdata=1;
 
 void testing(){
+    int e = ++testdata;
     while (1) {
     
-        Sys_log("yey\n");testdata++;
-        // int e = 293/0;
-        // int b =e/0;
+        Sys_log("hello from kthread %d\n",e);
+        
     }
 }
 
@@ -220,13 +221,12 @@ static inline void LOG_PCB(Linked_PCB_t* pcb) {
     Sys_log_NoPos("NEXT PCB phys addr = 0x%p\n", pcb->next);
 }
 
-void sched_next_process_core(void) {
-    Sys_log("%x\n",testdata);
+void* sched_next_process_core(uint32_t saved_esp) {
+
     Linked_PCB_t* current = _scheduler_current_process;
 
-    uint32_t esp;
-    __asm__ volatile ("mov %%esp, %0" : "=r"(esp));
-    current->k_esp = esp;
+    current->k_esp = saved_esp;
+    
 
     uint32_t cr3;
     __asm__ volatile ("mov %%cr3, %0" : "=r"(cr3));
@@ -248,7 +248,7 @@ void sched_next_process_core(void) {
 
     setTss_sp(next->k_esp);
 
-    __asm__ volatile ("mov %0, %%esp" :: "r"(next->k_esp));
+    return (void*)next->k_esp;
 }
 
 // __attribute__((naked)) void _sched_next_process(void) {
