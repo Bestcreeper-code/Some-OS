@@ -15,6 +15,7 @@
 #define _MAX_PT_AMOUNT  1024
 
 #define KERNEL_PDE_COUNT 128
+#define KERNEL_PDE_OFFSET 0
 
 #define _PAGETABLE_MAPPED_SIZE 0x400000
 
@@ -94,3 +95,5 @@ void reserve_kernel_pages();
 
 
 void dump_pd();
+
+void pd_init(PD_t* pd);

@@ -53,6 +53,6 @@ void itoa(int value, char* str, int base);
 char* strlow(const char* str);
 
 
-const char* byte_nb_simplify(uint32_t size_bytes, char* buf);
+const char* byte_nb_simplify(uint32_t size_bytes, char* buf, int depth);
 
 #endif // STRING_H

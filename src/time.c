@@ -48,7 +48,7 @@ int pit_init() {
     force_alloc(TICKS_AMOUNT,sizeof(uint64_t));
     timer_ticks =0;
     
-    uint16_t divisor = 1193180*10 / PIT_FREQUENCY;
+    uint16_t divisor = 1193180 / PIT_FREQUENCY;
     
     outb(PIT_COMMAND, 0x36);                 // Channel 0, lobyte/hibyte, mode 3
     outb(PIT_CHANNEL0, divisor & 0xFF);      // Low byte

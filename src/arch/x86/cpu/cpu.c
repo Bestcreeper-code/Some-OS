@@ -43,7 +43,7 @@ int cpu_log_specs(){
 
                 unsigned int cache_size = ways * partitions * line_size * sets;
                 char cache_size_text[8];
-                byte_nb_simplify(cache_size, cache_size_text);
+                byte_nb_simplify(cache_size, cache_size_text,0);
                 sys_color_serial_logf("L%d cache size = %s\n", ANSI_BRIGHT_CYAN, ANSI_BG_BLACK,"","",0, 
                     cache_level, cache_size_text);
             }

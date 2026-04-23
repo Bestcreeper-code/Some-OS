@@ -22,7 +22,7 @@ int scan_disk_mbr_vfs(struct block_device* blkdev) {
 
 
     
-
+#if MBR_DEBUG
     Sys_log_NoPos("mbr:{\n");
     for (int i = 0; i < 512; i++) {
         Sys_log_NoPos("%02x", ((uint8_t*)mbr)[i]);
@@ -30,14 +30,18 @@ int scan_disk_mbr_vfs(struct block_device* blkdev) {
             Sys_log_NoPos("\n");
     }
     Sys_log_NoPos("\n} mbr end\n");
-
+#endif
     for(int i = 0; i<4;i++ ) {
+#if MBR_DEBUG
         Sys_log("scaning /sys/devices/block/%s mbr part %d\n", blkdev->name, i);
+#endif
         mbr_partition_entry* partit = &mbr->partition_table[i];
 
         if(partit->total_sectors == 0) continue;
 
+#if MBR_DEBUG
         Sys_log(" /sys/devices/block/%s mbr part %d exists\n", blkdev->name, i);
+#endif
         char tmp_buff[64];
         
         sprintf(tmp_buff, "/sys/devices/block/%s/%sp%d", blkdev->name, blkdev->name, i+1);

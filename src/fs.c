@@ -53,8 +53,10 @@ struct dentry* kpath_lookup(struct inode* start, const char* path) {
 
 
 int kpath_create(struct inode* start, const char* path, umode_t mode, bool excl)
-{Sys_log("\n");
-Sys_log("creating %s\n",path);
+{
+#if VFS_ACTIONS_DEBUG
+    Sys_log("creating %s\n",path);
+#endif
     if (!start || !path)
         return -E_INVAL;
 

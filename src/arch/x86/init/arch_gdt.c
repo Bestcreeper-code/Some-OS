@@ -1,5 +1,4 @@
-#include "arch_gdt.h"
-#include "gdt.h"
+    #include "arch_gdt.h"
 #include "string.h"
 
 extern void gdt_flush(uint32_t);
@@ -50,7 +49,7 @@ void init_gdt(){
 
 void init_tss(uint32_t esp) {
     memset(&tss, 0, sizeof(tss));
-    tss.ss0 = 0x10;              // kernel data selector
+    tss.ss0 = KERNEL_DATA_SEGMENT;              // kernel data selector
     tss.esp0 = esp;              // top of kernel stack
     asm volatile("ltr %0" : : "r"(5 << 3)); // load TSS (selector = 5<<3)
 }

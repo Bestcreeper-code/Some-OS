@@ -7,9 +7,11 @@
 #include "arch_asm.h"
 #include "arch_paging.h"
 
-#define MAX_PID SHRT_MAX
+#define MAX_PID                     SHRT_MAX/2
 
-#define DEFAULT_STACK_PAGE_AMOUNT 32
+#define DEFAULT_STACK_PAGE_AMOUNT   32
+#define DEFAULT_STACK_PAGE_BYTES    (DEFAULT_STACK_PAGE_AMOUNT<<12)
+#define STACK_UPPER_USPACE_ADDR     0XBFFFFFFF
 
 typedef short pid_t;
 
@@ -29,15 +31,7 @@ typedef struct Linked_PCB_t {
 } __attribute__((__packed__)) Linked_PCB_t; 
 
 typedef struct __attribute__((packed)) ProcessStackFrame {
-    // // seg regs push
-    // uint32_t gs;
-    // uint32_t fs;
-    // uint32_t es;
-    // uint32_t ds;
-
-    // pushfd 
-    uint32_t eflags;
-
+    
     // pushad 
     uint32_t edi;
     uint32_t esi;
@@ -60,7 +54,7 @@ typedef struct __attribute__((packed)) ProcessStackFrame {
 
 
 typedef struct __attribute__((packed)) KProcessStackFrame {
-    uint32_t eflags;      // pushfd (TOP of stack)
+    
 
     // pushad
     uint32_t edi;
@@ -87,10 +81,11 @@ int scheduler_init();
 
 pid_t new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, Stack_t k_stack, Stack_t us_stack);
 
-void _setup_user_stack_sched_frame(void* stack_frame_upper, uint32_t* esp, uint32_t entry);
+void _setup_user_stack_sched_frame(void* us_stack_top, void* k_stack_top, uint32_t entry, uint32_t* out_esp);
 void _setup_kernel_stack_sched_frame(void* stack_top, uint32_t entry, uint32_t* out_esp);
 
 pid_t ktask_start(void* entry, char* name);
+pid_t us_task_start(void* entry, char* name, PD_t page_dir);
 void enable_scheduler();
 void disable_scheduler();
 

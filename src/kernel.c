@@ -1,31 +1,20 @@
-#include "ATA_IO.h"
 #include "FileSystem.h"
-#include "asm.h"
+#include "arch_paging.h"
 #include "bootloader.h"
-#include "console.h"
 #include "drivers/drivers.h"
-#include "err_codes.h"
+#include "elf--later/elf.h"
+#include "ff.h"
 #include "fs.h"
-#include "io.h"
 #include "memory.h"
 
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "ff.h"
 #include "Logger.h"
 #include "arch.h"
-#include "panic.h"
-#include "path.h"
-#include "time.h"
-#include "types.h"
-#include "video.h"
-#include "gdt.h"
-#include "mouse.h"
 #include "paging.h"
 #include "scheduler.h"
 #include "symbols.h"
-#include "config/config.h"
 #include "cpu.h"
 #include "kernel_data.h"
 #include "string.h"
@@ -95,8 +84,8 @@ void kmain() {
     char simplified_nb_1[16]; 
     char simplified_nb_2[16];
 
-    byte_nb_simplify(get_used_ram(), simplified_nb_1);
-    byte_nb_simplify(ram_amount, simplified_nb_2);
+    byte_nb_simplify(get_used_ram(), simplified_nb_1,1);
+    byte_nb_simplify(ram_amount, simplified_nb_2,1);
 
     Sys_color_log_NoPos("Ram Used = %s / %s \n",ANSI_BRIGHT_GREEN,0,simplified_nb_1, simplified_nb_2);
     Sys_log_NoPos("=====================================================\n");
@@ -122,17 +111,20 @@ void kmain() {
     tree(root_dentry, 0);
     
     
-
-    // scheduler_init();
-    
     // task_switching_flag = 1;
     disable_scheduler();
-    // Sys_Step_Point();
+    // // Sys_Step_Point();
     extern void testing();
     Sys_log_Pos("-------0x%x\n",ktask_start(testing, "test"));
-    Sys_log_Pos("-------0x%x\n",ktask_start(testing, "test"));
-    Sys_log_Pos("-------0x%x\n",ktask_start(testing, "test"));
-    // Sys_Step_Point();
+    pid_t spawn_test_task();
+    disable_scheduler();
+    Sys_log_Pos("-------0x%x\n",spawn_test_task());
+    
+
+
+    // Sys_log_Pos("-------0x%x\n",ktask_start(testing, "test"));
+    // Sys_log_Pos("-------0x%x\n",ktask_start(testing, "test"));
+
     enable_scheduler();
     late_init();
     
@@ -146,3 +138,31 @@ void kmain() {
 
 
 
+extern char user_test_entry;
+extern char user_test_end;
+
+pid_t spawn_test_task() {
+    PD_t pd;
+    pd.pde_arr = (PDE*)PAGE_ADDR( page_alloc(1, PAGE_FLAG_RW));
+    
+    pd_init(&pd);
+    
+    uintptr_t vaddr = 0x400000;
+
+    uintptr_t phys = page_alloc(1, PAGE_FLAG_RW | PAGE_FLAG_USER);
+    if (!phys) return -1;
+    
+    uintptr_t paddr = phys << 12;
+
+    // map user page
+    pd_map_page(&pd, vaddr, phys, 1, 1, 1);
+
+    // copy ASM blob instead of C function
+    size_t size = (uintptr_t)&user_test_end - (uintptr_t)&user_test_entry;
+    memcpy((void*)paddr,
+           (void*)&user_test_entry,
+           size);
+
+    // start at ASM entry point
+    return us_task_start((void*)vaddr, "test_uspace_task", pd);
+}

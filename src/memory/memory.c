@@ -154,7 +154,7 @@ int parse_memory_map() {
         mem_info->mmap_addr[0].addr, mem_info->mmap_addr[0].len, mem_info->mmap_addr[0].type,mem_info->mmap_addr[0].size,mem_info);
     Sys_log("Parsing memory map...\n");
 
-    ram_amount = ((mem_info->mem_upper) + 1024)*1024;
+    ram_amount = ((mem_info->mem_upper) + mem_info->mem_lower)*1024;
 
     free_region_map_t* k_mmap = get_free_region_map();
     //cleanup the k_mmap

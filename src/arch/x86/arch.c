@@ -1,11 +1,12 @@
 #include "arch.h"
 #include "Logger.h"
+#include "arch_gdt.h"
 #include "arch_paging.h"
 #include "asm.h"
 #include "bootloader.h"
 #include "err_codes.h"
 #include "idt.h"
-#include "gdt.h"
+
 #include "kernel_data.h"
 
 #include "paging.h"
@@ -32,7 +33,7 @@ int arch_init(){
     page_index allocated_stack_pages = page_alloc(KERNEL_STACK_PAGE_AMOUNT, PAGE_FLAG_RW);
     uintptr_t allocated_stack_top = (PAGE_ADDR(allocated_stack_pages) + (KERNEL_STACK_PAGE_AMOUNT * PAGE_SIZE));
 
-    if (!allocated_stack_top) {
+    if (!allocated_stack_pages) {
         Sys_Error("Couldn't allocate kernel stack :(");
         while (1) __asm__ volatile ("hlt");
     }

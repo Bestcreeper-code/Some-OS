@@ -330,8 +330,8 @@ PARTITION VolToPart[16] = {
 //     return -1; // Not found
 // }
 
-
 // int mount_notthatrealroot(){
+
 //     int mount_counter = 0;
 // mounting:
 //     Sys_log("trying to mount filesystem...\n");

@@ -1,5 +1,6 @@
 #include "scheduler.h"
 #include "Logger.h"
+#include "arch_paging.h"
 #include "helpers.h"
 #include "io.h"
 #include "paging.h"
@@ -9,6 +10,7 @@
 #include "memory.h"
 #include "drivers.h"
 #include "time.h"
+#include <stdint.h>
 
 
 Linked_PCB_t* _scheduler_first_process = 0;
@@ -138,40 +140,91 @@ void disable_scheduler(){
     task_switching_flag=0;
 }
 
-void _setup_user_stack_sched_frame(void* stack_top, uint32_t* v_esp, uint32_t entry){
-    ProcessStackFrame* frame = (ProcessStackFrame*)((uint8_t*)stack_top - sizeof(ProcessStackFrame));
+// void _setup_user_stack_sched_frame(void* stack_top, uint32_t* v_esp, uint32_t entry){
+//     ProcessStackFrame* frame = (ProcessStackFrame*)((uint8_t*)stack_top - sizeof(ProcessStackFrame));
 
-    frame->eax = 0;
-    frame->ebx = 0;
-    frame->ecx = 0;
-    frame->edx = 0;
-    frame->esi = 0;
-    frame->edi = 0;
-    frame->ebp = (uint32_t)*v_esp;
-    frame->esp = (uint32_t)*v_esp;
-    frame->eip = entry;
-    frame->cs = USER_CODE_SEGMENT;
-    frame->eflags_iret = 0x202;
-    frame->useresp = (uint32_t)*v_esp;
-    frame->ss = USER_DATA_SEGMENT;
+//     frame->eax = 0;
+//     frame->ebx = 0;
+//     frame->ecx = 0;
+//     frame->edx = 0;
+//     frame->esi = 0;
+//     frame->edi = 0;
+//     frame->ebp = (uint32_t)*v_esp;
+//     frame->esp = (uint32_t)*v_esp;
+//     frame->eip = entry;
+//     frame->cs = USER_CODE_SEGMENT;
+//     frame->eflags_iret = 0x202;
+//     frame->useresp = (uint32_t)*v_esp;
+//     frame->ss = USER_DATA_SEGMENT;
 
-    *v_esp -=sizeof(ProcessStackFrame);
+//     *v_esp -=sizeof(ProcessStackFrame);
 
-    Sys_log("making a sched frame at %x (v_esp=%x)\n",stack_top,*v_esp);
+//     Sys_log("making a sched frame at %x (v_esp=%x)\n",stack_top,*v_esp);
+// }
+
+void _setup_user_stack_sched_frame(void* us_stack_top, void* k_stack_top, uint32_t entry, uint32_t* out_esp) {
+    uint32_t* sp = (uint32_t*)k_stack_top;
+
+    *--sp = USER_DATA_SEGMENT; // ss
+    *--sp = (uintptr_t)us_stack_top; // useresp
+    // iret frame 
+    *--sp = 0x202;                 // eflags
+    *--sp = USER_CODE_SEGMENT;   // cs
+    *--sp = entry;                 // eip
+
+    // pushad 
+    *--sp = 0; // eax
+    *--sp = 0; // ecx
+    *--sp = 0; // edx
+    *--sp = 0; // ebx
+    *--sp = 0; // esp (dummy)
+    *--sp = 0; // ebp
+    *--sp = 0; // esi
+    *--sp = 0; // edi
+    
+
+    
+
+    *out_esp = (uint32_t)sp;
 }
 
+pid_t us_task_start(void* entry, char* name, PD_t page_dir) {
+    //kernel space bc ... why not?
+    void* k_stack = (void*)PAGE_ADDR(page_alloc(DEFAULT_STACK_PAGE_AMOUNT,PAGE_FLAG_RW));
+    RET_IF(!k_stack, 0);
+    
+    page_index us_stack_pages = page_alloc_nomap(DEFAULT_STACK_PAGE_AMOUNT);
+    uintptr_t us_stack_bott = PAGE_ADDR(us_stack_pages);
+    
+    RET_IF(!us_stack_pages, 0);
+    pd_map_page(&page_dir, STACK_UPPER_USPACE_ADDR-DEFAULT_STACK_PAGE_BYTES, us_stack_pages, 1, 1, 1);
+
+    uintptr_t out_esp;
+    _setup_user_stack_sched_frame(
+        (void*)us_stack_bott+DEFAULT_STACK_PAGE_BYTES,
+        k_stack+DEFAULT_STACK_PAGE_BYTES,
+        (uintptr_t)entry,
+        &out_esp
+    );
+
+    return new_pcb((PD_t*)&_k_pd, name, &out_esp,
+        (Stack_t){.bottom = (uintptr_t)k_stack,.top = (uintptr_t)k_stack+DEFAULT_STACK_PAGE_BYTES},
+        (Stack_t){.bottom = (uintptr_t)us_stack_bott,.top = (uintptr_t)us_stack_bott+DEFAULT_STACK_PAGE_BYTES}
+        );
+    
+}
 
 
 
 void _setup_kernel_stack_sched_frame(void* stack_top, uint32_t entry, uint32_t* out_esp) {
     uint32_t* sp = (uint32_t*)stack_top;
 
-    // iret frame (CPU would have pushed this FIRST)
-    *--sp = 0x202;                 // eflags (iret)
+    // iret frame 
+    *--sp = 0x202;                 // eflags
     *--sp = KERNEL_CODE_SEGMENT;   // cs
     *--sp = entry;                 // eip
 
-    // pushad (your ISR)
+    // pushad 
     *--sp = 0; // eax
     *--sp = 0; // ecx
     *--sp = 0; // edx
@@ -181,8 +234,7 @@ void _setup_kernel_stack_sched_frame(void* stack_top, uint32_t entry, uint32_t* 
     *--sp = 0; // esi
     *--sp = 0; // edi
 
-    // // pushfd (your ISR, LAST push = TOP of stack)
-    // *--sp = 0x202;
+    
 
     *out_esp = (uint32_t)sp;
 }
@@ -191,10 +243,10 @@ pid_t ktask_start(void* entry, char* name) {
     void* stack = (void*)PAGE_ADDR(page_alloc(DEFAULT_STACK_PAGE_AMOUNT,PAGE_FLAG_RW));
     RET_IF(!stack, 0);
     uintptr_t out_esp;
-    _setup_kernel_stack_sched_frame(stack+PAGE_ADDR(DEFAULT_STACK_PAGE_AMOUNT), (uint32_t)entry, (uint32_t*)&out_esp);
+    _setup_kernel_stack_sched_frame(stack+DEFAULT_STACK_PAGE_BYTES, (uint32_t)entry, (uint32_t*)&out_esp);
 
     return new_pcb((PD_t*)&_k_pd, name, &out_esp,
-        (Stack_t){.bottom = (uintptr_t)stack,.top = (uintptr_t)stack+PAGE_ADDR(DEFAULT_STACK_PAGE_AMOUNT)},
+        (Stack_t){.bottom = (uintptr_t)stack,.top = (uintptr_t)stack+DEFAULT_STACK_PAGE_BYTES},
         (Stack_t){0});
     
 }
@@ -204,11 +256,18 @@ volatile int testdata=1;
 
 void testing(){
     int e = ++testdata;
-    while (1) {
-    
-        Sys_log("hello from kthread %d\n",e);
-        
-    }
+    uint32_t eax = 4;
+    uint32_t ebx = 1;
+    uint32_t ecx = 0x41414141;
+    uint32_t edx = 4;
+
+    asm volatile (
+        "int $0x80"
+        :
+        : "a"(eax), "b"(ebx), "c"(ecx), "d"(edx)
+        : "memory"
+    );
+    Sys_Breakpoint();
 }
 
 static inline void LOG_PCB(Linked_PCB_t* pcb) {
@@ -228,9 +287,6 @@ void* sched_next_process_core(uint32_t saved_esp) {
     current->k_esp = saved_esp;
     
 
-    uint32_t cr3;
-    __asm__ volatile ("mov %%cr3, %0" : "=r"(cr3));
-    current->cr3 = cr3;
 
     Linked_PCB_t* next = current->next;
     if (!next) {

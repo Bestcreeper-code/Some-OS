@@ -6,6 +6,7 @@
 
 #include "arch_paging.h"
 #include "asm.h"
+#include "scheduler.h"
 
 #define EI_NIDENT 16
 #define SHN_UNDEF 0
@@ -176,8 +177,8 @@ typedef struct
 } ProcessInfo;
 
 
-LoadedElf* LoadElf(const char* path);
+pid_t LoadElf(const char* path);
 
-ProcessInfo exec_ELF(char* path);
+
 
 #endif // ELF_H

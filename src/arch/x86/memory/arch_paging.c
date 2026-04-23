@@ -158,7 +158,7 @@ void pd_map_page(PD_t* pd, uint32_t virtual_addr, uint32_t physical_addr, uint8_
 
     PTE* pte = &pt_base[pt_index];
 
-    sleep(0); // fixes all QEMU jank smh
+    sleep(0); // fixes asll QEMU jank smh
 
     pte->present = present;
     pte->rw = rw;
@@ -698,4 +698,28 @@ page_index vmap(page_index phys, size_t count, char flags) {
 found:
     if (map_range(run_start, phys, count, flags) != 0) return 0;
     return run_start;
+}
+
+
+void pd_init(PD_t* pd) {
+    if (!pd || !pd->pde_arr) return;
+
+    memset((void*)pd->pde_arr, 0, PAGE_SIZE);
+
+    for (uint32_t i = 0; i < KERNEL_PDE_COUNT; i++) {
+        uint32_t src = KERNEL_PDE_OFFSET + i;
+
+        pd->pde_arr[src] = _k_pd.pde_arr[src];
+
+
+        pd->pde_arr[src].user = 0;
+    }
+
+    for (uint32_t i = 0; i < KERNEL_PDE_COUNT; i++) {
+        uint32_t idx = KERNEL_PDE_OFFSET + i;
+
+        pd->pde_arr[idx].present = 1;
+        pd->pde_arr[idx].rw = 1;
+        pd->pde_arr[idx].user = 0;
+    }
 }

@@ -267,10 +267,10 @@ bool Console_Process_Command(char* command) {
     
     else if (!strcmp(tokens[0], "mem")) {
         char buffer[16];
-        byte_nb_simplify(get_used_ram(),buffer);
+        byte_nb_simplify(get_used_ram(),buffer,1);
         printf("mem=  %s",buffer);
         
-        byte_nb_simplify(ram_amount,buffer);
+        byte_nb_simplify(ram_amount,buffer,1);
         printf(" / %s\n",buffer);
 
     }
@@ -299,8 +299,6 @@ int Start_Console() {
         RET_ERR(E_NOMEM);
     }
     strcpy(currpath, "0:/");
-    ClearScreen();
-    move_cursor(0, 0);
 
     set_print_color(0x8);
     printf(TitleAsciiString);
