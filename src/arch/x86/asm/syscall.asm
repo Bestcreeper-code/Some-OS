@@ -11,14 +11,11 @@ _syscall_int_80_handler:
     push esi        ; arg4 and also saved regs
     
 
-    push edx        ; arg3
-    push ecx        ; arg2
-    push ebx        ; arg1
-    push eax        ; syscall number
+    pushad
 
     call syscall_handler
 
-    add esp, 16     ; cleanup (only the ea.. since other need preserv)
+    add esp, 32
 
     pop esi
     pop edi

@@ -317,11 +317,14 @@ void page_free(page_index pa, size_t amount) {
     for (uint32_t i = 0; i < amount; i++) {
         uint32_t idx = start_index + i;
         if (idx >= _pages_amount) break;
-
-        _free_pages_bitmap[idx / 32] |= (1 << (idx % 32));
-
         PTE* pte = get_pte(idx);
-        if (pte) pte->present = 0;
+
+        
+        if (pte){
+            _free_pages_bitmap[pte->addr / 32] |= (1 << (idx % 32));
+            pte->present = 0;
+            return;
+        }    
     }
 }
 

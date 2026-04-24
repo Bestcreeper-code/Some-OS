@@ -115,10 +115,11 @@ void kmain() {
     disable_scheduler();
     // // Sys_Step_Point();
     extern void testing();
+    for(int i=0;i<100;i++)
     Sys_log_Pos("-------0x%x\n",ktask_start(testing, "test"));
     pid_t spawn_test_task();
     disable_scheduler();
-    Sys_log_Pos("-------0x%x\n",spawn_test_task());
+    // Sys_log_Pos("-------0x%x\n",spawn_test_task());
     
 
 

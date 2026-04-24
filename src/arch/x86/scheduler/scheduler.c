@@ -1,8 +1,10 @@
 #include "scheduler.h"
 #include "Logger.h"
 #include "arch_paging.h"
+#include "container_of.h"
 #include "helpers.h"
 #include "io.h"
+#include "lists.h"
 #include "paging.h"
 #include "string.h"
 #include "arch_gdt.h"
@@ -13,7 +15,7 @@
 #include <stdint.h>
 
 
-Linked_PCB_t* _scheduler_first_process = 0;
+HLIST_HEAD(_scheduler_process_list_head);   
 
 uint16_t process_list_depth = 1;
 
@@ -78,18 +80,15 @@ pid_t new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, Stack_t k_stack, 
     new_pcb->k_esp = (uint32_t)*esp;  
 
     new_pcb->cr3 = (uintptr_t)page_dir->pde_arr; 
-    new_pcb->next = NULL;
+    new_pcb->list_node.next = NULL;
 
-    if (!_scheduler_first_process) {
-        _scheduler_first_process = new_pcb;
+    if (!_scheduler_process_list_head.first) {
+        _scheduler_process_list_head.first = &new_pcb->list_node;
         
     } else {
-        Linked_PCB_t* current = _scheduler_first_process;
 
-        while (current->next) {
-            current = current->next;
-        }
-        current->next = new_pcb;
+        hlist_add_head(&new_pcb->list_node, &_scheduler_process_list_head);
+        
     }
 
     pd_map_page(page_dir, (uint32_t)new_pcb, (uint32_t)new_pcb, 1, 1, 0);//identity map the pcb for sched
@@ -99,22 +98,17 @@ pid_t new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, Stack_t k_stack, 
 
 }
 
-int kill_process(short proc_pid){
-    Linked_PCB_t* pcb = _scheduler_first_process;
-    Linked_PCB_t* old = NULL;
-    int depth=0;
-    while (pcb && pcb->pid != proc_pid && depth < process_list_depth)
-    {
-        old = pcb;
-        pcb = pcb->next;
-    }
-
+int kill_ktask(Linked_PCB_t* pcb) {
     if(!pcb)return -1;
-
-    old->next = pcb->next;
-    
+    Sys_log("K Process %u (%s) exited with err:%d\n",pcb->pid,pcb->name,pcb->exit_code);
+    hlist_del(&pcb->list_node);    
     _free_pid(pcb->pid);
+
+    page_free(ADDR_TO_PAGE(pcb->kernel_stack.top), pcb->kernel_stack.size / PAGE_SIZE);
+    page_free(ADDR_TO_PAGE(pcb->kernel_stack.top), pcb->kernel_stack.size / PAGE_SIZE);
+
     kfree(pcb);
+    process_list_depth--;
     return 0;
 }
 
@@ -126,7 +120,7 @@ int scheduler_init(){
     
     new_pcb(&_k_pd,"Kernel",(uint32_t*)0x200000,(Stack_t){0x200000,0x1FF000},(Stack_t){1,1}); 
 
-    _scheduler_current_process = _scheduler_first_process;
+    _scheduler_current_process = container_of(_scheduler_process_list_head.first,Linked_PCB_t,list_node);
     
     enable_scheduler();
     return 0;
@@ -140,33 +134,11 @@ void disable_scheduler(){
     task_switching_flag=0;
 }
 
-// void _setup_user_stack_sched_frame(void* stack_top, uint32_t* v_esp, uint32_t entry){
-//     ProcessStackFrame* frame = (ProcessStackFrame*)((uint8_t*)stack_top - sizeof(ProcessStackFrame));
-
-//     frame->eax = 0;
-//     frame->ebx = 0;
-//     frame->ecx = 0;
-//     frame->edx = 0;
-//     frame->esi = 0;
-//     frame->edi = 0;
-//     frame->ebp = (uint32_t)*v_esp;
-//     frame->esp = (uint32_t)*v_esp;
-//     frame->eip = entry;
-//     frame->cs = USER_CODE_SEGMENT;
-//     frame->eflags_iret = 0x202;
-//     frame->useresp = (uint32_t)*v_esp;
-//     frame->ss = USER_DATA_SEGMENT;
-
-//     *v_esp -=sizeof(ProcessStackFrame);
-
-//     Sys_log("making a sched frame at %x (v_esp=%x)\n",stack_top,*v_esp);
-// }
-
-void _setup_user_stack_sched_frame(void* us_stack_top, void* k_stack_top, uint32_t entry, uint32_t* out_esp) {
-    uint32_t* sp = (uint32_t*)k_stack_top;
+void _setup_user_stack_sched_frame(void* us_stack_start, void* k_stack_start, uint32_t entry, uint32_t* out_esp) {
+    uint32_t* sp = (uint32_t*)k_stack_start;
 
     *--sp = USER_DATA_SEGMENT; // ss
-    *--sp = (uintptr_t)us_stack_top; // useresp
+    *--sp = (uintptr_t)us_stack_start; // useresp
     // iret frame 
     *--sp = 0x202;                 // eflags
     *--sp = USER_CODE_SEGMENT;   // cs
@@ -208,16 +180,16 @@ pid_t us_task_start(void* entry, char* name, PD_t page_dir) {
     );
 
     return new_pcb((PD_t*)&_k_pd, name, &out_esp,
-        (Stack_t){.bottom = (uintptr_t)k_stack,.top = (uintptr_t)k_stack+DEFAULT_STACK_PAGE_BYTES},
-        (Stack_t){.bottom = (uintptr_t)us_stack_bott,.top = (uintptr_t)us_stack_bott+DEFAULT_STACK_PAGE_BYTES}
+        (Stack_t){.top = (uintptr_t)k_stack,.bottom = (uintptr_t)k_stack+DEFAULT_STACK_PAGE_BYTES,.size=DEFAULT_STACK_PAGE_BYTES},
+        (Stack_t){.top = (uintptr_t)us_stack_bott,.bottom = (uintptr_t)us_stack_bott+DEFAULT_STACK_PAGE_BYTES,.size=DEFAULT_STACK_PAGE_BYTES}
         );
     
 }
 
 
 
-void _setup_kernel_stack_sched_frame(void* stack_top, uint32_t entry, uint32_t* out_esp) {
-    uint32_t* sp = (uint32_t*)stack_top;
+void _setup_kernel_stack_sched_frame(void* kstack_start, uint32_t entry, uint32_t* out_esp) {
+    uint32_t* sp = (uint32_t*)kstack_start;
 
     // iret frame 
     *--sp = 0x202;                 // eflags
@@ -246,7 +218,7 @@ pid_t ktask_start(void* entry, char* name) {
     _setup_kernel_stack_sched_frame(stack+DEFAULT_STACK_PAGE_BYTES, (uint32_t)entry, (uint32_t*)&out_esp);
 
     return new_pcb((PD_t*)&_k_pd, name, &out_esp,
-        (Stack_t){.bottom = (uintptr_t)stack,.top = (uintptr_t)stack+DEFAULT_STACK_PAGE_BYTES},
+        (Stack_t){.top = (uintptr_t)stack,.bottom = (uintptr_t)stack+DEFAULT_STACK_PAGE_BYTES},
         (Stack_t){0});
     
 }
@@ -267,7 +239,14 @@ void testing(){
         : "a"(eax), "b"(ebx), "c"(ecx), "d"(edx)
         : "memory"
     );
-    Sys_Breakpoint();
+    eax=1;
+    ebx=-2;
+    asm volatile (
+        "int $0x80"
+        :
+        : "a"(eax), "b"(ebx), "c"(ecx), "d"(edx)
+        : "memory"
+    );
 }
 
 static inline void LOG_PCB(Linked_PCB_t* pcb) {
@@ -277,7 +256,7 @@ static inline void LOG_PCB(Linked_PCB_t* pcb) {
     Sys_log_NoPos("PID = 0x%04x ", pcb->pid);
     Sys_log_NoPos("CR3 = 0x%x ", pcb->cr3);
     Sys_log_NoPos("V_ESP = 0x%x ", pcb->k_esp);
-    Sys_log_NoPos("NEXT PCB phys addr = 0x%p\n", pcb->next);
+    Sys_log_NoPos("NEXT PCB phys addr = 0x%p\n", pcb->list_node);
 }
 
 void* sched_next_process_core(uint32_t saved_esp) {
@@ -287,12 +266,19 @@ void* sched_next_process_core(uint32_t saved_esp) {
     current->k_esp = saved_esp;
     
 
+    struct hlist_node* next_node = current->list_node.next;
+get_next_pcb:
 
-    Linked_PCB_t* next = current->next;
-    if (!next) {
-        next = _scheduler_first_process;
+    if (!next_node) {
+        next_node = _scheduler_process_list_head.first;
     }
 
+    Linked_PCB_t* next = container_of(next_node, Linked_PCB_t, list_node);
+    if(next->state & PCB_STATE_ZOMBIE){
+        next_node = next->list_node.next;
+        kill_ktask(next);
+        goto get_next_pcb;
+    }
 #if DEBUG_SCHED_LOG
     LOG_PCB(next);
 #endif
@@ -307,6 +293,10 @@ void* sched_next_process_core(uint32_t saved_esp) {
     return (void*)next->k_esp;
 }
 
+extern void _ret_to_next_process(void* esp);
+void yield_core(uint32_t esp) {
+    _ret_to_next_process(sched_next_process_core(esp));
+}
 // __attribute__((naked)) void _sched_next_process(void) {
 //     __asm__ volatile (
 //         "cli\n\t"

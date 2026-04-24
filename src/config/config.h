@@ -13,7 +13,7 @@
 #define SYSCALL_DEBUG   0
 #define MBR_DEBUG       0
 
-#define DEBUG_SCHED_LOG 1
+#define DEBUG_SCHED_LOG 0
 
 
 #define POS_DEBUG_LOGS  1

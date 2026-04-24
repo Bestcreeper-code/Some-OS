@@ -1,6 +1,7 @@
 #ifndef ARCH_ASM_H
 #define ARCH_ASM_H
 
+#include <stddef.h>
 #include <stdint.h>
 
 
@@ -35,6 +36,7 @@ typedef struct {
 
 typedef struct {
     uintptr_t top,bottom;
+    size_t size;
 }  __attribute__((packed)) Stack_t;
 
 inline void capture_cpu_registers(cpu_registers_t* regs) {
