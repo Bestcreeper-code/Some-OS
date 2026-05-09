@@ -13,6 +13,7 @@ static struct bootloader_mmap_entry boot_mmap_buffer[64];
 struct bl_info boot_info = {.boot_protocol= "Multiboot2"};
 struct bl_mem_info mem_info;
 struct bl_framebuffer framebuffer_info;
+uint8_t* _rsdp_ptr;
 
 int bootloader_c_entry(unsigned int magic, unsigned long mb_struct_addr){
     struct multiboot_tag *tag;
@@ -217,9 +218,16 @@ int bootloader_c_entry(unsigned int magic, unsigned long mb_struct_addr){
                 //         *pixel = color;
                 //         }
                 //         break;
+                //         break;
                 //     }
                 // }
                 // break;
+            }
+            case MULTIBOOT_TAG_TYPE_ACPI_OLD:
+            {
+                struct multiboot_tag_old_acpi* acpi_tag = (struct multiboot_tag_old_acpi*)tag;
+
+                _rsdp_ptr = acpi_tag->rsdp;
             }
 
         }

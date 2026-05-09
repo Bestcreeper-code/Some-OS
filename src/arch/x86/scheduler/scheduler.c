@@ -227,18 +227,23 @@ pid_t ktask_start(void* entry, char* name) {
 volatile int testdata=1;
 
 void testing(){
-    int e = ++testdata;
+    ktask_start(testing, "test");
     uint32_t eax = 4;
-    uint32_t ebx = 1;
+    uint32_t ebx = testdata++;
     uint32_t ecx = 0x41414141;
     uint32_t edx = 4;
+    for(int i=0;i<100;i++) {
+        Sys_log("%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d end\n",ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx,ebx);
+        // asm volatile (
 
-    asm volatile (
-        "int $0x80"
-        :
-        : "a"(eax), "b"(ebx), "c"(ecx), "d"(edx)
-        : "memory"
-    );
+        //     "int $0x80"
+        //     :
+        //     : "a"(eax), "b"(ebx), "c"(ecx), "d"(edx)
+        //     : "memory"
+        // );
+    }
+    Sys_log("how was the fall?\n");
+
     eax=1;
     ebx=-2;
     asm volatile (
@@ -256,7 +261,7 @@ static inline void LOG_PCB(Linked_PCB_t* pcb) {
     Sys_log_NoPos("PID = 0x%04x ", pcb->pid);
     Sys_log_NoPos("CR3 = 0x%x ", pcb->cr3);
     Sys_log_NoPos("V_ESP = 0x%x ", pcb->k_esp);
-    Sys_log_NoPos("NEXT PCB phys addr = 0x%p\n", pcb->list_node);
+    Sys_log_NoPos("NEXT PCB phys addr = 0x%p\n", container_of(pcb->list_node.next,Linked_PCB_t,list_node));
 }
 
 void* sched_next_process_core(uint32_t saved_esp) {
@@ -296,6 +301,15 @@ get_next_pcb:
 extern void _ret_to_next_process(void* esp);
 void yield_core(uint32_t esp) {
     _ret_to_next_process(sched_next_process_core(esp));
+}
+
+void _yield() {
+    asm volatile (
+        "int $0x80"
+        :
+        : "a"(158)
+        : "memory"
+    );
 }
 // __attribute__((naked)) void _sched_next_process(void) {
 //     __asm__ volatile (

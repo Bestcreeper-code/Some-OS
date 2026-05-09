@@ -100,5 +100,6 @@ void enable_scheduler();
 void disable_scheduler();
 
 void yield_core(uint32_t esp);
+void _yield();
 
 #endif // SCHEDULER_H

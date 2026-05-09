@@ -106,4 +106,5 @@ void serial_set_color(uint8_t fg, uint8_t bg);
 void serial_set_fg(uint8_t fg);
 void serial_set_bg(uint8_t bg);
 
+
 #endif // DEBUG_H

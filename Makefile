@@ -18,7 +18,7 @@ ARCH_DIR = src/arch/$(ARCH)
 BOOTLOADERs_DIR = bootloader
 CURR_BOOTLOADER_DIR = $(BOOTLOADERs_DIR)/$(BOOTLOADER)
 
-SRC_DIRS  = src FatFs bootloader/$(BOOTLOADER)
+SRC_DIRS  = src FatFs bootloader/$(BOOTLOADER) #uACPI
 BUILD_DIR = build
 
 INCLUDE_DIRS = src FatFs src/config src/headers src/headers/defines \
@@ -29,9 +29,11 @@ INCLUDE_DIRS = src FatFs src/config src/headers src/headers/defines \
 	$(ARCH_DIR)/asm $(ARCH_DIR)/cpu         \
 	$(ARCH_DIR)/scheduler $(ARCH_DIR)/panic \
 	$(ARCH_DIR)/syscalls                    \
+	$(BOOTLOADERs_DIR) $(CURR_BOOTLOADER_DIR) \
 	src/drivers src/drivers/ATA src/drivers/PS-2 \
 	src/drivers/FS/FAT 						\
-	$(BOOTLOADERs_DIR) $(CURR_BOOTLOADER_DIR)
+	uACPI/include uACPI/include/uacpi       \
+	uACPI/include/uacpi/internal
 
 INCLUDES     := $(addprefix -I,$(INCLUDE_DIRS))
 DEFINES_FLAGS = $(addprefix -D,$(DEFINES))

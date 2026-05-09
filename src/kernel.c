@@ -63,6 +63,7 @@ void kmain() {
     
     core_init();
 
+    // logger_thread_init();
     
     __asm__ volatile ("sti");
 
@@ -114,17 +115,12 @@ void kmain() {
     // task_switching_flag = 1;
     disable_scheduler();
     // // Sys_Step_Point();
-    extern void testing();
-    for(int i=0;i<100;i++)
-    Sys_log_Pos("-------0x%x\n",ktask_start(testing, "test"));
-    pid_t spawn_test_task();
-    disable_scheduler();
-    // Sys_log_Pos("-------0x%x\n",spawn_test_task());
     
-
-
-    // Sys_log_Pos("-------0x%x\n",ktask_start(testing, "test"));
-    // Sys_log_Pos("-------0x%x\n",ktask_start(testing, "test"));
+    
+    extern void testing();
+    Sys_log_Pos("-------0x%x\n",ktask_start(testing, "test"));
+    
+    
 
     enable_scheduler();
     late_init();
@@ -132,38 +128,4 @@ void kmain() {
     while (1) { 
         __asm__ volatile ("hlt");
     }
-}
-
-
-
-
-
-
-extern char user_test_entry;
-extern char user_test_end;
-
-pid_t spawn_test_task() {
-    PD_t pd;
-    pd.pde_arr = (PDE*)PAGE_ADDR( page_alloc(1, PAGE_FLAG_RW));
-    
-    pd_init(&pd);
-    
-    uintptr_t vaddr = 0x400000;
-
-    uintptr_t phys = page_alloc(1, PAGE_FLAG_RW | PAGE_FLAG_USER);
-    if (!phys) return -1;
-    
-    uintptr_t paddr = phys << 12;
-
-    // map user page
-    pd_map_page(&pd, vaddr, phys, 1, 1, 1);
-
-    // copy ASM blob instead of C function
-    size_t size = (uintptr_t)&user_test_end - (uintptr_t)&user_test_entry;
-    memcpy((void*)paddr,
-           (void*)&user_test_entry,
-           size);
-
-    // start at ASM entry point
-    return us_task_start((void*)vaddr, "test_uspace_task", pd);
 }

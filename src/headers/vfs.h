@@ -1,4 +1,5 @@
 #pragma once
+#include <stdatomic.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -108,7 +109,7 @@ struct inode {
     time64_t   i_atime;
     time64_t   i_mtime;
     time64_t   i_ctime;
-    atomic_t		i_count;
+    atomic_t   i_count;
     // dev 
     dev_t      i_rdev;
 
@@ -129,6 +130,8 @@ struct dentry {
 
     struct hlist_node d_sib;      // child of parent list
     struct hlist_head d_children;
+
+    atomic_uint d_count;
 };
 
 

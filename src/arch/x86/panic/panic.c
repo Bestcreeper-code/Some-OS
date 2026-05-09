@@ -172,6 +172,7 @@ cpu_registers_t* _cpu_regs;
 volatile char panic_count = 0;
 void _panic_handler(int argc, uint32_t* argv) {
 
+    
     if (panic_count >= MAX_KPANIK_COUNT) {
         Sys_color_log_NoPos("Double Fault (%d) %x\n", ANSI_RED, ANSI_BG_BLACK, (int)argv[0], (uint32_t)((cpu_registers_t*)argv[2])->cr2);
         Sys_color_log_NoPos("Fix your shit\n", ANSI_RED, ANSI_BG_BLACK);

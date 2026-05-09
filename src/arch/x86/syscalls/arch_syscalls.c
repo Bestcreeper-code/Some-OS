@@ -28,6 +28,9 @@ int syscall_handler(
             
         case 4: // sys_write
             return sys_write(ebx, ecx, edx);
+
+        case 158:
+            yield_core(esp.val);
         default:
             Sys_log("Unknown syscall: %x\n", eax.val);
             return -1;

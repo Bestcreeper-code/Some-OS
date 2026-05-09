@@ -94,6 +94,8 @@ extern struct bl_info boot_info;
 extern struct bl_mem_info mem_info;
 extern struct bl_framebuffer framebuffer_info;
 
+extern uint8_t* _rsdp_ptr;
+
 static inline struct bl_info* get_bootloader_generic_info(){
 	return &boot_info;
 }

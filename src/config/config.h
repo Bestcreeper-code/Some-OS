@@ -12,6 +12,7 @@
 #define ELF_DEBUG       0
 #define SYSCALL_DEBUG   0
 #define MBR_DEBUG       0
+#define PCI_DEBUG       1
 
 #define DEBUG_SCHED_LOG 0
 

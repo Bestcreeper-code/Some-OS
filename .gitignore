@@ -22,11 +22,10 @@ diskmount/
 *.img
 *.bin
 outpu.h
-build.sh
 buildlib.sh
 *.png
 run.txt
 test.txt
 .cache/
 compile_commands.json
-
+.log
