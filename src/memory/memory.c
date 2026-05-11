@@ -1,6 +1,6 @@
 #include "memory.h"
 #include "bootloader.h"
-#include "bootloader_common.h"
+
 #include "drivers.h"
 #include "err_codes.h"
 #include "string.h"
@@ -149,40 +149,7 @@ void force_free(uint32_t address, uint32_t size) {
 
 REGISTER_DRIVER_CORE(k_allocator, parse_memory_map);
 int parse_memory_map() {
-    struct bl_mem_info* mem_info = get_bootloader_mem_info();
-    Sys_log("  Base = 0x%llx, Length = 0x%llx, Type = %u, Entry size = 0x%x zr,gcfh,nh,dbtvr %p\n", 
-        mem_info->mmap_addr[0].addr, mem_info->mmap_addr[0].len, mem_info->mmap_addr[0].type,mem_info->mmap_addr[0].size,mem_info);
-    Sys_log("Parsing memory map...\n");
-
-    ram_amount = ((mem_info->mem_upper) + mem_info->mem_lower)*1024;
-
-    free_region_map_t* k_mmap = get_free_region_map();
-    //cleanup the k_mmap
-    k_mmap->free_region_count = 0;
-    memset(k_mmap->free_regions, 0, sizeof(free_region_t) * MAX_FREE_REGIONS);
-    
-    if (!check_bl_flag(BL_BOOT_FLAG_MEM_MAP)) {
-        Sys_Error("Bootloader mmap not present\n");
-        RET_ERR(E_INVAL);
-    }
-
-    uintptr_t mmap_end = (uintptr_t)mem_info->mmap_addr + mem_info->mmap_length;
-    
-    struct bootloader_mmap_entry* mmap = mem_info->mmap_addr;
-
-    Sys_log("Bootloader mmap: \n");
-    
-    while ((uintptr_t)mmap < mmap_end) {
-        uintptr_t base = mmap->addr & ~0xFFF;
-        uintptr_t len  = (mmap->len + 0xFFF) & ~0xFFF;
-        uintptr_t page_end = base + len;
         
-        Sys_log("  Base = 0x%llx, Length = 0x%llx, Type = %u, Entry size = 0x%x\n", mmap->addr, mmap->len, mmap->type,mmap->size);
-        
-        mmap = (struct bootloader_mmap_entry*)((uintptr_t)mmap + mmap->size + sizeof(mmap->size));
-    }
-    Sys_log("mmap end \n");
-    
         
     for (int i = 0; i < KERNEL_RESERVED_PAGES; i++) {
         uintptr_t page_addr = PAGE_ADDR(page_alloc(1,PAGE_FLAG_RW));

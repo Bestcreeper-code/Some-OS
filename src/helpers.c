@@ -1,5 +1,5 @@
 #include "helpers.h"
-ssize_t bitmap_alloc_first(char *bitmap, size_t nbytes) {
+ssize_t bitmap_alloc_1_first(char *bitmap, size_t nbytes) {
     for (size_t i = 0; i < nbytes; i++) {
         unsigned char byte = bitmap[i];
         if (byte != 0xFF) {
@@ -12,7 +12,7 @@ ssize_t bitmap_alloc_first(char *bitmap, size_t nbytes) {
     return -1;
 }
 
-ssize_t wbitmap_alloc_first(char *bitmap, size_t nbytes) {
+ssize_t wbitmap_alloc_1_first(char *bitmap, size_t nbytes) {
     size_t nwords = (nbytes + sizeof(size_t) - 1) / sizeof(size_t);
     size_t *words = (size_t*)bitmap;
 
@@ -27,7 +27,7 @@ ssize_t wbitmap_alloc_first(char *bitmap, size_t nbytes) {
     return -1;
 }
 
-void bitmap_free_bit(char *bitmap, size_t pos) {
+void bitmap_zero_bit(char *bitmap, size_t pos) {
     size_t byte = pos / 8;
     size_t bit  = pos % 8;
     bitmap[byte] &= ~(1U << bit);

@@ -65,7 +65,7 @@ SYMBOLS_OBJ_FINAL  = $(BUILD_DIR)/$(ARCH_DIR)/debug/symbols_final.o
 
 C_SOURCES   := $(shell find $(SRC_DIRS) -type f -name "*.c" \
                    | grep -v '$(ARCH_DIR)/debug/symbols\.c')
-C_SOURCES += bootloader/bootloader_common.c
+C_SOURCES += bootloader/bootloader.c
 
 ASM_SOURCES := $(shell find $(SRC_DIRS) -type f -name "*.asm")
 

@@ -19,6 +19,15 @@
 
 #define _PAGETABLE_MAPPED_SIZE 0x400000
 
+#define KERNEL_VMA      0xC0000000
+#define HHDM_TO_PHYS(v) ((uintptr_t)(v) - KERNEL_VMA)
+#define HHDM_TO_VIRT(p) ((uintptr_t)(p) + KERNEL_VMA)
+
+
+#define KVSPACE_PAGES      (128 * 1024)
+#define KVSPACE_FIRST_PAGE (KERNEL_VMA >> 12)   // 0xC0000
+#define KVSPACE_LAST_PAGE  (KVSPACE_FIRST_PAGE + KVSPACE_PAGES)
+
 
 typedef struct {
     uint32_t present    : 1;
@@ -62,6 +71,7 @@ typedef struct {
 
 
 extern volatile PD_t _k_pd;
+extern volatile uintptr_t _k_pd_phys;
 
 
 
@@ -97,3 +107,17 @@ void reserve_kernel_pages();
 void dump_pd();
 
 void pd_init(PD_t* pd);
+
+
+typedef struct {
+    page_index phys_base;
+    size_t    size;
+} early_reservation_t;
+ 
+#define EARLY_RESERVATION_MAX  (PAGE_SIZE / sizeof(early_reservation_t))
+ 
+int page_reserve_page_early(page_index phys_base, size_t size);
+
+const early_reservation_t* page_early_reservations(int *out_count);
+void page_reclaim_early_reservation_table();
+static void _bitmap_mark_range_used(uintptr_t phys_base, size_t size);

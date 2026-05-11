@@ -5,7 +5,9 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "string.h"
 #include "compiler_defs.h"
+#include "paging.h"
 int bootloader_init();
 extern void bootloader_asm_entry();
 
@@ -88,13 +90,24 @@ struct bootloader_mmap_entry
  	uint32_t type;
 } GCC_ATTR((packed));
 
+typedef struct bootloader_loaded_module {
+    uint32_t mod_start;
+    uint32_t mod_end;
+    char cmdline[248]; //256 bytes struct
+} bootloader_loaded_module;
+
 extern bool check_bl_flag(uint32_t index);
 
 extern struct bl_info boot_info;
 extern struct bl_mem_info mem_info;
 extern struct bl_framebuffer framebuffer_info;
+extern struct bootloader_loaded_module bl_modules_list[16];
+
 
 extern uint8_t* _rsdp_ptr;
+
+#define check_bl_flag(index) (boot_info.boot_flags & (index))
+
 
 static inline struct bl_info* get_bootloader_generic_info(){
 	return &boot_info;
@@ -105,3 +118,6 @@ static inline struct bl_framebuffer* get_bootloader_fb_info(){
 static inline struct bl_mem_info* get_bootloader_mem_info(){
   	return &mem_info;
 }
+
+struct bootloader_loaded_module* get_bootloader_module(char* name);
+

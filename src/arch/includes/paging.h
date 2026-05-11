@@ -16,22 +16,22 @@
 
 #define PAGE_IS_ALIGNED(addr)  (((uintptr_t)(addr) & ~PAGE_MASK) == 0)
 
-#define PAGE_ADDR(idx)         ((uintptr_t)(idx << 12))
+#define PAGE_ADDR(idx)         ((uintptr_t)((idx) << 12))
 
 #define ADDR_TO_PAGE(addr)     (((page_index)(addr)) >> 12)
 
-#define KVSPACE_PAGES       (128 * 1024)
-#define KVSPACE_FIRST_PAGE  1
-#define KVSPACE_LAST_PAGE   (KVSPACE_PAGES + KVSPACE_FIRST_PAGE )
 
 
 
 typedef uintptr_t page_index;
 
 typedef enum {
+    PAGE_FLAG_RO   = 0 << 0,
     PAGE_FLAG_RW   = 1 << 0,
+    
+    PAGE_FLAG_KERNEL = 0 << 1,
     PAGE_FLAG_USER = 1 << 1
-} PAGING_FLAGS;
+} PAGING_FLAG;
 
 typedef struct {
     bool     present;

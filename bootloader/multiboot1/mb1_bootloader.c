@@ -11,6 +11,7 @@ multiboot_info_t mb_info;
 struct bl_info boot_info = {.boot_protocol= "Multiboot1"};
 struct bl_mem_info mem_info;
 struct bl_framebuffer framebuffer_info;
+struct bootloader_loaded_module bl_modules_list[16];
 
 int bootloader_c_entry(unsigned int magic, unsigned long mb_struct_addr){
     

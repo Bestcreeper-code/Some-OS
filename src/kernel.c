@@ -118,8 +118,7 @@ void kmain() {
     
     
     extern void testing();
-    Sys_log_Pos("-------0x%x\n",ktask_start(testing, "test"));
-    
+    // Sys_log_Pos("starting process that spams logs with pid 0x%x\n",ktask_start(testing, "test"));
     
 
     enable_scheduler();

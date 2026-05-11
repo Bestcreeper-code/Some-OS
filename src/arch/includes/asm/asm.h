@@ -43,3 +43,20 @@ static inline void invlpg(uint32_t index) {
 #endif
 
 
+static inline uintptr_t get_instruction_pointer() {
+    uintptr_t ip;
+
+#ifdef __ARCH_X86__
+    __asm__ volatile (
+        "call 1f\n\t"
+        "1: pop %0"
+        : "=r"(ip)
+        :
+        : "memory"
+    );
+#else
+    #error missing arch implementation
+#endif
+    return ip;
+}
+

@@ -37,7 +37,7 @@ struct block_device* Register_Block_Device(const char *name, lsize_t size,
     blkdev->block_size = block_size;
     blkdev->ops = ops;
     blkdev->private_data = private_data;
-    blkdev->id = wbitmap_alloc_first((char*)_blkdev_id_map, sizeof(_blkdev_id_map));
+    blkdev->id = wbitmap_alloc_1_first((char*)_blkdev_id_map, sizeof(_blkdev_id_map));
 
 
     
@@ -88,7 +88,7 @@ int Unregister_Block_Device(struct block_device* blkdev){
             blkdev->list.next->prev = blkdev->list.prev;
     }
 
-    bitmap_free_bit((char*)_blkdev_id_map, blkdev->id);
+    bitmap_zero_bit((char*)_blkdev_id_map, blkdev->id);
     kfree(blkdev);
     return 0;
 }

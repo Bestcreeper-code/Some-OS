@@ -63,25 +63,32 @@ void _free_pid(pid_t pid) {
 }
 
 pid_t new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, Stack_t k_stack, Stack_t us_stack) {
-    
+    Sys_Info("O\n");
     Linked_PCB_t* new_pcb = (Linked_PCB_t*)kmalloc(sizeof(Linked_PCB_t));
     if (!new_pcb){ return -1;}
-
+    Sys_Info("O\n");
     
     new_pcb->pid = _get_unused_pid();
     if(new_pcb->pid<0)return -2;
-
+    Sys_Info("O\n");
     new_pcb->name = strdup(name);
     new_pcb->state = 0; 
     
     new_pcb->user_stack = us_stack;
     new_pcb->kernel_stack = k_stack;
-    
+    Sys_Info("O\n");
     new_pcb->k_esp = (uint32_t)*esp;  
+    
 
-    new_pcb->cr3 = (uintptr_t)page_dir->pde_arr; 
+    uintptr_t cr3_val = (uintptr_t)page_dir->pde_arr;
+    
+    if (cr3_val >= KERNEL_VMA)
+        cr3_val = HHDM_TO_PHYS(cr3_val);
+    new_pcb->cr3 = cr3_val;
+    
+
     new_pcb->list_node.next = NULL;
-
+    Sys_Info("O\n");
     if (!_scheduler_process_list_head.first) {
         _scheduler_process_list_head.first = &new_pcb->list_node;
         
@@ -90,10 +97,11 @@ pid_t new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, Stack_t k_stack, 
         hlist_add_head(&new_pcb->list_node, &_scheduler_process_list_head);
         
     }
+    Sys_Info("O\n");
 
-    pd_map_page(page_dir, (uint32_t)new_pcb, (uint32_t)new_pcb, 1, 1, 0);//identity map the pcb for sched
+    // pd_map_page(page_dir, (uint32_t)new_pcb, (uint32_t)new_pcb, 1, 1, 0);//identity map the pcb for sched
     
-
+    Sys_Info("O\n");
     return new_pcb->pid;
 
 }
@@ -117,8 +125,10 @@ REGISTER_DRIVER_CORE(scheduler, scheduler_init);
 int scheduler_init(){   
     
     pid_bitmap[0] &= ~(1 << 0);
-    
-    new_pcb(&_k_pd,"Kernel",(uint32_t*)0x200000,(Stack_t){0x200000,0x1FF000},(Stack_t){1,1}); 
+
+    PD_t k_pd = {.pde_arr=(void*)_k_pd_phys};
+    uint32_t tmp=0x200000;
+    new_pcb(&k_pd,"Kernel",&tmp,(Stack_t){0x200000,0x1FF000},(Stack_t){1,1}); 
 
     _scheduler_current_process = container_of(_scheduler_process_list_head.first,Linked_PCB_t,list_node);
     
@@ -227,7 +237,7 @@ pid_t ktask_start(void* entry, char* name) {
 volatile int testdata=1;
 
 void testing(){
-    ktask_start(testing, "test");
+    // ktask_start(testing, "test");
     uint32_t eax = 4;
     uint32_t ebx = testdata++;
     uint32_t ecx = 0x41414141;

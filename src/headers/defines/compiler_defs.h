@@ -10,3 +10,5 @@
 #define __user _GCC_ADDR_SPACE(_gcc_user_address_space)
 
 #define __same_type(a, b) __builtin_types_compatible_p(typeof(a), typeof(b))
+
+#define arr_lengthof(comptime_array) (sizeof(comptime_array)/sizeof(comptime_array[0]))

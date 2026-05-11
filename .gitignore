@@ -29,3 +29,4 @@ test.txt
 .cache/
 compile_commands.json
 .log
+.cache/
