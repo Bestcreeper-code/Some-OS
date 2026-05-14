@@ -167,27 +167,28 @@ void _Log_Isr_Error_Code(char isr_idx, uint32_t code){
 
 
 
-cpu_registers_t* _cpu_regs;
 
 volatile char panic_count = 0;
-void _panic_handler(int argc, uint32_t* argv) {
+void _panic_handler(uintptr_t isr_index, uint32_t err_code, cpu_registers_t* regs, uint32_t* call_stack) {
 
     
+    
     if (panic_count >= MAX_KPANIK_COUNT) {
-        Sys_color_log_NoPos("Double Fault (%d) %x\n", ANSI_RED, ANSI_BG_BLACK, (int)argv[0], (uint32_t)((cpu_registers_t*)argv[2])->cr2);
+        Sys_color_log_NoPos("Double Fault (%d) %x\n", ANSI_RED, ANSI_BG_BLACK, isr_index, regs->cr2);
         Sys_color_log_NoPos("Fix your shit\n", ANSI_RED, ANSI_BG_BLACK);
         for (;;);
     }
-
+    
     panic_count++;
-
+    
     task_switching_flag = false;
-    int isr_index = (int)argv[0];
+    
+
 
     Sys_log("Kernel panic (%d | %d | CR2:0x%x)\n",
-        (int)argv[0],
-        (int)argv[1],
-        ((cpu_registers_t*)argv[2])->cr2);
+        (int)isr_index,
+        (int)err_code,
+        regs->cr2);
 
     if (Get_Kernel_Flag(KDATA_FLAG_FRAMEBUFFER_ON)) {
         ClearScreen();
@@ -196,16 +197,8 @@ void _panic_handler(int argc, uint32_t* argv) {
         // dw_memset((void*)_display_fb, 0x000000FF, fb_size);
     }
 
-    uint32_t* call_stack = NULL;
-    if (argc >= 4) call_stack = (uint32_t*)argv[3];
+    
 
-    if (argc < 4) {
-        Sys_log_NoPos("Crash Handler: Not enough panic info provided\n");
-        return;
-    }
-
-    uint32_t err_code = argv[1];
-    _cpu_regs = (cpu_registers_t*)argv[2];
 
     const char* error_name =
         (isr_index >= 0 &&
@@ -230,26 +223,26 @@ void _panic_handler(int argc, uint32_t* argv) {
     Sys_log_NoPos(" Regs Dump:\n");
 
     Sys_log_NoPos(" EAX: 0x%x  EBX: 0x%x  ECX: 0x%x  EDX: 0x%x\n",
-        _cpu_regs->eax, _cpu_regs->ebx,
-        _cpu_regs->ecx, _cpu_regs->edx);
+        regs->eax, regs->ebx,
+        regs->ecx, regs->edx);
 
     Sys_log_NoPos(" ESI: 0x%x  EDI: 0x%x  EBP: 0x%x  ESP: 0x%x\n",
-        _cpu_regs->esi, _cpu_regs->edi,
-        _cpu_regs->ebp, _cpu_regs->esp);
+        regs->esi, regs->edi,
+        regs->ebp, regs->esp);
 
     Sys_log_NoPos(" EIP: 0x%x  EFLAGS: 0x%x\n",
-        _cpu_regs->eip, _cpu_regs->eflags);
+        regs->eip, regs->eflags);
 
     Sys_log_NoPos(" CS:  0x%04X  DS:  0x%04X  ES:  0x%04X\n",
-        _cpu_regs->cs, _cpu_regs->ds, _cpu_regs->es);
+        regs->cs, regs->ds, regs->es);
 
     Sys_log_NoPos(" FS:  0x%04X  GS:  0x%04X  SS:  0x%04X\n",
-        _cpu_regs->fs, _cpu_regs->gs, _cpu_regs->ss);
+        regs->fs, regs->gs, regs->ss);
 
     Sys_log_NoPos(" CR0: 0x%x  CR2: 0x%x\n",
-        _cpu_regs->cr0, _cpu_regs->cr2);
+        regs->cr0, regs->cr2);
 
-    Sys_log_NoPos(" CR3: 0x%x\n", _cpu_regs->cr3);
+    Sys_log_NoPos(" CR3: 0x%x\n", regs->cr3);
 
     asm volatile("sti");
     if (call_stack) {

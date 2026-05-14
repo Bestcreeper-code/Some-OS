@@ -5,7 +5,83 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#define FLAG_PER_ROW 8
+
 short hfp;
+
+
+char ecx_cpuid_1_flags[][32] = {
+    "SSE3"       ,
+    "PCLMUL"     ,
+    "DTES64"     ,
+    "MONITOR"    ,
+    "DS_CPL"     ,
+    "VMX"        ,
+    "SMX"        ,
+    "EST"        ,
+    "TM2"        ,
+    "SSSE3"      ,
+    "CID"        ,
+    "SDBG"       ,
+    "FMA"        ,
+    "CX16"       ,
+    "XTPR"       ,
+    "PDCM"       ,
+    ""                          ,
+    "PCID"       ,
+    "DCA"        ,
+    "SSE4_1"     ,
+    "SSE4_2"     ,
+    "X2APIC"     ,
+    "MOVBE"      ,
+    "POPCNT"     ,
+    "TSC"        ,
+    "AES"        ,
+    "XSAVE"      ,
+    "OSXSAVE"    ,
+    "AVX"        ,
+    "F16C"       ,
+    "RDRAND"     ,
+    "HYPERVISOR" ,
+};
+
+
+char edx_cpuid_1_flags[][32]= {
+    "FPU"        ,
+    "VME"        ,
+    "DE"         ,
+    "PSE"        ,
+    "TSC"        ,
+    "MSR"        ,
+    "PAE"        ,
+    "MCE"        ,
+    "CX8"        ,
+    "APIC"       ,
+    ""                          ,
+    "SEP"        ,
+    "MTRR"       ,
+    "PGE"        ,
+    "MCA"        ,
+    "CMOV"       ,
+    "PAT"        ,
+    "PSE36"      ,
+    "PSN"        ,
+    "CLFLUSH"    ,
+    ""                          ,
+    "DS"         ,
+    "ACPI"       ,
+    "MMX"        ,
+    "FXSR"       ,
+    "SSE"        ,
+    "SSE2"       ,
+    "SS"         ,
+    "HTT"        ,
+    "TM"         ,
+    "IA64"       ,
+    "PBE"               
+};
+
+uint64_t cpu_features = 0;
 
 int cpu_log_specs(){
     register_t eax = 0;
@@ -50,9 +126,86 @@ int cpu_log_specs(){
 
             cache_index++;
         }
-
     
+        __cpuid(0x1, eax, ebx, ecx, edx);
 
+        unsigned int brand_index        = ebx & 0xFF;
+        unsigned int clflush_line_size  = (ebx >> 8) & 0xFF;
+        unsigned int apic_id            = (ebx >> 16) & 0xFF;
+        unsigned int initial_apic_id    = (ebx >> 24) & 0xFF;
+
+        sys_color_serial_logf(
+            "BRAND INDEX: %x CLFLUSH_LINE_SIZE: %x APIC_ID: %x INITIAL_APIC_ID: %x\n",
+            ANSI_BRIGHT_CYAN, ANSI_BG_BLACK, "", "", 0,
+            brand_index,
+            clflush_line_size,
+            apic_id,
+            initial_apic_id
+        );
+    
+        // ECX flags
+        int count = 0;
+        for (int i = 0; i < 32; i++) {
+            if (ecx_cpuid_1_flags[i][0] == '\0')
+                continue;
+
+            int enabled = (ecx >> i) & 1;
+
+            sys_color_serial_logf("%s:%d  ",
+                enabled ? ANSI_GREEN : ANSI_RED,
+                ANSI_BG_BLACK,
+                "",
+                "",
+                0,
+                ecx_cpuid_1_flags[i],
+                enabled);
+
+            count++;
+
+            if (count % FLAG_PER_ROW == 0)
+                sys_color_serial_logf("\n", ANSI_RESET, ANSI_BG_BLACK, "", "", 0);
+        }
+
+        if (count % FLAG_PER_ROW != 0)
+            sys_color_serial_logf("\n", ANSI_RESET, ANSI_BG_BLACK, "", "", 0);
+
+
+        // EDX flags
+        count = 0;
+        for (int i = 0; i < 32; i++) {
+            if (edx_cpuid_1_flags[i][0] == '\0')
+                continue;
+
+            int enabled = (edx >> i) & 1;
+
+            sys_color_serial_logf("%s:%d  ",
+                enabled ? ANSI_GREEN : ANSI_RED,
+                ANSI_BG_BLACK,
+                "",
+                "",
+                0,
+                edx_cpuid_1_flags[i],
+                enabled);
+
+            count++;
+
+            if (count % FLAG_PER_ROW == 0)
+                sys_color_serial_logf("\n", ANSI_RESET, ANSI_BG_BLACK, "", "", 0);
+        }
+
+        if (count % FLAG_PER_ROW != 0)
+            sys_color_serial_logf("\n", ANSI_RESET, ANSI_BG_BLACK, "", "", 0);
 
     return 0;
+}
+
+
+void register_cpu_features() {
+    register_t eax = 0;
+    register_t ebx = 0;
+    register_t ecx = 0;
+    register_t edx = 0;
+    __cpuid(0x1, eax, ebx, ecx, edx);
+
+    cpu_features = ((uint64_t)edx << 32) | (uint32_t)ecx;
 }

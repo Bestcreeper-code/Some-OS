@@ -146,7 +146,7 @@ pid_t LoadElf(const char* path) {
 
     kfree(program_headers);
 
-    pid_t pid = us_task_start((void*)elf_header.e_entry, (char*)path, app_page_dir);
+    pid_t pid = us_task_start((void*)elf_header.e_entry, (char*)path, app_page_dir)->pid;
 
     f_close(&file);
 #if ELF_DEBUG

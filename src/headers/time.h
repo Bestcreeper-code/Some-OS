@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "kernel_data.h"
-// #define TICKS_AMOUNT_POINTER 0x2700
+
 
 typedef struct {
     uint8_t second;
@@ -15,12 +15,12 @@ typedef struct {
     uint16_t year;
 } __attribute__((__packed__)) rtc_time_t;
 
-extern uint64_t timer_ticks;
+extern uint64_t timer_ticks_ms;
 
 int pic_remap();
 // PIT / Timer
-int pit_init(void);
-void timer_irq(void); // call this from irq_handler when IRQ0 fires
+int pit_init();
+void timer_irq(); 
 
 // Sleeping
 void sleep(uint64_t ms);

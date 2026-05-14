@@ -5,6 +5,7 @@
 #include "lists.h"
 #include "string.h"
 #include "memory.h"
+#include "time.h"
 #include "types.h"
 #include "err_codes.h"
 
@@ -76,6 +77,11 @@ int vfs_create(struct inode *dir, struct dentry *dentry, umode_t mode, bool excl
     new_inode->i_dentry  = dentry;
     new_inode->i_count   = 0;
     new_inode->i_private = NULL;
+
+    rtc_time_t *time = kmalloc(sizeof(rtc_time_t));
+    rtc_read_time(time);
+    new_inode->i_ctime = rtc_to_unix_timestamp(time);
+    new_inode->i_mtime = new_inode->i_ctime;
     
     INIT_HLIST_HEAD(&dentry->d_children);
     INIT_HLIST_NODE(&dentry->d_sib);

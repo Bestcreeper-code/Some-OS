@@ -4,6 +4,7 @@
 #include "arch_paging.h"
 #include "asm.h"
 #include "bootloader.h"
+#include "cpu.h"
 #include "err_codes.h"
 #include "idt.h"
 
@@ -17,6 +18,8 @@ int arch_init(){
     Sys_log("Entering arch init");
     init_gdt();
     idt_init();
+
+    register_cpu_features();
 
     int pg_res = setup_paging();
     if (pg_res != 0  ) {

@@ -1,36 +1,55 @@
-extern acquireLock
-extern releaseLock
+global acquire_lock
+global release_lock
+global try_acquire_lock
 
-;from osdev wiki
-acquireLock:
-    pop edx ; pops the dword addr
-    pop eax ; pops the bit index
-    and eax, 31
+; void acquire_lock(uint32_t *addr, uint32_t bit)
+acquire_lock:
+    mov eax, [esp + 8]     ; bit index
+    mov edx, [esp + 4]     ; address pointer
 
-    ;ecx = (1<<eax)
-    push 1
-    mov cl, al
-    shl dword [esp], cl
-    pop ecx
+    and eax, 31            ; keep bit range 0-31
 
-    ;try
-    lock bts [edx],eax
-    jc .spin_wait
+.try_lock:
+    lock bts dword [edx], eax   ; set bit, CF = old value
+    jc .spin                ; if already set, spin
+
     ret
 
-    
-.spin_wait:
-
-    ;check loop
-    test dword [edx], ecx 
+.spin:
     pause
-    jnz .spin_wait
-    jmp acquireLock
+
+    bt dword [edx], eax    ; test bit
+    jc .spin               ; still locked, continue spinning
+
+    jmp .try_lock
 
 
-releaseLock:
-    pop edx ; pops the dword addr
-    pop eax ; pops the bit index
 
-    lock btr [edx],eax
+
+; int try_acquire_lock(uint32_t *addr, uint32_t bit)
+try_acquire_lock:
+    mov eax, [esp + 8]     ; bit index
+    mov edx, [esp + 4]     ; address pointer
+
+    and eax, 31
+
+    lock bts dword [edx], eax   ; set bit, CF = old value
+
+    jc .fail                    ; already set → fail
+
+    mov eax, 1                  ; success
+    ret
+
+.fail:
+    xor eax, eax                ; return 0
+    ret
+
+; void release_lock(uint32_t *addr, uint32_t bit)
+release_lock:
+    mov eax, [esp + 8]     ; bit index
+    mov edx, [esp + 4]     ; address pointer
+
+    and eax, 31
+
+    lock btr dword [edx], eax   ; clear bit
     ret

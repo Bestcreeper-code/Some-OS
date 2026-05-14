@@ -10,6 +10,7 @@
 #include "cpu/cpu.h"
 #include "drivers.h"
 #include "err_codes.h"
+#include "fs.h"
 #include "string.h"
 #include "ATA_IO.h"
 #include "time.h"
@@ -21,6 +22,7 @@
 
 #include "data/textconsts.h"
 #include "paging.h"
+#include "vfs.h"
 
 #define MAX_HISTORY 32
 #define MAX_COMMAND_LENGTH 256  
@@ -231,9 +233,31 @@ bool Console_Process_Command(char* command) {
             result = false;
         }
     }
-    else if (!strcmp(tokens[0], "read")) {
+    else if (!strcmp(tokens[0], "cat")) {
         if (token_count > 1) {
-            // Placeholder 
+            struct dentry* f_dentry = kpath_lookup(root_dentry->inode, tokens[1]);
+            if (f_dentry && f_dentry->inode) {
+                struct file* f = kmalloc(sizeof(struct file));
+                if (f_dentry->inode->i_fop && f_dentry->inode->i_fop->open) {
+                    if (f_dentry->inode->i_fop->open(f_dentry->inode, f) == 0) {
+                        char buf[128];
+                        loff_t offset = 0;
+                        ssize_t read;
+                        while ((read = f_dentry->inode->i_fop->read(f, buf, sizeof(buf) - 1, &offset)) > 0) {
+                            buf[read] = '\0';
+                            printstr(buf);
+                        }
+                        f_dentry->inode->i_fop->release(f_dentry->inode, f);
+                    } else {
+                        if (echoing) printf("Failed to open file: %s\n", tokens[1]);
+                    }
+                } else {
+                    if (echoing) printf("File cannot be opened: %s\n", tokens[1]);
+                }
+            } else {
+                if (echoing) printf("File not found: %s\n", tokens[1]);
+                result = false;
+            }
         } else {
             result = false;
         }
@@ -286,7 +310,6 @@ bool Console_Process_Command(char* command) {
 
 char* console_requests[32];
 
-REGISTER_DRIVER_LATE(kconsole, Start_Console);
 int Start_Console() {
     Sys_log("Kernel Console started\n");
     memset(CONSOLE_REQUEST_QUEUE, 0, sizeof(char*) * 16);

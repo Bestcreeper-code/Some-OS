@@ -14,7 +14,7 @@
 
 #define  KERNEL_RESERVED_PAGES 4
 
-volatile uint32_t ram_amount;
+volatile size_t ram_amount;
 
 static free_region_map_t region_map;
 free_region_map_t* k_mmap = &region_map;
@@ -150,6 +150,7 @@ void force_free(uint32_t address, uint32_t size) {
 REGISTER_DRIVER_CORE(k_allocator, parse_memory_map);
 int parse_memory_map() {
         
+    ram_amount = get_bootloader_mem_info()->mem_lower+get_bootloader_mem_info()->mem_upper;
         
     for (int i = 0; i < KERNEL_RESERVED_PAGES; i++) {
         uintptr_t page_addr = PAGE_ADDR(page_alloc(1,PAGE_FLAG_RW));
@@ -376,7 +377,7 @@ void kfree_impl(void* _Memory) {
 }
 
 
-void* realloc_impl(void *ptr, size_t size) {
+void* krealloc_impl(void *ptr, size_t size) {
 #if MEM_DEBUG
     Sys_log("[MEM_DBG] this func was called with %x , %d\n",ptr,size);
 #endif

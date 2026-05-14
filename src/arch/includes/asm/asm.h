@@ -38,8 +38,17 @@ static inline uint32_t inl(uint16_t port) {
 static inline void invlpg(uint32_t index) {
     asm volatile("invlpg (%0)" : : "r"(index) : "memory");
 }
+
+static inline void cli(){
+    asm volatile("cli");
+} 
+
+static inline void sti(){
+    asm volatile("sti");
+} 
+
 #else
-#error no portio
+#error unsupported arch
 #endif
 
 

@@ -48,13 +48,21 @@
 #define LOOKUP_IS_SCOPED (LOOKUP_BENEATH | LOOKUP_IN_ROOT)
 
 
+enum file_flag {
+    O_RD        = 0x0,
+    O_WR        = 0x1,
+    O_RW        = 0X2,
+    O_ACCESS    = 0x3,
+    
+    O_CREAT     = 0x10
+};
 
 struct file {
     struct inode *f_inode;          // points to the file/directory inode
     loff_t f_pos;                   // current file position (for read/write)
-    unsigned int f_flags;           // O_RDONLY, O_WRONLY, etc.
+    uint32_t f_flags;           // O_RDONLY, O_WRONLY, etc.
     void *private_data;             // filesystem-specific data
-    const struct file_operations *f_op; // pointer to file operations
+    const struct file_operations *f_ops; // pointer to file operations
 };
 
 

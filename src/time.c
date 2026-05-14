@@ -15,7 +15,7 @@
 #define PIT_CHANNEL0  0x40
 #define PIT_FREQUENCY 1000  // 1000 Hz
 
-uint64_t timer_ticks;
+uint64_t timer_ticks_ms;
 
 
 
@@ -46,7 +46,7 @@ REGISTER_DRIVER_CORE(pit, pit_init);
 int pit_init() {
     Sys_log("initializing pit\n");
     force_alloc(TICKS_AMOUNT,sizeof(uint64_t));
-    timer_ticks =0;
+    timer_ticks_ms=0;
     
     uint16_t divisor = 1193180 / PIT_FREQUENCY;
     
@@ -60,15 +60,15 @@ int pit_init() {
 
 
 void timer_irq() {
-    (timer_ticks)++;
+    (timer_ticks_ms)++;
 }
 
 // ----------------- Sleep -----------------
 
 void sleep(uint64_t ms) {
     
-    uint64_t target = timer_ticks + ms;
-    while (timer_ticks < target)__asm__ volatile ("hlt");  
+    uint64_t target = timer_ticks_ms+ ms;
+    while (timer_ticks_ms< target)__asm__ volatile ("hlt");  
     
 }
 
@@ -155,28 +155,27 @@ bool is_leap_year(int year) {
     return (year % 4 == 0 && (year % 100 != 0 || year % 400 == 0));
 }
 
-uint32_t rtc_to_unix_timestamp(rtc_time_t* rtc) {
+uint32_t rtc_to_unix_timestamp(rtc_time_t* rtc)
+{
     uint32_t days = 0;
 
-    // Count days from 1970 to current year
     for (int y = 1970; y < rtc->year; y++) {
         days += is_leap_year(y) ? 366 : 365;
     }
 
-    // Count days in the current year up to current month
     for (int m = 1; m < rtc->month; m++) {
         days += days_in_month[m - 1];
+
         if (m == 2 && is_leap_year(rtc->year)) {
-            days += 1; // leap day
+            days += 1;
         }
     }
 
-    days += rtc->day - 1; // days so far this month
+    days += (rtc->day - 1);
 
-    // Convert to seconds
-    uint32_t seconds = days * 86400;
-    seconds += rtc->hour * 3600;
-    seconds += rtc->minute * 60;
+    uint32_t seconds = (uint32_t)((uint64_t)days * 86400ULL);
+    seconds += rtc->hour * 3600U;
+    seconds += rtc->minute * 60U;
     seconds += rtc->second;
 
     return seconds;

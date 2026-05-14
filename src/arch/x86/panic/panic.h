@@ -1,11 +1,12 @@
 #ifndef CRASHHNDL_H
 #define CRASHHNDL_H
 
+#include "arch_asm.h"
 #include <stdint.h>
 
 #define MAX_STACK_TRACE_SIZE 16
 
-void _panic_handler(int argc, uint32_t* argv);
+void _panic_handler(uintptr_t isr_index, uint32_t err_code, cpu_registers_t* regs, uint32_t* call_stack);
 void _manual_panic(const char* error, const char* info);
 
 #endif // CRASHHNDL_H

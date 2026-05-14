@@ -228,16 +228,13 @@ isr_handler:
     mov eax,[int_indx]       ; int_index
     mov ebx,[int_err_code]       ; error_code
 
-    mov dword [argv], eax
-    mov dword [argv + 4], ebx
-    mov dword [argv + 8], gp_regs
-    mov dword [argv + 12], stack_trace
-
-    push argv
-    push 4
+    push stack_trace
+    push gp_regs
+    push ebx
+    push eax
     
     call _panic_handler
-    add esp, 12
+    add esp, 16
 
     sti
 

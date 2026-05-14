@@ -1,6 +1,7 @@
 #include "FileSystem.h"
 #include "arch_paging.h"
 #include "bootloader.h"
+#include "console.h"
 #include "drivers/drivers.h"
 #include "elf--later/elf.h"
 #include "ff.h"
@@ -109,7 +110,7 @@ void kmain() {
 
 
     
-    tree(root_dentry, 0);
+    // tree(root_dentry, 0);
     
     
     // task_switching_flag = 1;
@@ -121,10 +122,31 @@ void kmain() {
     // Sys_log_Pos("starting process that spams logs with pid 0x%x\n",ktask_start(testing, "test"));
     
 
+    
+    
+    ////////////////// ktask_start(Start_Console, "kconsole");
+
+    // int crash();
+
+    // crash();
+    // Sys_Breakpoint();
+    int temp_stalling();
+    ktask_start(temp_stalling,"d");
     enable_scheduler();
-    late_init();
+    // late_init();
     
     while (1) { 
         __asm__ volatile ("hlt");
     }
 }
+int crash(){
+    int* ptr = 0;
+    return *ptr;
+}
+
+int temp_stalling(){
+    
+    crash();
+    for(;;);
+}
+REGISTER_DRIVER_LATE(slepping, temp_stalling);

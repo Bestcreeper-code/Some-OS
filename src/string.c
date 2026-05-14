@@ -122,7 +122,7 @@ char** Split(const char* string, char separator, int max_tokens, int* out_count)
             // Resize if needed (only if max_tokens == 0)
             if (max_tokens <= 0 && token_index >= capacity) {
                 capacity *= 2;
-                char** temp = realloc(tokens, sizeof(char*) * capacity);
+                char** temp = krealloc(tokens, sizeof(char*) * capacity);
                 if (!temp) {
                     // On failure, cleanup and return NULL
                     for (int i = 0; i < token_index; i++) kfree(tokens[i]);

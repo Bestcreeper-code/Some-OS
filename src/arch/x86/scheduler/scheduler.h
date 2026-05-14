@@ -87,15 +87,15 @@ int scheduler_init();
 
 void* sched_next_process_core(uint32_t saved_esp);
 
-pid_t new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, Stack_t k_stack, Stack_t us_stack);
+Linked_PCB_t* new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, Stack_t k_stack, Stack_t us_stack);
 
 void _setup_user_stack_sched_frame(void* us_stack_top, void* k_stack_top, uint32_t entry, uint32_t* out_esp);
 void _setup_kernel_stack_sched_frame(void* stack_top, uint32_t entry, uint32_t* out_esp);
 
 int kill_ktask(Linked_PCB_t* pcb);
 
-pid_t ktask_start(void* entry, char* name);
-pid_t us_task_start(void* entry, char* name, PD_t page_dir);
+Linked_PCB_t* ktask_start(void* entry, char* name);
+Linked_PCB_t* us_task_start(void* entry, char* name, PD_t page_dir);
 void enable_scheduler();
 void disable_scheduler();
 

@@ -9,7 +9,7 @@ OBJCOPY  = objcopy
 ARCH    ?= x86
 BOOTLOADER ?= multiboot2
 
-DEFINES ?= __ARCH_X86__
+DEFINES ?= __ARCH_X86__ UACPI_BAREBONES_MODE
 
 # === Directories ===
 
@@ -18,7 +18,7 @@ ARCH_DIR = src/arch/$(ARCH)
 BOOTLOADERs_DIR = bootloader
 CURR_BOOTLOADER_DIR = $(BOOTLOADERs_DIR)/$(BOOTLOADER)
 
-SRC_DIRS  = src FatFs bootloader/$(BOOTLOADER) #uACPI
+SRC_DIRS  = src FatFs bootloader/$(BOOTLOADER) #uACPI/source
 BUILD_DIR = build
 
 INCLUDE_DIRS = src FatFs src/config src/headers src/headers/defines \
@@ -40,6 +40,7 @@ DEFINES_FLAGS = $(addprefix -D,$(DEFINES))
 
 CFLAGS  = -m32 -O0 -g -ffreestanding $(INCLUDES) $(DEFINES_FLAGS) \
           -fno-stack-protector -mno-sse -mno-sse2 -fno-tree-vectorize \
+		  
 
 
 LDFLAGS = -m elf_i386 -T src/arch/$(ARCH)/linker.ld -z noexecstack
@@ -122,7 +123,8 @@ $(SYMBOLS_OBJ_FINAL): $(SYMBOLS_SRC) $(SYMS_OBJ)
 
 $(KERNEL_NOSYMS_ELF): $(BOOT_HEADER_OBJ) $(NOSYMS_OBJECTS) 
 	@echo "  LD  [nosyms] $@"
-	$(LD) $(LDFLAGS) -o $@ $(BOOT_HEADER_OBJ) $(NOSYMS_OBJECTS)
+	$(LD) $(LDFLAGS) -o $@ $(BOOT_HEADER_OBJ) $(NOSYMS_OBJECTS) \
+		$(shell $(CC) -m32 -print-libgcc-file-name)
 
 
 $(SYMS_BIN): $(KERNEL_NOSYMS_ELF)
@@ -143,7 +145,8 @@ $(SYMS_OBJ): $(SYMS_BIN)
 $(KERNEL_ELF): $(SYMS_OBJ) $(SYMBOLS_OBJ_FINAL) $(BOOT_HEADER_OBJ) $(COMMON_OBJECTS) 
 	@echo "  LD  [final] $@"
 	$(LD) $(LDFLAGS) -o $@ \
-	    $(SYMS_OBJ) $(BOOT_HEADER_OBJ) $(SYMBOLS_OBJ_FINAL) $(COMMON_OBJECTS)
+	    $(SYMS_OBJ) $(BOOT_HEADER_OBJ) $(SYMBOLS_OBJ_FINAL) $(COMMON_OBJECTS) \
+		$(shell $(CC) -m32 -print-libgcc-file-name)
 	cp $(KERNEL_ELF) ./
 
 # === Generate flat binary ===

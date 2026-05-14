@@ -93,9 +93,9 @@ PARTITION VolToPart[16] = {
 
 //         if (nfile >= capacity) {
 //             capacity *= 2;
-//             char **tmp = realloc(list, capacity * sizeof(char*));
+//             char **tmp = krealloc(list, capacity * sizeof(char*));
 //             if (!tmp) {
-//                 // Clean up allocated memory on realloc failure
+//                 // Clean up allocated memory on krealloc failure
 //                 for (int i = 0; i < nfile; i++) {
 //                     kfree(list[i]);
 //                 }

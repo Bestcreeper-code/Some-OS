@@ -62,14 +62,14 @@ void _free_pid(pid_t pid) {
     *addr |= (1 << bit);
 }
 
-pid_t new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, Stack_t k_stack, Stack_t us_stack) {
+Linked_PCB_t* new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, Stack_t k_stack, Stack_t us_stack) {
     Sys_Info("O\n");
     Linked_PCB_t* new_pcb = (Linked_PCB_t*)kmalloc(sizeof(Linked_PCB_t));
-    if (!new_pcb){ return -1;}
+    if (!new_pcb){ return NULL;}
     Sys_Info("O\n");
     
     new_pcb->pid = _get_unused_pid();
-    if(new_pcb->pid<0)return -2;
+    if(new_pcb->pid<0)return NULL;
     Sys_Info("O\n");
     new_pcb->name = strdup(name);
     new_pcb->state = 0; 
@@ -102,7 +102,7 @@ pid_t new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, Stack_t k_stack, 
     // pd_map_page(page_dir, (uint32_t)new_pcb, (uint32_t)new_pcb, 1, 1, 0);//identity map the pcb for sched
     
     Sys_Info("O\n");
-    return new_pcb->pid;
+    return new_pcb;
 
 }
 
@@ -170,7 +170,7 @@ void _setup_user_stack_sched_frame(void* us_stack_start, void* k_stack_start, ui
     *out_esp = (uint32_t)sp;
 }
 
-pid_t us_task_start(void* entry, char* name, PD_t page_dir) {
+Linked_PCB_t* us_task_start(void* entry, char* name, PD_t page_dir) {
     //kernel space bc ... why not?
     void* k_stack = (void*)PAGE_ADDR(page_alloc(DEFAULT_STACK_PAGE_AMOUNT,PAGE_FLAG_RW));
     RET_IF(!k_stack, 0);
@@ -201,6 +201,7 @@ pid_t us_task_start(void* entry, char* name, PD_t page_dir) {
 void _setup_kernel_stack_sched_frame(void* kstack_start, uint32_t entry, uint32_t* out_esp) {
     uint32_t* sp = (uint32_t*)kstack_start;
 
+    *--sp = 0; // to stop the stack trace from dying
     // iret frame 
     *--sp = 0x202;                 // eflags
     *--sp = KERNEL_CODE_SEGMENT;   // cs
@@ -221,7 +222,7 @@ void _setup_kernel_stack_sched_frame(void* kstack_start, uint32_t entry, uint32_
     *out_esp = (uint32_t)sp;
 }
 
-pid_t ktask_start(void* entry, char* name) {
+Linked_PCB_t* ktask_start(void* entry, char* name) {
     void* stack = (void*)PAGE_ADDR(page_alloc(DEFAULT_STACK_PAGE_AMOUNT,PAGE_FLAG_RW));
     RET_IF(!stack, 0);
     uintptr_t out_esp;
@@ -265,7 +266,7 @@ void testing(){
 }
 
 static inline void LOG_PCB(Linked_PCB_t* pcb) {
-    RET_IF(pcb->pid==1,);
+    // RET_IF(pcb->pid==1,);
     Sys_log_NoPos("Switching to process %s ",pcb->name);
 
     Sys_log_NoPos("PID = 0x%04x ", pcb->pid);
@@ -303,7 +304,7 @@ get_next_pcb:
     __asm__ volatile ("mov %0, %%cr3" :: "r"(next->cr3));
 
 
-    setTss_sp(next->k_esp);
+    // setTss_sp(next->k_esp);
 
     return (void*)next->k_esp;
 }

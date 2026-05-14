@@ -14,6 +14,8 @@
 #define MBR_DEBUG       0
 #define PCI_DEBUG       1
 
+#define INITRD_DEBUG    0
+
 #define DEBUG_SCHED_LOG 0
 
 
@@ -21,6 +23,8 @@
 
 
 #define VERY_EARLY_SERIAL 1
+
+
 
 
 

@@ -738,6 +738,80 @@ int write_hex32_fixed_width(char* buffer, int pos, uint32_t val, int width, int 
     return len;
 }
 
+int write_float_sci(char* buffer, int pos, double val, int precision, int size, int uppercase) {
+    int start = pos;
+
+    if (val == 0.0) {
+        pos += write_char(buffer, pos, '0', size);
+        if (precision > 0) {
+            pos += write_char(buffer, pos, '.', size);
+            for (int i = 0; i < precision; i++)
+                pos += write_char(buffer, pos, '0', size);
+        }
+        pos += write_char(buffer, pos, uppercase ? 'E' : 'e', size);
+        pos += write_char(buffer, pos, '+', size);
+        pos += write_char(buffer, pos, '0', size);
+        pos += write_char(buffer, pos, '0', size);
+        return pos - start;
+    }
+
+    if (val < 0.0) {
+        pos += write_char(buffer, pos, '-', size);
+        val = -val;
+    }
+
+    int exp = 0;
+    while (val >= 10.0) {
+        val /= 10.0;
+        exp++;
+    }
+    while (val < 1.0) {
+        val *= 10.0;
+        exp--;
+    }
+
+    double rounding = 0.5;
+    for (int i = 0; i < precision; i++) rounding /= 10.0;
+    val += rounding;
+
+    if (val >= 10.0) {
+        val /= 10.0;
+        exp++;
+    }
+
+    int first = (int)val;
+    pos += write_char(buffer, pos, '0' + first, size);
+    val -= first;
+
+    if (precision > 0) {
+        pos += write_char(buffer, pos, '.', size);
+        for (int i = 0; i < precision; i++) {
+            val *= 10.0;
+            int digit = (int)val;
+            pos += write_char(buffer, pos, '0' + digit, size);
+            val -= digit;
+        }
+    }
+
+    pos += write_char(buffer, pos, uppercase ? 'E' : 'e', size);
+
+    if (exp >= 0) {
+        pos += write_char(buffer, pos, '+', size);
+    } else {
+        pos += write_char(buffer, pos, '-', size);
+        exp = -exp;
+    }
+
+    if (exp < 10) {
+        pos += write_char(buffer, pos, '0', size);
+        pos += write_char(buffer, pos, '0' + exp, size);
+    } else {
+        pos += write_uint32(buffer, pos, exp, size);
+    }
+
+    return pos - start;
+}
+
 int vsnprintf(char* buffer, int size, const char* format, va_list args) {
     int pos = 0;
 
@@ -812,6 +886,11 @@ int vsnprintf(char* buffer, int size, const char* format, va_list args) {
                         pos += write_char(buffer, pos, '%', 0);
                         pos += write_char(buffer, pos, *format, 0);
                     }
+                    break;
+                }
+                case 'e': case 'E': {
+                    double val = va_arg(args, double);
+                    pos += write_float_sci(buffer, pos, val, 6, size, *format == 'E');
                     break;
                 }
                 case 'c': {
@@ -920,6 +999,11 @@ int vsprintf(char* buffer, const char* format, va_list args) {
                         pos += write_char(buffer, pos, '%', 0);
                         pos += write_char(buffer, pos, *format, 0);
                     }
+                    break;
+                }
+                case 'e': case 'E': {
+                    double val = va_arg(args, double);
+                    pos += write_float_sci(buffer, pos, val, 6, 0, *format == 'E');
                     break;
                 }
                 case 'c': {
