@@ -82,8 +82,8 @@ Linked_PCB_t* new_pcb(PD_t* page_dir, const char* name, uint32_t* esp, Stack_t k
 
     uintptr_t cr3_val = (uintptr_t)page_dir->pde_arr;
     
-    if (cr3_val >= KERNEL_VMA)
-        cr3_val = HHDM_TO_PHYS(cr3_val);
+    // if (cr3_val >= KERNEL_VMA)
+    //     cr3_val = HHDM_TO_PHYS(cr3_val);
     new_pcb->cr3 = cr3_val;
     
 
@@ -178,6 +178,8 @@ Linked_PCB_t* us_task_start(void* entry, char* name, PD_t page_dir) {
     page_index us_stack_pages = page_alloc_nomap(DEFAULT_STACK_PAGE_AMOUNT);
     uintptr_t us_stack_bott = PAGE_ADDR(us_stack_pages);
     
+    pd_init(&page_dir);
+
     RET_IF(!us_stack_pages, 0);
     pd_map_page(&page_dir, STACK_UPPER_USPACE_ADDR-DEFAULT_STACK_PAGE_BYTES, us_stack_pages, 1, 1, 1);
 
@@ -188,8 +190,13 @@ Linked_PCB_t* us_task_start(void* entry, char* name, PD_t page_dir) {
         (uintptr_t)entry,
         &out_esp
     );
-
-    return new_pcb((PD_t*)&_k_pd, name, &out_esp,
+    // for (int i= 0;i<1024;i++) {
+    //     Sys_log("PDE %d , addr: %x, data: %x\n", i, page_dir.pde_arr[i].addr << 12, *(uint32_t*)(&page_dir.pde_arr[i]));
+    //     if (page_dir.pde_arr[i].present) {
+    //     }
+    // }
+    // Sys_Breakpoint();
+    return new_pcb(&page_dir, name, &out_esp,
         (Stack_t){.top = (uintptr_t)k_stack,.bottom = (uintptr_t)k_stack+DEFAULT_STACK_PAGE_BYTES,.size=DEFAULT_STACK_PAGE_BYTES},
         (Stack_t){.top = (uintptr_t)us_stack_bott,.bottom = (uintptr_t)us_stack_bott+DEFAULT_STACK_PAGE_BYTES,.size=DEFAULT_STACK_PAGE_BYTES}
         );
@@ -267,12 +274,14 @@ void testing(){
 
 static inline void LOG_PCB(Linked_PCB_t* pcb) {
     // RET_IF(pcb->pid==1,);
+    bool e = Get_Kernel_Flag(KDATA_FLAG_FRAMEBUFFER_ON);
+    Set_Kernel_Flag(KDATA_FLAG_FRAMEBUFFER_ON, 0);
     Sys_log_NoPos("Switching to process %s ",pcb->name);
-
     Sys_log_NoPos("PID = 0x%04x ", pcb->pid);
     Sys_log_NoPos("CR3 = 0x%x ", pcb->cr3);
-    Sys_log_NoPos("V_ESP = 0x%x ", pcb->k_esp);
+    Sys_log_NoPos("V_KESP = 0x%x ", pcb->k_esp);
     Sys_log_NoPos("NEXT PCB phys addr = 0x%p\n", container_of(pcb->list_node.next,Linked_PCB_t,list_node));
+    Set_Kernel_Flag(KDATA_FLAG_FRAMEBUFFER_ON, e);
 }
 
 void* sched_next_process_core(uint32_t saved_esp) {
@@ -304,7 +313,7 @@ get_next_pcb:
     __asm__ volatile ("mov %0, %%cr3" :: "r"(next->cr3));
 
 
-    // setTss_sp(next->k_esp);
+    setTss_sp(next->k_esp);
 
     return (void*)next->k_esp;
 }

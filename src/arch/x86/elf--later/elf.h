@@ -177,8 +177,7 @@ typedef struct
 } ProcessInfo;
 
 
-pid_t LoadElf(const char* path);
-
+pid_t load_elf_from_vfs(const char* vfs_path);
 
 
 #endif // ELF_H

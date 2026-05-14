@@ -334,22 +334,18 @@ void page_free(page_index pa, size_t amount) {
 }
 
 
-void dump_pd() {
-    uint32_t* pdes = (uint32_t*)_k_pd.pde_arr;
-#if PAGE_DEBUG
+void dump_pd(PD_t* pd) {
+    uint32_t* pdes = (uint32_t*) PAGE_ADDR(vmap(ADDR_TO_PAGE(pd->pde_arr),1,PAGE_FLAG_RW));
     Sys_log("Dumping Page Directory from %x\n", _k_pd.pde_arr);
     Sys_log("first pde: %x\n", ((PTE*)pdes)[0].addr * PAGE_SIZE);
-#endif
-    for (int i = 0; i < 1; i++) {
-        if (!(pdes[i] & 1)) continue;
+    for (int i = 0; i < 1024; i++) {
+        if (!(pdes[i] & 1)){Sys_log("no pde %x     %x\n",i, pdes[i]); continue;}
         uint32_t base = pdes[i] & 0xFFFFF000;
         uint32_t* pt = (uint32_t*)base;
-        for (int j = 0; j < 300; j++) {
+        for (int j = 0; j < 1024; j++) {
             if (1||pt[j] & 1) {
                 uint32_t pa = pt[j] & 0xFFFFF000;
-#if PAGE_DEBUG
                 Sys_log("PD[%03d] PT[%03d] VA=%x -> data=%x\n", i, j, (i<<22)|(j<<12), pt[j]);
-#endif
             }
         }
     }
@@ -719,21 +715,14 @@ void pd_init(PD_t* pd) {
 
     memset((void*)pd->pde_arr, 0, PAGE_SIZE);
 
-    for (uint32_t i = 0; i < KERNEL_PDE_COUNT; i++) {
-        uint32_t src = KERNEL_PDE_OFFSET + i;
+    uint32_t pde_start = KVSPACE_FIRST_PAGE >> 10;
+    uint32_t pde_end   = KVSPACE_LAST_PAGE  >> 10;
 
-        pd->pde_arr[src] = _k_pd.pde_arr[src];
+    for (uint32_t i = 0; i < pde_end; i++) {
+        
 
+        pd->pde_arr[i] = _k_pd.pde_arr[i];
 
-        pd->pde_arr[src].user = 0;
-    }
-
-    for (uint32_t i = 0; i < KERNEL_PDE_COUNT; i++) {
-        uint32_t idx = KERNEL_PDE_OFFSET + i;
-
-        pd->pde_arr[idx].present = 1;
-        pd->pde_arr[idx].rw = 1;
-        pd->pde_arr[idx].user = 0;
     }
 }
 

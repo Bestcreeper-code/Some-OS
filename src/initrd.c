@@ -68,9 +68,7 @@ int initrd_init() {
         new_dentry->name = header->filename;
         new_dentry->parent = dir_dentry;
         new_dentry->inode = NULL;
-#if INITRD_DEBUG
-        Sys_log("%p   %p ",dir_dentry,dir_dentry);
-#endif
+
         dir_dentry->inode->i_op->create(
             dir_dentry->inode,
             new_dentry,

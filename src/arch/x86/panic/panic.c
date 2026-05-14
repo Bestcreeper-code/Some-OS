@@ -190,12 +190,7 @@ void _panic_handler(uintptr_t isr_index, uint32_t err_code, cpu_registers_t* reg
         (int)err_code,
         regs->cr2);
 
-    if (Get_Kernel_Flag(KDATA_FLAG_FRAMEBUFFER_ON)) {
-        ClearScreen();
-        // size_t fb_size = Multiboot_info->framebuffer_width *
-        //                  Multiboot_info->framebuffer_height;
-        // dw_memset((void*)_display_fb, 0x000000FF, fb_size);
-    }
+    
 
     
 
@@ -250,8 +245,7 @@ void _panic_handler(uintptr_t isr_index, uint32_t err_code, cpu_registers_t* reg
         for (int i = 0; i < MAX_STACK_TRACE_SIZE; i++) {
             uint32_t addr = call_stack[i];
             if (addr < 0x1000) { 
-                Sys_color_log_NoPos(" invalid backtrace addr: 0x%x\n",
-                    ANSI_RED, ANSI_BG_BLACK, addr);
+                
                 break;
             }
             char tmp_buffer[64];
@@ -265,21 +259,8 @@ void _panic_handler(uintptr_t isr_index, uint32_t err_code, cpu_registers_t* reg
         }
     }
 
-    Sys_log_NoPos(" Rebooting in 10 sec...\n");
-
+    for(;;);
     
-
-    for (int i = 0; i < 10; i++) {
-        draw_bitmap_char('#',
-            60 + (8 * i), 440,
-            8, 16,
-            0xFF00FF00,
-            font8x16,
-            false, true, true);
-        sleep(1000);
-    }
-    Sys_Breakpoint();
-    // pc_reboot();
 }
 
 

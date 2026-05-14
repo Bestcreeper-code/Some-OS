@@ -11,6 +11,7 @@
 #include "drivers.h"
 #include "err_codes.h"
 #include "fs.h"
+#include "scheduler.h"
 #include "string.h"
 #include "ATA_IO.h"
 #include "time.h"
@@ -271,6 +272,14 @@ bool Console_Process_Command(char* command) {
     else if (!strcmp(tokens[0], "nullptr")) {
         char* wtf= 0;
         token_count = *wtf++;
+    }
+    else if (!strcmp(tokens[0], "exec")) {
+        if (token_count < 2) { result = false; }
+        else {
+            extern pid_t load_elf_from_vfs(const char*);
+            pid_t pid = load_elf_from_vfs(tokens[1]);
+            printf("launched pid %d\n", pid);
+        }
     }
     else if (!strcmp(tokens[0], "rm")) {
         if (token_count < 2) {

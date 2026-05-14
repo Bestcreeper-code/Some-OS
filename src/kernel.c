@@ -127,26 +127,20 @@ void kmain() {
     ////////////////// ktask_start(Start_Console, "kconsole");
 
     // int crash();
+    enable_scheduler();
 
     // crash();
     // Sys_Breakpoint();
-    int temp_stalling();
-    ktask_start(temp_stalling,"d");
-    enable_scheduler();
-    // late_init();
+    // Add_Console_Request("exec initrd/hello.elf");
+    Start_Console();
+    late_init();
     
     while (1) { 
         __asm__ volatile ("hlt");
     }
 }
-int crash(){
-    int* ptr = 0;
-    return *ptr;
-}
 
 int temp_stalling(){
-    
-    crash();
     for(;;);
 }
 REGISTER_DRIVER_LATE(slepping, temp_stalling);

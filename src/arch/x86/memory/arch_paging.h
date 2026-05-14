@@ -104,7 +104,7 @@ int pd_unmap_page(PD_t* target_pd, uint32_t virtual_addr);
 void reserve_kernel_pages();
 
 
-void dump_pd();
+void dump_pd(PD_t* pd);
 
 void pd_init(PD_t* pd);
 

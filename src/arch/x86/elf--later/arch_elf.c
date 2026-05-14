@@ -2,6 +2,7 @@
 #include "elf.h"
 #include "asm.h"
 #include "Logger.h"
+#include "fs.h"
 #include "string.h"
 #include "FileSystem.h"
 #include "memory.h"
@@ -61,101 +62,76 @@ bool elf_check_support(Elf32_Ehdr* elf_header, const char* path){
     return true;
 }
 
-pid_t LoadElf(const char* path) {
-#if ELF_DEBUG
-    Sys_log("Opening ELF file: %s\n", path);
-#endif
 
-    FIL file;
-    FRESULT res = f_open(&file, path, FA_READ);
-    if (res != FR_OK) {
-        Sys_Error("Failed to open file '%s', error code: %d\n", path, res);
+pid_t load_elf_from_vfs(const char* vfs_path) {
+    struct dentry* d = kpath_lookup(root_dentry->inode, vfs_path);
+    if (!d || !d->inode || !d->inode->i_fop) {
+        Sys_Error("ELF: path not found: %s\n", vfs_path);
         return -1;
     }
 
-    Elf32_Ehdr elf_header;
-    UINT bytesRead;
-    res = f_read(&file, &elf_header, sizeof(Elf32_Ehdr), &bytesRead);
-    if (res != FR_OK || bytesRead != sizeof(Elf32_Ehdr)) {
-        Sys_Error("Failed to read ELF header from '%s'\n", path);
-        f_close(&file);
-        return -1;
-    }
+    struct file f = {0};
+    if (d->inode->i_fop->open(d->inode, &f) < 0) return -1;
 
-    if (!elf_check_support(&elf_header, path)) {
-        Sys_Error("ELF file '%s' is not supported\n", path);
-        f_close(&file);
-        return -1;
-    }
+    // Read ELF header
+    Elf32_Ehdr ehdr;
+    loff_t off = 0;
+    if (d->inode->i_fop->read(&f, (char*)&ehdr, sizeof(ehdr), &off)
+            != sizeof(ehdr)) return -1;
 
-#if ELF_DEBUG
-    Sys_log("ELF entry point: 0x%x\n", elf_header.e_entry);
-#endif
+    if (!elf_check_support(&ehdr, vfs_path)) return -1;
 
-    f_lseek(&file, elf_header.e_phoff);
-    Elf32_Phdr* program_headers = kmalloc(sizeof(Elf32_Phdr) * elf_header.e_phnum);
-    
-    if (!program_headers) {
-        Sys_log("Failed to allocate memory for program headers\n");
-        f_close(&file);
-        return -1;
-    }
+    // Read program headers
+    Elf32_Phdr* phdrs = kmalloc(sizeof(Elf32_Phdr) * ehdr.e_phnum);
+    off = ehdr.e_phoff;
+    d->inode->i_fop->read(&f, (char*)phdrs, sizeof(Elf32_Phdr) * ehdr.e_phnum, &off);
 
-    res = f_read(&file, program_headers, sizeof(Elf32_Phdr) * elf_header.e_phnum, &bytesRead);
-    if (res != FR_OK || bytesRead != sizeof(Elf32_Phdr) * elf_header.e_phnum) {
-        Sys_log("Failed to read program headers\n");
-        kfree(program_headers);
-        f_close(&file);
-        return -1;
-    }
+    // Build a fresh page directory
+    PD_t app_pd;
+    PDE* pd_mem = (PDE*)PAGE_ADDR(page_alloc_nomap(1));
+    app_pd.pde_arr = (PDE*)HHDM_TO_VIRT((uintptr_t)pd_mem);
+    pd_init(&app_pd);
 
-    PD_t app_page_dir;
+    // Load PT_LOAD segments
+    for (int i = 0; i < ehdr.e_phnum; i++) {
+        Elf32_Phdr* ph = &phdrs[i];
+        if (ph->p_type != PT_LOAD) continue;
 
-    for (int i = 0; i < elf_header.e_phnum; i++) {
-        Elf32_Phdr* phdr = &program_headers[i];
-        if (phdr->p_type != PT_LOAD) continue;
+        size_t npages = (ph->p_memsz + PAGE_SIZE - 1) / PAGE_SIZE;
+        page_index phys = page_alloc_nomap(npages);
+        if (!phys) goto fail;
 
-        size_t num_pages = (phdr->p_memsz + PAGE_SIZE - 1) / PAGE_SIZE;
-        uintptr_t segment_mem = page_alloc(num_pages, ((phdr->p_flags & PF_W) ? PAGE_FLAG_RW : 0) | PAGE_FLAG_USER) << 12;
-        if (!segment_mem) {
-            Sys_log("Failed to allocate memory for segment %d\n", i);
-            kfree(program_headers);
-            f_close(&file);
-            return -1;
+        // Map into app PD at the segment's virtual address
+        for (size_t p = 0; p < npages; p++) {
+            pd_map_page(&app_pd,
+                ph->p_vaddr + p * PAGE_SIZE,
+                (phys + p) * PAGE_SIZE,
+                1,
+                (ph->p_flags & PF_W) ? 1 : 0,
+                1);   // user=1
         }
 
-#if ELF_DEBUG
-        Sys_log("Segment %d -> VA: 0x%x, PA: 0x%x, Size: %u bytes \n", i, phdr->p_vaddr, segment_mem, phdr->p_memsz, i);
-#endif
+        // We need a kernel-accessible window to write the segment data.
+        // Temporarily vmap the physical pages.
+        page_index kwin = vmap(phys, npages, PAGE_FLAG_RW);
+        void* kptr = (void*)PAGE_ADDR(kwin);
 
-        pd_map_page(&app_page_dir, phdr->p_vaddr, segment_mem >> 12, 1, (phdr->p_flags & PF_W) ? 1 : 0, 1);
+        memset(kptr, 0, npages * PAGE_SIZE);
 
-        f_lseek(&file, phdr->p_offset);
-        res = f_read(&file, (void*)segment_mem, phdr->p_filesz, &bytesRead);
-        if (res != FR_OK || bytesRead != phdr->p_filesz) {
-            Sys_log("Failed to read segment data for segment %d\n", i);
-            kfree(program_headers);
-            f_close(&file);
-            return -1;
-        }
+        off = ph->p_offset;
+        d->inode->i_fop->read(&f, (char*)kptr, ph->p_filesz, &off);
 
-        if (phdr->p_memsz > phdr->p_filesz) {
-            memset((void*)(segment_mem + phdr->p_filesz), 0, phdr->p_memsz - phdr->p_filesz);
-        }
+        // Unmap the kernel window (optional if you're tight on vspace)
+        for (size_t p = 0; p < npages; p++) unmap_page(kwin + p);
     }
 
-    kfree(program_headers);
+    kfree(phdrs);
+    d->inode->i_fop->release(d->inode, &f);
 
-    pid_t pid = us_task_start((void*)elf_header.e_entry, (char*)path, app_page_dir)->pid;
+    Linked_PCB_t* pcb = us_task_start((void*)ehdr.e_entry, (char*)vfs_path, app_pd);
+    return pcb ? pcb->pid : -1;
 
-    f_close(&file);
-#if ELF_DEBUG
-    Sys_log("ELF file '%s' loaded successfully. Entry: 0x%x\n", path, elf_header.e_entry);
-#endif
-    return pid;
+fail:
+    kfree(phdrs);
+    return -1;
 }
-
-
-
-
-

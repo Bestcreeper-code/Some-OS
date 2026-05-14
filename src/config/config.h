@@ -16,7 +16,7 @@
 
 #define INITRD_DEBUG    0
 
-#define DEBUG_SCHED_LOG 0
+#define DEBUG_SCHED_LOG 1
 
 
 #define POS_DEBUG_LOGS  1
