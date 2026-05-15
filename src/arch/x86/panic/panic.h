@@ -1,7 +1,7 @@
 #ifndef CRASHHNDL_H
 #define CRASHHNDL_H
 
-#include "arch_asm.h"
+#include "asm/arch_asm.h"
 #include <stdint.h>
 
 #define MAX_STACK_TRACE_SIZE 16

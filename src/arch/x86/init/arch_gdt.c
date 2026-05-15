@@ -1,4 +1,4 @@
-    #include "arch_gdt.h"
+    #include "init/arch_gdt.h"
 #include "string.h"
 
 extern void gdt_flush(uint32_t);

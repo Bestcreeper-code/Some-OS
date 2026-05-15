@@ -1,7 +1,7 @@
-#include "arch_paging.h"
+#include "paging/arch_paging.h"
 #include "bootloader.h"
 
-#include "asm.h"
+#include "asm-defs/asm.h"
 #include "compiler_defs.h"
 #include "multiboot2/multiboot2_info.h"
 #include "paging.h"

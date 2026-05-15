@@ -1,8 +1,8 @@
-#include "arch_asm.h"
+#include "asm/arch_asm.h"
 #include "bootloader.h"
 #include "err_codes.h"
 #include "paging.h"
-#include "arch_paging.h"
+#include "paging/arch_paging.h"
 // #include "memory.h"
 
 #include "string.h"

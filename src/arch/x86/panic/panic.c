@@ -8,15 +8,15 @@
 #include "time.h"
 
 #include "power.h"
-#include "arch_asm.h"
-#include "panic.h"
+#include "asm/arch_asm.h"
+#include "panic/panic.h"
 #include "symbols.h"
-#include "scheduler.h"
+#include "scheduler/scheduler.h"
 #include "../data/textconsts.h"
 #include "kernel_data.h"
 #include <assert.h>
 #include <stdint.h>
-// #include "../../distorm/include/distorm.h"
+
 
 
 

@@ -1,6 +1,6 @@
 #include "fpu.h"
 #include "Logger.h"
-#include "cpu.h"
+#include "cpu/cpu.h"
 #include "drivers.h"
 
 

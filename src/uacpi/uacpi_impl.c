@@ -1,10 +1,10 @@
 #include "locks.h"
-#include "scheduler.h"
+#include "scheduler/scheduler.h"
 #include "uacpi_impl_defs.h"
 
 #include "uacpi/kernel_api.h"
 
-#include "asm.h"
+#include "asm-defs/asm.h"
 
 #include "uacpi/types.h"
 
@@ -14,7 +14,7 @@
 #include "pci/pci_config_io.h"
 
 
-#include "arch_paging.h"
+#include "paging/arch_paging.h"
 
 #include "kernel_api.h"
 #include "time.h"

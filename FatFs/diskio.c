@@ -10,7 +10,7 @@
 #include "blkdev.h"
 #include "ff.h"			/* Obtains integer types */
 #include "diskio.h"		/* Declarations of disk functions */
-#include "ATA_IO.h"
+#include "ATA/ATA_IO.h"
 
 /* Definitions of physical drive number for each drive */
 #define DEV_MMC 0  /* ATA drive as physical drive 0 */

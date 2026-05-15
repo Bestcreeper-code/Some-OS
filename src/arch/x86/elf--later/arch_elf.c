@@ -1,13 +1,13 @@
 #include "elf--later/elf.h"
 #include "elf.h"
-#include "asm.h"
+#include "asm-defs/asm.h"
 #include "Logger.h"
 #include "fs.h"
 #include "string.h"
 #include "FileSystem.h"
 #include "memory.h"
-#include "arch_paging.h"
-#include "scheduler.h"
+#include "paging/arch_paging.h"
+#include "scheduler/scheduler.h"
 
 #include <assert.h>
 #include <stdint.h>

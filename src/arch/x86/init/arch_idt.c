@@ -1,9 +1,9 @@
 #include "idt.h"
 #include "arch_idt.h"
-#include "arch_asm.h"
+#include "asm/arch_asm.h"
 #include "string.h"
 #include "Logger.h"
-#include "mouse.h"
+#include "PS-2/mouse.h"
 #include "io.h"
 
 #define IDT_ENTRIES 256

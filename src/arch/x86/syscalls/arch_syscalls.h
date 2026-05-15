@@ -1,7 +1,7 @@
 #ifndef SYSCALLS_H
 #define SYSCALLS_H
 
-#include "arch_asm.h"
+#include "asm/arch_asm.h"
 
 #include <stdint.h>
 

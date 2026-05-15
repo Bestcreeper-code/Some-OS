@@ -1,11 +1,11 @@
-#include "ATA_IO.h"
+#include "ATA/ATA_IO.h"
 #include "Logger.h"
 #include "blkdev.h"
 #include "drivers/drivers.h"
 #include "helpers.h"
 #include "ioctl.h"
 #include "memory.h"
-#include <asm.h>
+#include "asm-defs/asm.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <stdbool.h>

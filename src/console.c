@@ -4,21 +4,16 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdlib.h>
 #include <string.h>
-#include "asm.h"
 #include "cpu/cpu.h"
-#include "drivers.h"
 #include "err_codes.h"
 #include "fs.h"
-#include "scheduler.h"
+#include "scheduler/scheduler.h"
 #include "string.h"
-#include "ATA_IO.h"
 #include "time.h"
 #include "io.h"
 #include "memory.h"
 
-#include "../FatFs/ff.h"
 #include "FileSystem.h"
 
 #include "data/textconsts.h"

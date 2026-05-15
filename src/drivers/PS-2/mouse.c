@@ -1,9 +1,9 @@
-#include "mouse.h"
+#include "PS-2/mouse.h"
 #include "Logger.h"
 #include "bootloader.h"
 #include "kernel_data.h"
 #include "video.h"
-#include "asm.h"
+#include "asm-defs/asm.h"
 #include "Logger.h"
 #include "io.h"
 #include <stdint.h>

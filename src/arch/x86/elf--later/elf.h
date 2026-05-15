@@ -4,9 +4,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#include "arch_paging.h"
-#include "asm.h"
-#include "scheduler.h"
+#include "paging/arch_paging.h"
+#include "asm-defs/asm.h"
+#include "scheduler/scheduler.h"
 
 #define EI_NIDENT 16
 #define SHN_UNDEF 0

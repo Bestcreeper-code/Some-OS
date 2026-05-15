@@ -23,15 +23,11 @@ BUILD_DIR = build
 
 INCLUDE_DIRS = src FatFs src/config src/headers src/headers/defines \
 	src/bootloader                          \
-	src/arch/includes src/arch/includes/asm \
-	$(ARCH_DIR) $(ARCH_DIR)/elf             \
-	$(ARCH_DIR)/memory $(ARCH_DIR)/init     \
-	$(ARCH_DIR)/asm $(ARCH_DIR)/cpu         \
-	$(ARCH_DIR)/scheduler $(ARCH_DIR)/panic \
-	$(ARCH_DIR)/syscalls                    \
+	src/arch/includes src/arch/includes \
+	$(ARCH_DIR)			                    \
 	$(BOOTLOADERs_DIR) $(CURR_BOOTLOADER_DIR) \
-	src/drivers src/drivers/ATA src/drivers/PS-2 \
-	src/drivers/FS/FAT 						\
+	src/drivers		 						\
+											\
 	uACPI/include uACPI/include/uacpi       \
 	uACPI/include/uacpi/internal
 

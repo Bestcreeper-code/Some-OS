@@ -1,10 +1,10 @@
 #include "arch.h"
 #include "Logger.h"
-#include "arch_gdt.h"
-#include "arch_paging.h"
-#include "asm.h"
+#include "init/arch_gdt.h"
+#include "paging/arch_paging.h"
+#include "asm-defs/asm.h"
 #include "bootloader.h"
-#include "cpu.h"
+#include "cpu/cpu.h"
 #include "err_codes.h"
 #include "idt.h"
 
@@ -16,10 +16,10 @@
 
 int arch_init(){
     Sys_log("Entering arch init");
+    register_cpu_features();
     init_gdt();
     idt_init();
 
-    register_cpu_features();
 
     int pg_res = setup_paging();
     if (pg_res != 0  ) {

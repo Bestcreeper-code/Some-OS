@@ -1,9 +1,9 @@
 #include "arch_syscalls.h"
-#include "arch_asm.h"
+#include "asm/arch_asm.h"
 #include "Logger.h"
 #include "container_of.h"
 #include "lists.h"
-#include "scheduler.h"
+#include "scheduler/scheduler.h"
 
 syscall_args_t _syscall_args;
 
