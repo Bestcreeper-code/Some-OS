@@ -19,6 +19,7 @@
 #include "data/textconsts.h"
 #include "paging.h"
 #include "vfs.h"
+#include "printf.h"
 
 #define MAX_HISTORY 32
 #define MAX_COMMAND_LENGTH 256  
@@ -197,13 +198,13 @@ bool Console_Process_Command(char* command) {
     if (token_count <= 0) {
         result = false;
     } else if (!strcmp(tokens[0], "ping")) {
-        printstr("pong\n");
+        printf("pong\n");
     }
     else if (!strcmp(tokens[0], "help")) {
-        printstr("Available commands:\n");
+        printf("Available commands:\n");
         for (int i = 0; command_list[i] != NULL; i++) {
-            printstr(command_list[i]);
-            printstr("\n");
+            printf(command_list[i]);
+            printf("\n");
         }
     }
     else if (!strcmp(tokens[0], "cls")) {
@@ -223,8 +224,8 @@ bool Console_Process_Command(char* command) {
     // }
     else if (!strcmp(tokens[0], "echo")) {
         if (token_count > 1) {
-                printstr(tokens[1]);
-                printstr("\n");
+                printf(tokens[1]);
+                printf("\n");
         } else {
             result = false;
         }
@@ -241,7 +242,7 @@ bool Console_Process_Command(char* command) {
                         ssize_t read;
                         while ((read = f_dentry->inode->i_fop->read(f, buf, sizeof(buf) - 1, &offset)) > 0) {
                             buf[read] = '\0';
-                            printstr(buf);
+                            printf(buf);
                         }
                         f_dentry->inode->i_fop->release(f_dentry->inode, f);
                     } else {
@@ -357,7 +358,7 @@ int Start_Console() {
 
         if(usr_input) command_History[command_History_count++] = command;
 
-        printstr("\n");
+        printf("\n");
         Console_Process_Command(command);
     }
 }

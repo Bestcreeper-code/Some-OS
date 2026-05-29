@@ -6,10 +6,12 @@ NASM     = nasm
 LD       = ld
 OBJCOPY  = objcopy
 
-ARCH    ?= x86
+# ARCH    ?= x86
+ARCH    ?= x86_64
 BOOTLOADER ?= multiboot2
 
-DEFINES ?= __ARCH_X86__ UACPI_BAREBONES_MODE
+# DEFINES ?= UACPI_BAREBONES_MODE
+DEFINES ?= UACPI_BAREBONES_MODE
 
 # === Directories ===
 
@@ -18,10 +20,17 @@ ARCH_DIR = src/arch/$(ARCH)
 BOOTLOADERs_DIR = bootloader
 CURR_BOOTLOADER_DIR = $(BOOTLOADERs_DIR)/$(BOOTLOADER)
 
-SRC_DIRS  = src FatFs bootloader/$(BOOTLOADER) #uACPI/source
+INITRD_DIR = initrd
+INITRD_FILE = $(ISO_DIR)/initrd.tar
+
+SRC_DIRS  = src  \
+	FatFs bootloader/$(BOOTLOADER) uACPI/source printf/
 BUILD_DIR = build
 
-INCLUDE_DIRS = src FatFs src/config src/headers src/headers/defines \
+GCC_INCLUDES := $(shell $(CC) -m32 -print-file-name=include)
+
+INCLUDE_DIRS = $(GCC_INCLUDES) src FatFs src/config \
+	src/headers src/headers/defines \
 	src/bootloader                          \
 	src/arch/includes src/arch/includes \
 	$(ARCH_DIR)			                    \
@@ -29,14 +38,23 @@ INCLUDE_DIRS = src FatFs src/config src/headers src/headers/defines \
 	src/drivers		 						\
 											\
 	uACPI/include uACPI/include/uacpi       \
-	uACPI/include/uacpi/internal
+	uACPI/include/uacpi/internal	s		\
+											\
+	printf/
+	
 
 INCLUDES     := $(addprefix -I,$(INCLUDE_DIRS))
 DEFINES_FLAGS = $(addprefix -D,$(DEFINES))
 
-CFLAGS  = -m32 -O0 -g -ffreestanding $(INCLUDES) $(DEFINES_FLAGS) \
-          -fno-stack-protector -mno-sse -mno-sse2 -fno-tree-vectorize \
-		  
+
+CFLAGS_x86    = -m32 -O0 -g -ffreestanding -nostdinc -fno-stack-protector -mno-sse -mno-sse2 \
+	-fno-tree-vectorize -fno-omit-frame-pointer 
+
+CFLAGS_x86_64 = -m64 -O0 -g -ffreestanding -nostdinc -fno-stack-protector -mno-sse -mno-sse2 \
+	-fno-tree-vectorize -fno-omit-frame-pointer 
+
+
+CFLAGS = $(CFLAGS_$(ARCH)) $(INCLUDES) $(DEFINES_FLAGS)
 
 
 LDFLAGS = -m elf_i386 -T src/arch/$(ARCH)/linker.ld -z noexecstack
@@ -55,16 +73,33 @@ SYMS_BIN = syms.bin
 SYMS_OBJ = $(BUILD_DIR)/syms.o
 
 
-SYMBOLS_SRC        = $(ARCH_DIR)/debug/symbols.c
+SYMBOLS_SRC        = src/arch/arch_indep/symbols.c
 SYMBOLS_OBJ_NOSYMS = $(BUILD_DIR)/$(ARCH_DIR)/debug/symbols_nosyms.o
 SYMBOLS_OBJ_FINAL  = $(BUILD_DIR)/$(ARCH_DIR)/debug/symbols_final.o
 
 
-C_SOURCES   := $(shell find $(SRC_DIRS) -type f -name "*.c" \
-                   | grep -v '$(ARCH_DIR)/debug/symbols\.c')
-C_SOURCES += bootloader/bootloader.c
 
-ASM_SOURCES := $(shell find $(SRC_DIRS) -type f -name "*.asm")
+
+
+
+OTHER_ARCHES      := $(filter-out $(ARCH), x86 x86_64)
+OTHER_BOOTLOADERS := $(filter-out $(BOOTLOADER), multiboot1 multiboot2)
+
+PRUNE_FLAGS := $(foreach a,$(OTHER_ARCHES),       -not -path '*/arch/$(a)'        -not -path '*/arch/$(a)/*') \
+               $(foreach b,$(OTHER_BOOTLOADERS),  -not -path '*/bootloader/$(b)'  -not -path '*/bootloader/$(b)/*')
+
+C_SOURCES   := $(shell find $(SRC_DIRS) -type f -name "*.c" $(PRUNE_FLAGS) \
+                   | grep -v '$(SYMBOLS_SRC)')
+
+C_SOURCES   += bootloader/bootloader.c
+
+ASM_SOURCES := $(shell find $(SRC_DIRS) -type f -name "*.asm" $(PRUNE_FLAGS))
+
+
+
+
+
+
 
 C_OBJECTS   := $(patsubst %.c,$(BUILD_DIR)/%.o,$(C_SOURCES))
 ASM_OBJECTS := $(patsubst %.asm,$(BUILD_DIR)/%_asm.o,$(ASM_SOURCES))
@@ -125,7 +160,7 @@ $(KERNEL_NOSYMS_ELF): $(BOOT_HEADER_OBJ) $(NOSYMS_OBJECTS)
 
 $(SYMS_BIN): $(KERNEL_NOSYMS_ELF)
 	@echo "  SYM generating $@ from $<"
-	sh ./syms_file_maker.sh $< $@
+	sh ./syms_file_maker.sh $< $@ $(ARCH)
 
 
 $(SYMS_OBJ): $(SYMS_BIN)
@@ -150,9 +185,12 @@ $(KERNEL_BIN): $(KERNEL_ELF)
 	@echo "  BIN $@"
 	$(OBJCOPY) -O binary $< $@
 
+$(INITRD_FILE): 
+	(cd $(INITRD_DIR) && tar -cf ../$(INITRD_FILE) *)
 
-# === ISO ===
-iso: $(KERNEL_ELF) $(KERNEL_BIN) $(GRUB_DIR)
+
+# === ISO === 
+iso: $(KERNEL_ELF) $(KERNEL_BIN) $(GRUB_DIR) $(INITRD_FILE)
 	@echo "  ISO $@"
 	
 	sh $(CURR_BOOTLOADER_DIR)/build_iso.sh

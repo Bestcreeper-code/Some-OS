@@ -1,11 +1,7 @@
 #include "FileSystem.h"
-#include "paging/arch_paging.h"
 #include "bootloader.h"
 #include "console.h"
 #include "drivers/drivers.h"
-#include "elf--later/elf.h"
-#include "ff.h"
-#include "fs.h"
 #include "memory.h"
 
 
@@ -19,7 +15,6 @@
 #include "cpu/cpu.h"
 #include "kernel_data.h"
 #include "string.h"
-#include "vfs.h"
 #include "sysfs.h"
 #include "drivers.h"
 

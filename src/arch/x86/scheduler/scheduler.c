@@ -3,7 +3,6 @@
 #include "paging/arch_paging.h"
 #include "container_of.h"
 #include "helpers.h"
-#include "io.h"
 #include "lists.h"
 #include "paging.h"
 #include "string.h"
@@ -11,7 +10,6 @@
 #include "asm/arch_asm.h"
 #include "memory.h"
 #include "drivers.h"
-#include "time.h"
 #include <stdint.h>
 
 

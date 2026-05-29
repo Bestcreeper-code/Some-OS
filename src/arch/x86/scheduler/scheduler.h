@@ -1,14 +1,14 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 
-#include <limits.h>
+
 #include <stdint.h>
 
 #include "asm/arch_asm.h"
 #include "paging/arch_paging.h"
 #include "lists.h"
 
-#define MAX_PID                     SHRT_MAX/2
+#define MAX_PID                     16384   
 
 #define DEFAULT_STACK_PAGE_AMOUNT   32
 #define DEFAULT_STACK_PAGE_BYTES    (DEFAULT_STACK_PAGE_AMOUNT<<12)

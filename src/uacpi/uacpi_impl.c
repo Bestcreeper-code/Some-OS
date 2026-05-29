@@ -1,3 +1,4 @@
+#include "arch/x86/paging/arch_paging.h"
 #include "locks.h"
 #include "scheduler/scheduler.h"
 #include "uacpi_impl_defs.h"

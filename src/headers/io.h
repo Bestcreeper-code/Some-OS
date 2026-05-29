@@ -52,15 +52,6 @@ void ClearScreen();
 void move_cursor(int x, int y);
 
 
-// Text Output
-int printstr(const char* str);
-int printlen(const char* buffer, unsigned int length);
-int print_hex32(uint32_t byte);
-int print_number(int num);
-int print_unsigned_number(uint32_t num);
-int printf(const char* format,...) __attribute__ ((format (printf, 1, 2)));
-int printLine(const char* str, int line);
-
 // Text Color
 // set current print color
 void set_print_color(char color);
@@ -77,21 +68,6 @@ void reset_input_buffer();
 void get_string(char* buffer);
 void get_string_after_index(int start, char* buffer);
 
-
-//sprintf & others
-
-
-int sprintf(char* buffer, const char* format, ...)    __attribute__ ((format (printf, 1, 3)));
-int snprintf(char* buffer, int size, const char* format, ...) __attribute__ ((format (printf, 1, 4)));
-int vsprintf(char* buffer, const char* format, va_list args);
-int vsnprintf(char* buffer, int size, const char* format, va_list args);
-
-int write_char(char* buffer, int pos, char c, int size);
-int write_str(char* buffer, int pos, const char* s, int size);
-int write_number(char* buffer, int pos, int num, int size);
-int write_uint32(char* buffer, int pos, uint32_t num, int size);
-int write_hex32(char* buffer, int pos, uint32_t num, int size);
-int write_number_fixed_width(char* buffer, int pos, int num, int width, int size);
 
 
 

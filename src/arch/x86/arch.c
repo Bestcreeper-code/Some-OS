@@ -1,8 +1,6 @@
 #include "arch.h"
 #include "Logger.h"
 #include "init/arch_gdt.h"
-#include "paging/arch_paging.h"
-#include "asm-defs/asm.h"
 #include "bootloader.h"
 #include "cpu/cpu.h"
 #include "err_codes.h"
@@ -12,7 +10,6 @@
 
 #include "paging.h"
 #include "time.h"
-#include "string.h"
 
 int arch_init(){
     Sys_log("Entering arch init");

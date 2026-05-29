@@ -13,7 +13,7 @@
 
 
 
-uintptr_t inline get_esp(void) {
+uintptr_t inline get_stack_ptr(void) {
     uintptr_t esp;
     asm volatile("mov %%esp, %0" : "=r"(esp));
     return esp;

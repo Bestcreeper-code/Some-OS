@@ -1,7 +1,7 @@
 #include <stddef.h>
 #include "headers/string.h"
 #include "headers/memory.h"
-#include "headers/io.h"
+#include "printf.h"
 
 int strcmp(const char* s1, const char* s2) {
     while (*s1 && (*s1 == *s2)) {

@@ -1,3 +1,9 @@
 [submodule "uACPI"]
 	path = uACPI
 	url = https://github.com/uACPI/uACPI
+[submodule "prin/printf"]
+	path = prin/printf
+	url = https://github.com/mpaland/printf
+[submodule "printf"]
+	path = printf
+	url = https://github.com/mpaland/printf

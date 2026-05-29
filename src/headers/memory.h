@@ -14,8 +14,8 @@
 #define MAX_FREE_REGIONS 128
 
 typedef struct {
-    uint32_t base_addr;
-    uint32_t length;
+    uintptr_t base_addr;
+    size_t length;
 } __attribute__((packed)) free_region_t;
 
 typedef struct {
@@ -29,9 +29,9 @@ extern free_region_map_t* k_mmap;
 
 int parse_memory_map();
 
-void force_alloc(uint32_t address, uint32_t size);
-void force_free(uint32_t address, uint32_t size);
-uint32_t get_pter_size(void* pter) __attribute__((nonnull (1)));
+void force_alloc(uintptr_t address, size_t size);
+void force_free(uintptr_t address, size_t size);
+size_t get_pter_size(void* pter) __attribute__((nonnull (1)));
 
 void aligned_free(void* ptr)  __attribute__((nonnull (1)));;
 void* aligned_malloc(size_t size, size_t alignment) __attribute__ ((malloc, malloc(aligned_free, 1)));

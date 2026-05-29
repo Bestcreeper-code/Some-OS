@@ -104,10 +104,11 @@ int setup_paging() {
 
     Sys_log("Switching CR3 to new PD (phys=0x%x)\n", pd_phys);
     
-    
     asm volatile ("mov %0, %%cr3" :: "r"(pd_phys) : "memory");
     _k_pd_phys = pd_phys;
     Sys_log("Paging set up successfully.\n");
+    page_reclaim_early_reservation_table();
+    Sys_log("Reclaimed page res entries memory\n");
     return 0;
 }
 
@@ -137,7 +138,7 @@ void tlb_flush_all(void) {
 }
 
 
-
+// #error make that shit work and not a shitty cod from me being tired some time ago
 void pd_map_page(PD_t* pd, uint32_t virtual_addr, uint32_t physical_addr,
                  uint8_t present, uint8_t rw, uint8_t user) {
     uint32_t pd_index = (virtual_addr >> 22) & 0x3FF;
@@ -336,7 +337,7 @@ void page_free(page_index pa, size_t amount) {
 
 void dump_pd(PD_t* pd) {
     uint32_t* pdes = (uint32_t*) PAGE_ADDR(vmap(ADDR_TO_PAGE(pd->pde_arr),1,PAGE_FLAG_RW));
-    Sys_log("Dumping Page Directory from %x\n", _k_pd.pde_arr);
+    Sys_log("Dumping Page Directory from %x\n", (uint32_t)_k_pd.pde_arr);
     Sys_log("first pde: %x\n", ((PTE*)pdes)[0].addr * PAGE_SIZE);
     for (int i = 0; i < 1024; i++) {
         if (!(pdes[i] & 1)){Sys_log("no pde %x     %x\n",i, pdes[i]); continue;}
@@ -349,7 +350,6 @@ void dump_pd(PD_t* pd) {
             }
         }
     }
-    while (1);
 }
 
 void debug_dump_kernel_mapping(PD_t* pd, uint32_t va) {
@@ -369,82 +369,6 @@ void debug_dump_kernel_mapping(PD_t* pd, uint32_t va) {
             pt_i, pte->present, pte->rw, pte->user, pte->addr << 12);
 }
 
-uintptr_t new_page_dir(Page_Group* groups, uint32_t group_count, volatile PD_t* out_pd) {
-    if (!groups || group_count == 0) return 0;
-    
-    asm volatile("sti\n");
-
-    PDE* pd_addr = (PDE*)PAGE_ADDR(page_alloc(1, PAGE_FLAG_RW));
-    // PDE pd_addr[1024];
-    if (!pd_addr) return 0;
-
-    memset(pd_addr, 0, PAGE_SIZE);
-    out_pd->pde_arr = pd_addr;
-
-    
-    for (uint32_t i = 0; i < 1024; i++) {
-        uint32_t val;
-        asm volatile(
-            "movl %1, %0"
-            : "=r"(val)                     // output to register 'val'
-            : "m"(_k_pd.pde_arr[i])         // input from memory
-            : "memory"
-        );
-
-        asm volatile(
-            "movl %1, %0"
-            : "=m"(out_pd->pde_arr[i])    // store 'val' into out_pd_t
-            : "r"(val)
-            : "memory"
-        );
-
-        // serial_log_hex("pde nb", i);
-        // serial_log_hex("pde in _k_pd: ", *(uint32_t*)&_k_pd.pde_arr[i]);
-        // serial_log_hex("pde copied to out_pd: ", *(uint32_t*)&out_pd->pde_arr[i]);
-    }
-    
-    
-    
-
-    // for (uint32_t g = 0; g < group_count; g++) {
-    //     Sys_log("%x  %x   %x\n\n\n\n", groups[g].vaddr, groups[g].pte_bits, groups[g].size);
-    //     Page_Group* group = &groups[g];
-    //     if (group->size == 0) continue;
-
-    //     for (uint32_t i = 0; i < group->size; i++) {
-    //         uint32_t virt_page = group->vaddr + i;
-    //         uint32_t phys_page = group->pte_bits.addr + i;
-
-    //         uint32_t pd_i = virt_page >> 10;
-    //         uint32_t pt_i = virt_page & 0x3FF;
-
-    //         volatile PDE* pde = &out_pd->pde_arr[pd_i];
-
-    //         if (!pde->present) {
-    //             char flags = PAGE_FLAG_RW | (group->pte_bits.user ? PAGE_FLAG_USER : 0);
-    //             PTE* new_pt = (PTE*)PAGE_ADDR(page_alloc(1, flags));
-    //             if (!new_pt) return 0;
-    //             memset(new_pt, 0, PAGE_SIZE);
-
-    //             pde->present   = 1;
-    //             pde->rw        = group->pte_bits.rw;
-    //             pde->user      = group->pte_bits.user;
-    //             pde->page_size = 0;
-    //             pde->addr      = (uintptr_t)new_pt >> 12;
-    //         }
-
-    //         PTE* pt    = (PTE*)((uintptr_t)pde->addr << 12);
-    //         PTE  entry = group->pte_bits;
-    //         entry.addr = phys_page;
-    //         entry.present = 1;
-    //         pt[pt_i]   = entry;
-    //     }
-    // }
-
-    Sys_Warning("new_page_dir: cr3 at %x\n", out_pd->pde_arr);
-    
-    return (uintptr_t)_k_pd.pde_arr;
-}
 
 void pd_free(PD_t* pd) {
     if (!pd || !pd->pde_arr) return;
@@ -468,51 +392,6 @@ void pd_free(PD_t* pd) {
 
     page_free((uintptr_t)pd->pde_arr, 1);
     pd->pde_arr = NULL;
-}
-
-
-int v_map(PD_t* page_dir, Page_Group* groups, uint32_t group_count) {
-    if (!page_dir || !page_dir->pde_arr || !groups) return false;
-
-    for (uint32_t g = 0; g < group_count; g++) {
-        Page_Group* group = &groups[g];
-        if (group->size == 0) continue;
-
-        uintptr_t virt_addr = group->vaddr;
-        uint32_t page_idx_start = virt_addr >> 12;
-
-        for (uint32_t i = 0; i < group->size; i++) {
-            uint32_t virt_page_idx = page_idx_start + i;
-            uint32_t pd_i = virt_page_idx >> 10;   
-            uint32_t pt_i = virt_page_idx & 0x3FF; 
-
-            volatile PDE* pde = &page_dir->pde_arr[pd_i];
-            PTE* pt_base;
-
-            if (!pde->present) {
-                pt_base = (PTE*)page_alloc(1, PAGE_FLAG_RW);
-                if (!pt_base) return false;
-                memset(pt_base, 0, PAGE_SIZE);
-
-                pde->present = 1;
-                pde->rw = 1;
-                pde->user = 0;
-                pde->page_size = 0;
-                
-                uintptr_t phys = HHDM_TO_PHYS((uintptr_t)pt_base);
-                pde->addr = phys >> 12;
-            } else {
-                pt_base = (PTE*)((uintptr_t)(pde->addr) << 12);
-            }
-
-            PTE* pte = &pt_base[pt_i];
-
-            *pte = group->pte_bits;
-            pte->addr = (group->pte_bits.addr + i);
-        }
-    }
-
-    return true;
 }
 
 
@@ -709,9 +588,13 @@ found:
     return run_start;
 }
 
-
+// #error  wtf all 0??
 void pd_init(PD_t* pd) {
-    if (!pd || !pd->pde_arr) return;
+    if (!pd || !pd->pde_arr){
+        Sys_Error("erm..wtf");
+        return;
+    }
+    PDE* pde_arr = (PDE*)(vmap(ADDR_TO_PAGE(pd->pde_arr),1,PAGE_FLAG_RW)<<12);
 
     memset((void*)pd->pde_arr, 0, PAGE_SIZE);
 
@@ -720,10 +603,12 @@ void pd_init(PD_t* pd) {
 
     for (uint32_t i = 0; i < pde_end; i++) {
         
-
+Sys_Info("frmt, ... %d",i);
         pd->pde_arr[i] = _k_pd.pde_arr[i];
 
     }
+    dump_pd(pd);
+    Sys_Success("yippee");
 }
 
 

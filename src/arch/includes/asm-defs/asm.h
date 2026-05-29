@@ -4,7 +4,32 @@
 
 
 
-#ifdef  __ARCH_X86__
+
+
+
+
+
+
+#if defined (__i386__)
+
+typedef uint32_t register_t;
+
+#elif defined (__x86_64__)
+
+typedef uint64_t register_t;
+
+#endif
+
+
+
+
+
+
+
+
+
+#if defined(__i386__) || defined(__x86_64__)
+
 static inline void outb(uint16_t port, uint8_t val) {
     __asm__ volatile ("outb %0, %1" : : "a"(val), "Nd"(port));
 }
@@ -46,16 +71,23 @@ static inline void cli(){
 static inline void sti(){
     asm volatile("sti");
 } 
-
 #else
 #error unsupported arch
 #endif
 
 
+
+
+
+
+
+
+
+
+
+#if defined(__i386__) || defined(__x86_64__)
 static inline uintptr_t get_instruction_pointer() {
     uintptr_t ip;
-
-#ifdef __ARCH_X86__
     __asm__ volatile (
         "call 1f\n\t"
         "1: pop %0"
@@ -63,9 +95,10 @@ static inline uintptr_t get_instruction_pointer() {
         :
         : "memory"
     );
+    return ip;
+}
+
 #else
     #error missing arch implementation
 #endif
-    return ip;
-}
 

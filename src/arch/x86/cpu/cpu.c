@@ -1,9 +1,11 @@
-#include "cpu/cpu.h"
+#include "cpu.h"
+
+#include "asm-defs/asm.h"
 #include "Logger.h"
 #include "cpuid.h"
 #include "string.h"
 #include <stdint.h>
-#include <sys/types.h>
+
 
 #define FLAG_PER_ROW 8
 

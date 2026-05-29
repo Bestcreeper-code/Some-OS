@@ -24,6 +24,8 @@
 
 
 typedef uintptr_t page_index;
+typedef uintptr_t page_table_index;
+typedef uintptr_t page_dir_index;
 
 typedef enum {
     PAGE_FLAG_RO   = 0 << 0,
@@ -38,6 +40,7 @@ typedef struct {
     uintptr_t index;
     bool     rw;
     bool     us;
+    bool     nx;
 } PAGE;
 
 int setup_paging();

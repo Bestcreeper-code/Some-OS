@@ -5,7 +5,7 @@
 #include <stddef.h>
 
 #include "paging/arch_paging.h"
-#include "asm-defs/asm.h"
+
 #include "scheduler/scheduler.h"
 
 #define EI_NIDENT 16

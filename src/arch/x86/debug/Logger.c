@@ -7,6 +7,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdint.h>
+#include "printf.h"
 
 static uint8_t current_fg = ANSI_WHITE;
 static uint8_t current_bg = ANSI_BG_BLACK;
@@ -71,7 +72,7 @@ void sys_serial_vlogf(const char* format, const char* file, const char* func, in
     serial_write_string(output);
 
     if (Get_Kernel_Flag(KDATA_FLAG_FRAMEBUFFER_ON) && Get_Kernel_Flag(KDATA_FLAG_PAGING_ON)) {
-        printstr(output);
+        printf(output);
     }
 }
 

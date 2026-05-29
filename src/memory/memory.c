@@ -26,33 +26,33 @@ static inline free_region_map_t* get_free_region_map(void) {
     return k_mmap;
 }
 
-void force_alloc(uintptr_t address, uint32_t size) {
+void force_alloc(uintptr_t address, size_t size) {
     free_region_map_t* k_mmap = get_free_region_map();
     uintptr_t end = address + size;
     size_t page_size = 0x1000;
 
-    for (uint32_t page_addr = address & ~(page_size - 1); page_addr < end; page_addr += page_size) {
+    for (uintptr_t page_addr = address & ~(page_size - 1); page_addr < end; page_addr += page_size) {
         
-        uint32_t page_start = page_addr;
-        uint32_t page_end = page_addr + page_size;
+        uintptr_t page_start = page_addr;
+        uintptr_t page_end = page_addr + page_size;
 
         if (address > page_start) {
-            uint32_t free_start = page_start;
-            uint32_t free_len = address - page_start;
+            uintptr_t free_start = page_start;
+            size_t free_len = address - page_start;
             force_free(free_start, free_len);
         }
 
         if (end < page_end) {
-            uint32_t free_start = end;
-            uint32_t free_len = page_end - end;
+            uintptr_t free_start = end;
+            size_t free_len = page_end - end;
             force_free(free_start, free_len);
         }
     }
 
-    uint32_t lock_end = end;
+    uintptr_t lock_end = end;
     for (int i = 0; i < k_mmap->free_region_count; i++) {
         free_region_t* region = &k_mmap->free_regions[i];
-        uint32_t region_end = region->base_addr + region->length;
+        uintptr_t region_end = region->base_addr + region->length;
 
         if (lock_end <= region->base_addr || address >= region_end) continue;
 
@@ -76,9 +76,9 @@ void force_alloc(uintptr_t address, uint32_t size) {
         }
 
         if (address > region->base_addr && lock_end < region_end) {
-            uint32_t first_len = address - region->base_addr;
-            uint32_t second_base = lock_end;
-            uint32_t second_len = region_end - lock_end;
+            size_t first_len = address - region->base_addr;
+            uintptr_t second_base = lock_end;
+            size_t second_len = region_end - lock_end;
             region->length = first_len;
 
             if (k_mmap->free_region_count < MAX_FREE_REGIONS) {
@@ -93,11 +93,11 @@ void force_alloc(uintptr_t address, uint32_t size) {
     }
 }
 
-void force_free(uint32_t address, uint32_t size) {
+void force_free(uintptr_t address, size_t size) {
     free_region_map_t* k_mmap = get_free_region_map();
 
-    uint32_t new_start = address & ~0xFFFU; // align down to 4KB page
-    uint32_t new_end   = (address + size + 0xFFFU) & ~0xFFFU; // align up
+    uintptr_t new_start = address & ~0xFFFU; // align down to 4KB page
+    uintptr_t new_end   = (address + size + 0xFFFU) & ~0xFFFU; // align up
 
     // never free memory below 0x10000
     if (new_end <= 0x10000) return;
@@ -105,24 +105,24 @@ void force_free(uint32_t address, uint32_t size) {
 
     for (int i = 0; i < k_mmap->free_region_count; i++) {
         free_region_t* region = &k_mmap->free_regions[i];
-        uint32_t region_start = region->base_addr;
-        uint32_t region_end   = region->base_addr + region->length;
+        uintptr_t region_start = region->base_addr;
+        uintptr_t region_end   = region->base_addr + region->length;
 
         if (new_end >= region_start && new_start <= region_end) {
-            uint32_t merged_start = (new_start < region_start) ? new_start : region_start;
-            uint32_t merged_end   = (new_end > region_end) ? new_end : region_end;
+            uintptr_t merged_start = (new_start < region_start) ? new_start : region_start;
+            uintptr_t merged_end   = (new_end > region_end) ? new_end : region_end;
             region->base_addr = merged_start;
             region->length = merged_end - merged_start;
 
             for (int j = 0; j < k_mmap->free_region_count; j++) {
                 if (j == i) continue;
                 free_region_t* other = &k_mmap->free_regions[j];
-                uint32_t other_start = other->base_addr;
-                uint32_t other_end   = other->base_addr + other->length;
+                uintptr_t other_start = other->base_addr;
+                uintptr_t other_end   = other->base_addr + other->length;
 
                 if (region->base_addr <= other_end && region->base_addr + region->length >= other_start) {
-                    uint32_t merge_start = (region->base_addr < other_start) ? region->base_addr : other_start;
-                    uint32_t merge_end   = ((region->base_addr + region->length) > other_end) ? (region->base_addr + region->length) : other_end;
+                    uintptr_t merge_start = (region->base_addr < other_start) ? region->base_addr : other_start;
+                    uintptr_t merge_end   = ((region->base_addr + region->length) > other_end) ? (region->base_addr + region->length) : other_end;
                     region->base_addr = merge_start;
                     region->length = merge_end - merge_start;
 
@@ -175,8 +175,8 @@ int parse_memory_map() {
 
         if (region->length == 0) continue;
 
-        if (region->base_addr < (uint32_t)&_kernel_end) {
-            uint32_t overlap = (uint32_t)&_kernel_end - region->base_addr;
+        if (region->base_addr < (uintptr_t)&_kernel_end) {
+            size_t overlap = (uintptr_t)&_kernel_end - region->base_addr;
             if (overlap >= region->length) {
                 region->length = 0; // entire region is under kernel, remove it
             } else {
@@ -195,13 +195,13 @@ int parse_memory_map() {
 
 free_region_t* FirstRegionOfSizeOrMore(size_t size) {
     free_region_map_t* k_mmap = get_free_region_map();
-    uint32_t requestedSize = (uint32_t)((size + sizeof(uint32_t) + 7) & ~7U);
+    size_t requestedSize = (size + sizeof(uintptr_t) + 7) & ~7U;
 
     for (int i = 0; i < k_mmap->free_region_count; i++) {
         if (k_mmap->free_regions[i].length == 0) continue;
 
-        uint32_t currBase = k_mmap->free_regions[i].base_addr;
-        uint32_t currSize = k_mmap->free_regions[i].length;
+        uintptr_t currBase = k_mmap->free_regions[i].base_addr;
+        size_t currSize = k_mmap->free_regions[i].length;
 
         bool merged[MAX_FREE_REGIONS] = {false};
         merged[i] = true;
@@ -246,9 +246,9 @@ void print_free_regions() {
     }
 }
 
-uint32_t get_pter_size(void* pter){
+uintptr_t get_pter_size(void* pter){
     uint8_t* raw = (uint8_t*)pter;
-    uint32_t* sizeaddr = (uint32_t*)(raw - sizeof(uint32_t));
+    uintptr_t* sizeaddr = (uintptr_t*)(raw - sizeof(uintptr_t));
     return *sizeaddr;
 }
 
@@ -261,13 +261,13 @@ void* kmalloc_impl(size_t size) {
     free_region_map_t* k_mmap = get_free_region_map();
     if (!k_mmap) return NULL;
 
-    if (size > UINT32_MAX - sizeof(uint32_t)) return NULL; // prevent overflow
-    uint32_t full_size = (uint32_t)((size + sizeof(uint32_t) + 7) & ~7U);
+    if (size > SIZE_MAX - sizeof(uintptr_t)) return NULL; // prevent overflow
+    size_t full_size = (size + sizeof(uintptr_t) + 7) & ~7U;
 
     free_region_t* region = FirstRegionOfSizeOrMore(full_size);
 
     if (!region || region->base_addr <= 0xFFFF) {
-        uint32_t pages_needed = (full_size + PAGE_SIZE - 1) / PAGE_SIZE;
+        size_t pages_needed = (full_size + PAGE_SIZE - 1) / PAGE_SIZE;
         page_index base = page_alloc(pages_needed, PAGE_FLAG_RW);
         if (!base) {
             return NULL;
@@ -277,7 +277,7 @@ void* kmalloc_impl(size_t size) {
         // force free only above 0x10000
         uintptr_t page_addr = PAGE_ADDR(base);
         if (page_addr < 0x10000) page_addr = 0x10000;
-        force_free((uint32_t)page_addr, pages_needed * PAGE_SIZE);
+        force_free(page_addr, pages_needed * PAGE_SIZE);
 
         region = FirstRegionOfSizeOrMore(full_size);
     }
@@ -287,8 +287,8 @@ void* kmalloc_impl(size_t size) {
         Sys_Step_Point();
     }
 
-    uint32_t* header = (uint32_t*)(uintptr_t)region->base_addr;
-    *header = (uint32_t)size;
+    uintptr_t* header = (uintptr_t*)region->base_addr;
+    *header = (uintptr_t)size;
 
     region->base_addr += full_size;
     region->length -= full_size;
@@ -317,13 +317,13 @@ void kfree_impl(void* _Memory) {
     free_region_map_t* k_mmap = get_free_region_map();
 
     uintptr_t address = (uintptr_t)_Memory;
-    uint32_t* sizeptr = (uint32_t*)(address - sizeof(uint32_t));
-    uint32_t size = *sizeptr + sizeof(uint32_t);
+    uintptr_t* sizeptr = (uintptr_t*)(address - sizeof(uintptr_t));
+    size_t size = *sizeptr + sizeof(uintptr_t);
     size = (size + 7) & ~7U;
 
     for (int i = 0; i < MAX_FREE_REGIONS; i++) {
         if (k_mmap->free_regions[i].length == 0) {
-            k_mmap->free_regions[i].base_addr = (uint32_t)(address - sizeof(uint32_t));
+            k_mmap->free_regions[i].base_addr = address - sizeof(uintptr_t);
             k_mmap->free_regions[i].length = size;
 #if MEM_DEBUG
             Sys_log("freeing %u bytes at %p\n", size, _Memory);
@@ -352,7 +352,7 @@ void kfree_impl(void* _Memory) {
         for (int j = i + 1; j < MAX_FREE_REGIONS; j++) {
             if (k_mmap->free_regions[j].length == 0) continue;
 
-            uint32_t end_i = k_mmap->free_regions[i].base_addr + k_mmap->free_regions[i].length;
+            uintptr_t end_i = k_mmap->free_regions[i].base_addr + k_mmap->free_regions[i].length;
             if (end_i == k_mmap->free_regions[j].base_addr) {
                 k_mmap->free_regions[i].length += k_mmap->free_regions[j].length;
 
@@ -395,7 +395,7 @@ void* krealloc_impl(void *ptr, size_t size) {
         return NULL;
     }
 
-    uint32_t old_len = get_pter_size(ptr);
+    size_t old_len = get_pter_size(ptr);
     size_t copy_size = (size < old_len) ? size : old_len;
 
     memcpy(new_ptr, ptr, copy_size);
@@ -410,14 +410,14 @@ void* aligned_malloc(size_t size, size_t alignment) {
         return NULL;
     }
 
-    uint32_t extra = (uint32_t)(alignment - 1 + sizeof(uint32_t));
+    size_t extra = alignment - 1 + sizeof(uintptr_t);
     void* raw = kmalloc_impl(size + extra);
     if (!raw) return NULL;
 
     uintptr_t raw_addr = (uintptr_t)raw;
-    uintptr_t aligned_addr = (raw_addr + sizeof(uint32_t) + alignment - 1) & ~(alignment - 1);
+    uintptr_t aligned_addr = (raw_addr + sizeof(uintptr_t) + alignment - 1) & ~(alignment - 1);
 
-    ((uint32_t*)aligned_addr)[-1] = (uint32_t)raw_addr;
+    ((uintptr_t*)aligned_addr)[-1] = raw_addr;
 
     return (void*)aligned_addr;
 }
@@ -426,8 +426,7 @@ void aligned_free(void* ptr) {
     
 
     uintptr_t aligned_addr = (uintptr_t)ptr;
-    void* raw = (void*)(uintptr_t)((uint32_t*)((uintptr_t)aligned_addr))[-1];
+    void* raw = (void*)((uintptr_t*)aligned_addr)[-1];
 
     kfree_impl(raw);
 }
-
